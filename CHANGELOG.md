@@ -38,5 +38,9 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `infrastructure/scanners/`: the built-in fallback scanner and the entropy
   rule behind one of its findings. Eight rules, each documenting which way it
   leans and what it also fires on; thresholds measured rather than chosen.
+- `infrastructure/estimators/rules.py`: the complexity estimator. Nine rules
+  across the two feature families it is allowed to use, three of them
+  escalating, and a docstring that states plainly why this axis is the weaker
+  of the two.
 
 The first release will be `0.1.0`.
