@@ -208,13 +208,18 @@ arrives as a published JSON contract that iriguchi reads and never imports
 
 ## The road
 
-| | |
-|---|---|
-| **v0.1** ✅ | The router, headless. Domain, ports, fallback scanner, complexity estimator, CLI, evaluation corpus. No GUI, no network, no model. |
-| **v0.2** | The seams. mamori as scanner ✅ and as escalation channel ✅; ollama as the local model; `iriguchi ask`. |
-| **v0.3** | The shell. Tray residency, hotkey, popup — with measured performance floors on the warm path. |
-| **v0.4** | The Anchor Dashboard. Provenance from tsumugi and akashi, rendered — including what was left out. |
-| **v1.0** | Full-offline routing. No new intelligence. |
+A name in this table is a plan, not a command. `iriguchi ask` reads like
+something you could type, and it is not — the built commands are `route`,
+`config`, `doctor`, `demo` and `eval`, and `iriguchi --help` is the authority.
+
+| | | |
+|---|---|---|
+| **v0.1** | **built** | The router, headless. Domain, ports, fallback scanner, complexity estimator, CLI, evaluation corpus. No GUI, no network, no model. |
+| **v0.2** | **built** | mamori as the scanner (`--scanner mamori`), and as the escalation channel. |
+| **v0.2** | *not built* | ollama as the local model; `iriguchi ask`, which would be the first command that actually sends. |
+| **v0.3** | *not built* | The shell. Tray residency, hotkey, popup — with measured performance floors on the warm path. |
+| **v0.4** | *not built* | The Anchor Dashboard. Provenance from tsumugi and akashi, rendered — including what was left out. |
+| **v1.0** | *not built* | Full-offline routing. No new intelligence. |
 
 [docs/proposals/0001-the-design.md](docs/proposals/0001-the-design.md) is the
 whole design, including the parts of the original specification it revises and

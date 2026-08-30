@@ -150,6 +150,11 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   is in**, so `ESCALATED` is no longer a verdict with nothing behind it.
 - **License: Apache-2.0. Python: 3.12+. Runtime dependencies: 0**, checked in CI
   by installing without extras and asserting nothing came along.
+- **The commands that exist** are `route`, `config`, `doctor`, `demo`, `eval`.
+  `iriguchi ask` does not, and neither does any model or ollama adapter — a
+  sibling session built a GPU schedule around running it, because a roadmap item
+  name is shaped exactly like a command name and reads as one. `iriguchi --help`
+  is the authority; a plan is not a program.
 - **Built:** `domain/` — `Span`, `Destination`, `Route`, `Finding`,
   `Sensitivity`, `Signal`, `Complexity`, `Reason`, `Removal`, `RoutingDecision`,
   `RoutingPolicy` — and `errors.py`. 100% covered, `mypy --strict` clean, and the
