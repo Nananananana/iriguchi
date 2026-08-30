@@ -152,8 +152,13 @@ fixed by widening it until the number looks better.
 The 0% leak rate underneath it is honest and nearly meaningless on its own —
 those prompts are easy, so the *complexity* axis kept them local, and a missed
 finding that never became a route is invisible end to end. The first version of
-this report had only the second number. [docs/measurements.md](docs/measurements.md)
-has the whole story.
+this report had only the second number.
+
+And every figure here is a **regression floor, not a measurement of the world**:
+the corpus was written by iriguchi's author and borrowed from a sibling that can
+read iriguchi's rules, so none of it is independent of what it scores.
+[docs/measurements.md](docs/measurements.md) has the whole story, including what
+would have to exist for these numbers to be portable.
 
 ## The family
 

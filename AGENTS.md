@@ -308,9 +308,25 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   decision to disk, nothing sends one anywhere, and there is no `--log-file` —
   the absence is deliberate, not unfinished.
 - The mamori comparison (63.5% → 1.0% missed) is **measured on mamori's own
-  corpus** and is not a general figure. The only unseen data is 6 generated
-  must-stay-local cases. Growing that half is the measurement the project owes
-  itself.
+  corpus** and is not a general figure. The only data mamori has not seen is 6
+  generated must-stay-local cases, which supports no miss rate at all.
+- **`Case.source` is necessary and not sufficient.** It records who wrote a case;
+  independence is a *relation*, not an attribute. The question is not "did the
+  scorer write this" but **"could whoever wrote it see the rules being scored"**,
+  and these six libraries share their design discussion — so a corpus borrowed
+  from a sibling fails that test as surely as one written here. Not having
+  written something is not the same as not having seen it.
+- **Generating does not launder provenance: the generator is a hand.**
+  `tools/generate_cases.py` was written by whoever writes the rules, while
+  looking at them. More cases from it raise the regression floor and cannot
+  produce independence. `docs/measurements.md` used to propose exactly that as
+  the fix for portability, and it was wrong.
+- Consequently **every number in `docs/measurements.md` is a regression floor**,
+  not a measured property of the world. What would be portable is cases whose
+  *text* came from somebody who could not see these rules, labelled here
+  afterwards — the two hands split. **iriguchi has no scorer-side refusal**;
+  mamori built one (`report.as_evidence_for(subject)`) and it is the shape to
+  copy if this is ever enforced rather than documented.
 - **Next, per `docs/proposals/0001-the-design.md` section 8:** six ports with
   conformance suites, the over-detecting fallback scanner, the rules complexity
   estimator, the CLI (`route`, `explain`, `config`, `doctor`, `eval`, `demo`),
