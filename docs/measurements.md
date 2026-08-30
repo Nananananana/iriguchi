@@ -243,6 +243,19 @@ the two hands is the point: text from elsewhere and labels from us is the
 cheapest arrangement that stops a corpus measuring its author's imagination. It
 does not exist, and no amount of generating will produce it.
 
+Both hands are now recorded per file rather than described in prose, so the
+question can be asked of the data instead of read out of a paragraph:
+
+| | text | labels |
+|---|---|---|
+| generated (21) | `tools/generate_cases.py`, by iriguchi | same |
+| borrowed (134) | mamori's evaluation corpus, by mamori | `tools/borrow_mamori_cases.py`, by iriguchi |
+
+The borrowed half is the only place those two columns differ, and it differs in
+the wrong direction for portability: the *labels* are the hand that could see
+these rules. Recorded as `borrowed:mamori`, that was one word for two hands, and
+it named the flattering one.
+
 ## What this is not measured against
 
 RouterBench (405k precomputed inferences, 11 models across 7 tasks) and

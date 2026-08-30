@@ -22,13 +22,17 @@ import pytest
 
 from iriguchi.application.routing import PromptRouter
 from iriguchi.domain.destination import Route
-from iriguchi.evaluation.case import Case, SensitivityClass, TrapKind
+from iriguchi.evaluation.case import UNRECORDED, Case, Hand, Provenance, SensitivityClass, TrapKind
 from iriguchi.evaluation.dataset import DATA_DIR, load_case, load_corpus
 from iriguchi.evaluation.scoring import run
 from iriguchi.infrastructure.estimators.rules import RulesEstimator
 from iriguchi.infrastructure.scanners.fallback import FallbackScanner
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+#: For the tests below, which are about a single case rather than about
+#: where a file came from.
+A_HAND = Provenance(text=Hand("test", "test"), labels=Hand("test", "test"))
 
 #: Deliberately far looser than the current scores. A gate set at today's number
 #: makes every honest experiment a build failure, and tuning to reach a
@@ -108,6 +112,7 @@ class TestTheLoaderRefusesRatherThanGuesses:
                     "trapp": "plain",
                 },
                 "test",
+                A_HAND,
             )
 
     def test_an_unknown_format_version_is_refused(self, tmp_path: Path) -> None:
@@ -129,6 +134,7 @@ class TestTheLoaderRefusesRatherThanGuesses:
                     "trap": "hidden_secret",
                 },
                 "test",
+                A_HAND,
             )
 
 
@@ -300,11 +306,11 @@ class TestACaseRefusesToBeNonsense:
 
     def test_a_case_needs_an_id(self) -> None:
         with pytest.raises(ValueError, match="must have an id"):
-            load_case({**self.BASE, "id": ""}, "test")
+            load_case({**self.BASE, "id": ""}, "test", A_HAND)
 
     def test_a_case_needs_a_prompt(self) -> None:
         with pytest.raises(ValueError, match="no prompt"):
-            load_case({**self.BASE, "prompt": "   "}, "test")
+            load_case({**self.BASE, "prompt": "   "}, "test", A_HAND)
 
     def test_the_corpus_refuses_duplicate_ids_across_files(self, tmp_path: Path) -> None:
         """Two files can each be valid and still collide. Loading them together
@@ -313,7 +319,17 @@ class TestACaseRefusesToBeNonsense:
 
         for name in ("a.json", "b.json"):
             (tmp_path / name).write_text(
-                json.dumps({"format_version": 1, "source": "t", "samples": [self.BASE]}),
+                json.dumps(
+                    {
+                        "format_version": 1,
+                        "source": "t",
+                        "provenance": {
+                            "text": {"produced_by": "t", "authored_by": "t"},
+                            "labels": {"produced_by": "t", "authored_by": "t"},
+                        },
+                        "samples": [self.BASE],
+                    }
+                ),
                 encoding="utf-8",
             )
         with pytest.raises(ValueError, match="duplicate case ids"):
@@ -336,3 +352,144 @@ class TestTheCorpusShipsInTheWheel:
     def test_both_files_are_there(self) -> None:
         names = {path.name for path in DATA_DIR.glob("*.json")}
         assert names == {"generated.json", "borrowed-mamori.json"}
+
+
+class TestProvenanceIsWrittenDownBeforeItIsGuessed:
+    """A generator is a hand, and `generated` does not name it.
+
+    Right now `tools/generate_cases.py` was written by whoever writes
+    iriguchi's rules — one hand, known. That is the same position tsumugi was
+    in with twenty cases whose `origin` said `drafted` and where nothing
+    recorded *what* had drafted them. It became unrecoverable the moment a
+    second producer existed, and the only available repair was to write a
+    default into the field whose job is to hold a fact.
+
+    The window here closes when a model drafts its first case: `generated`
+    would then mean two things and the twenty-one already committed could only
+    be told apart by guessing.
+    """
+
+    def test_both_corpora_say_whose_text_and_whose_labels(self, corpus: tuple[Case, ...]) -> None:
+        for case in corpus:
+            assert case.provenance.is_recorded, f"{case.id} does not say where it came from"
+
+    def test_the_generated_half_names_this_repository_as_both_hands(
+        self, corpus: tuple[Case, ...]
+    ) -> None:
+        """It measures whether the rules do what their author intended, and the
+        record says so rather than leaving `generated` to imply otherwise."""
+        generated = next(case for case in corpus if case.source == "generated")
+        assert generated.provenance.text.produced_by == "tools/generate_cases.py"
+        assert generated.provenance.text.authored_by == "iriguchi"
+        assert generated.provenance.labels.authored_by == "iriguchi"
+
+    def test_the_borrowed_half_names_two_different_hands(self, corpus: tuple[Case, ...]) -> None:
+        """mamori wrote the prose; a rule here assigned the labels. Recorded as
+        `borrowed:mamori` alone, that was one word for two hands — and it named
+        the more flattering one."""
+        borrowed = next(case for case in corpus if case.source == "borrowed:mamori")
+        assert borrowed.provenance.text.authored_by == "mamori"
+        assert borrowed.provenance.labels.authored_by == "iriguchi"
+        assert borrowed.provenance.text.authored_by != borrowed.provenance.labels.authored_by
+
+    def test_a_file_that_does_not_say_is_refused(self, tmp_path: Path) -> None:
+        """Not defaulted. A default here is a guess in the field whose only job
+        is to hold a fact, and it is one line away at every moment."""
+        from iriguchi.evaluation.dataset import load_cases
+
+        path = tmp_path / "silent.json"
+        path.write_text(
+            json.dumps({"format_version": 1, "source": "t", "samples": []}), encoding="utf-8"
+        )
+        with pytest.raises(ValueError, match="declares no provenance"):
+            load_cases(path)
+
+    def test_an_empty_hand_is_refused_but_unrecorded_is_not(self) -> None:
+        """`unrecorded` is a value; `""` is a silence that reads as a claim.
+
+        An empty field says "nothing to declare". The word says "not written
+        down". Those are opposite statements about the same absence, and only
+        one of them is ever true by accident.
+        """
+        with pytest.raises(ValueError, match="is empty"):
+            Hand(produced_by="", authored_by="x")
+        assert Hand().produced_by == UNRECORDED
+        assert not Provenance(text=Hand(), labels=Hand()).is_recorded
+
+    def test_a_case_defaults_to_unrecorded_rather_than_to_here(self) -> None:
+        """Constructing a case without provenance must not silently claim this
+        repository wrote it — that is the guess the whole field exists to
+        prevent."""
+        case = load_case(
+            {
+                "id": "x",
+                "prompt": "hello",
+                "sensitivity": "may_leave",
+                "band": "low",
+                "trap": "plain",
+            },
+            "test",
+            Provenance(text=Hand(), labels=Hand()),
+        )
+        assert not case.provenance.is_recorded
+
+
+class TestTheProvenanceReaderRefusesRatherThanGuesses:
+    """Unknown keys and missing halves, refused the same way settings are.
+
+    A misspelled `authored_by` that silently became `unrecorded` would turn a
+    recorded fact into a declared absence — which is the one direction this
+    field must never move on its own, because the absence is then indelible and
+    looks deliberate.
+    """
+
+    def file_with(self, tmp_path: Path, provenance: object) -> Path:
+        path = tmp_path / "case.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "format_version": 1,
+                    "source": "t",
+                    "provenance": provenance,
+                    "samples": [],
+                }
+            ),
+            encoding="utf-8",
+        )
+        return path
+
+    def test_an_unknown_top_level_key(self, tmp_path: Path) -> None:
+        from iriguchi.evaluation.dataset import load_cases
+
+        path = self.file_with(
+            tmp_path,
+            {
+                "text": {"produced_by": "a", "authored_by": "b"},
+                "labels": {"produced_by": "a", "authored_by": "b"},
+                "prose": {"produced_by": "a"},
+            },
+        )
+        with pytest.raises(ValueError, match="unknown provenance keys"):
+            load_cases(path)
+
+    def test_a_missing_half(self, tmp_path: Path) -> None:
+        """Text without labels is not half a record; it is a record that will be
+        read as though the missing half agreed with the present one."""
+        from iriguchi.evaluation.dataset import load_cases
+
+        path = self.file_with(tmp_path, {"text": {"produced_by": "a", "authored_by": "b"}})
+        with pytest.raises(ValueError, match="does not say who produced its labels"):
+            load_cases(path)
+
+    def test_a_misspelled_field(self, tmp_path: Path) -> None:
+        from iriguchi.evaluation.dataset import load_cases
+
+        path = self.file_with(
+            tmp_path,
+            {
+                "text": {"produced_by": "a", "authoured_by": "b"},
+                "labels": {"produced_by": "a", "authored_by": "b"},
+            },
+        )
+        with pytest.raises(ValueError, match="unknown keys"):
+            load_cases(path)
