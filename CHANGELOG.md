@@ -65,6 +65,9 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   amended once — the prohibitions were borrowed from mamori's ADR-0032 and were
   incomplete here, because a rule id names a topic and mamori's records never
   describe what a document is for.
+- A CI job that installs mamori from its own repository and runs the seam
+  tests, which had never executed in CI at all. It asserts the sibling is
+  importable first, so a failed install cannot report success.
 - `mamori_state()` replaces a boolean that conflated "mamori is absent" with
   "mamori is installed and will not import". The seam test suite now skips on
   the first and fails on the second; `config`, `doctor` and the constructor no
