@@ -86,6 +86,29 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
 - **Everything in the repository is English.** Conversation language may differ;
   committed text may not.
 - TDD. One issue, one PR, squash merge, close the issue after.
+- **After a merge: pull, `git log --oneline -1`, and run the suite on `main`.**
+  Written down because it was a habit, and a habit is not installed — this file
+  had nothing about verifying a merge at all, which is worse than kiseki's and
+  musubi's `confirm "Squashed and merged"` even though that line reads a
+  mechanism's report rather than a result.
+
+  What it proves: the squash commit exists, and the tests that came with it pass
+  where they landed. What it does not: that the *content* is what the PR
+  contained. Reading a file for a phrase from the change is the cheap version of
+  that, and this is what caught #33 as genuinely landed rather than merely
+  merged.
+
+  **A stronger script exists** in the release role's working directory and is
+  deliberately not adopted here. Replacing something weak and installed with
+  something strong and uninstalled is the same trade as a weak check that looks
+  like coverage, run backwards — and the release role reached that conclusion
+  about distributing it before anybody asked. Recording the practice is not the
+  same act as upgrading it, and only the first is happening.
+- A PR handed to the release queue may be **taken back by its author after 30
+  minutes**. That is a threshold for the waiting side, not a promise from the
+  queue: past it, the author is right and the queue is slow. It rests on one
+  measurement (#33, 289 seconds end to end) and is a chosen number, not a
+  derived one.
 - **All tests must pass before any commit.** One failure means stop and
   investigate, not proceed.
 - Test file names are unique across the repository — tests are not a package and
