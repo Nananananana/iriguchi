@@ -47,6 +47,11 @@ class TrapKind(Enum):
 
     A closed set on purpose. A new kind of adversary is a visible change to what
     the corpus claims to cover.
+
+    It is also a ceiling: seven kinds chosen by one person, so this corpus can
+    only fail an implementation in seven ways that person had already imagined.
+    ADR-0007's cost section says what widening it would take, and it is not more
+    cases.
     """
 
     #: No adversary. Included so the corpus has a baseline, and kept in a

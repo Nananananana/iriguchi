@@ -76,3 +76,18 @@ for mamori's own detection numbers.
 Refusing a judge also means the complexity axis is scored against a *label* for
 what a small model can handle, not against what a small model actually did.
 `eval --model` exists to check that label, and it is the half CI cannot run.
+
+And **`TrapKind` is a closed set of seven that one person chose.** The closedness
+is a feature — a new kind of adversary becomes a visible change to what the
+corpus claims to cover — and it is also a ceiling: this corpus can only fail an
+implementation in the seven ways its author had already thought of. Adding cases
+raises the floor; it cannot widen that.
+
+The enum's docstring said only the first half for as long as it existed. Both
+halves are true at once and the second is the one somebody reading a number
+needs, so it says both now.
+
+Widening it needs somebody else deciding what counts as a trap, which is a
+different thing from somebody else writing the prompts. A corpus drafted
+elsewhere and labelled here fixes the vocabulary and leaves the taxonomy exactly
+where it was.
