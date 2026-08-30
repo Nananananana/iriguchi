@@ -1,9 +1,19 @@
 """The exception tree.
 
-Every failure in the deciding path is one of these, and every one of them means
-the same thing to a caller: no route was produced, so nothing may be sent. There
-is no partial decision and no permissive mode -- see
-``docs/adr/0002-fail-closed.md``.
+These are how an *adapter* says it could not answer. What happens next is
+`application/routing.py`'s business, and it is not what you would guess: a
+proposer's failure does not become a failed request.
+
+``docs/adr/0002-fail-closed.md`` settles it -- a failure "yields the most
+restrictive route available, not the most useful one". So a `ScanError` becomes
+a restriction and the prompt routes local, with a reason naming the scanner that
+broke. A broken scanner costs you the external route; it does not cost you your
+afternoon, and it never silently costs you your privacy.
+
+That is why a scanner must raise rather than return an empty sequence. At the
+call site "I found nothing" and "I broke" are indistinguishable, and only the
+first is safe -- so the port forbids the ambiguity and these types are how it is
+avoided.
 
 Messages carry rule ids, spans and types. They never carry a matched value: a
 router that prints the thing it was protecting has undone itself.
@@ -17,20 +27,37 @@ class IriguchiError(Exception):
 
 
 class RoutingError(IriguchiError):
-    """A route could not be decided, so nothing may be sent."""
+    """A proposer could not answer.
+
+    Not "no route was produced". `PromptRouter` catches these and produces a
+    decision anyway -- the most restrictive one available -- because a person
+    with a broken scanner should still be able to work locally. What must never
+    happen is the request going *out* while one of these is in flight, and the
+    use case is where that is arranged.
+    """
 
 
 class ScanError(RoutingError):
     """A sensitivity scanner failed.
 
-    This is deliberately a ``RoutingError``: a scanner that died has not
-    reported "nothing sensitive", it has reported nothing at all, and the two
-    are indistinguishable at the call site unless one of them raises.
+    A scanner that died has not reported "nothing sensitive", it has reported
+    nothing at all, and the two are indistinguishable at the call site unless
+    one of them raises. Raising is how a scanner says the difference.
+
+    The use case turns this into a restriction spanning the whole prompt, so the
+    route becomes local and the reason names the scanner.
     """
 
 
 class EstimationError(RoutingError):
-    """A complexity estimator failed."""
+    """A complexity estimator failed.
+
+    Less serious than a `ScanError`, and the difference is worth knowing: no
+    signals is already the lowest band, which routes local, so the safe answer
+    is the default here rather than something that has to be arranged. It is
+    still reported -- a decision that quietly lost an axis looks exactly like one
+    where that axis had no opinion.
+    """
 
 
 class ConfigurationError(IriguchiError):
