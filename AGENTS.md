@@ -338,6 +338,19 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   on the machine. Without that, `absent` was untestable on a developer's machine
   and `broken` untestable in CI — and four tests failed the first time the suite
   ran in a genuinely mamori-free environment.
+- **The seam job is the only place `tests/test_mamori_scanner.py` ever runs.**
+  Nothing else in CI installs mamori, so before that job existed those tests had
+  never executed anywhere but a developer's machine — including the run that
+  produced the numbers in `docs/measurements.md`. The absent side was covered by
+  two dedicated jobs and the present side by none.
+- **That job asserts mamori is importable before running anything**, because
+  every test in it skips when mamori is absent: a failed install would run zero
+  tests and report success. `continue-on-error` is on the two steps *after* that
+  assertion and never on the job. A sibling's release changing behaviour should
+  tell us rather than block a merge, but "we could not install the sibling" is a
+  different finding and must be red. **If a mamori release starts blocking work,
+  pin the checkout to a ref — do not widen the tolerance.**
+  `tests/test_ci_seam_job.py` enforces that split.
 - **v0.1 exit criterion:** on the corpus, leak rate is zero and route accuracy is
   measured and written down; a test proves no socket opens on any local route;
   the wheel installs with zero runtime dependencies.

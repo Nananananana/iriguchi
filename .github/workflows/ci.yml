@@ -91,6 +91,79 @@ jobs:
         env:
           PYTHONUTF8: "1"
 
+  seam:
+    name: the mamori seam
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # mamori is not on PyPI, so there is no `siblings` extra to install -- a
+      # manifest naming a package nobody can fetch is a broken install rather
+      # than an optional feature. The sibling comes from its own repository.
+      - uses: actions/checkout@v7
+        with:
+          repository: Nananananana/mamori
+          path: .sibling-mamori
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install both
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip install -e ./.sibling-mamori
+
+      # **The step that stops this job from being decoration.** Everything in
+      # tests/test_mamori_scanner.py is gated on mamori being importable, so a
+      # job where the install quietly failed runs zero tests and reports green.
+      # That is the shape this file has spent the day removing, and a sibling
+      # job is the easiest place to reintroduce it.
+      #
+      # `mamori_state()` distinguishes absent from broken, so the failure says
+      # which happened.
+      - name: The sibling has to actually be there
+        run: |
+          python -c "
+          from iriguchi.infrastructure.scanners.mamori_scanner import SiblingState, mamori_state
+          state, detail = mamori_state()
+          assert state is SiblingState.AVAILABLE, (
+              f'this job exists to run the seam tests and mamori is {state.value}. '
+              f'{detail} Every test it was meant to run would have skipped, and '
+              'this job would have reported success.')
+          import mamori; print('mamori', mamori.__version__)
+          "
+        env:
+          PYTHONUTF8: "1"
+
+      # Only *these* steps tolerate failure, and the split is the point.
+      #
+      # A sibling's release changing behaviour should tell us rather than block
+      # an unrelated merge -- tsumugi's reasoning, and it is right. But applying
+      # that to the whole job is what let tsumugi's equivalent fail to install
+      # mamori and stay green: setup failing means the job proved nothing, which
+      # is not the same finding as the seam having moved.
+      #
+      # So: setup is red, the seam is an annotation. If a mamori release starts
+      # blocking work here, pin the checkout above to a ref -- do not widen this.
+      - name: The seam
+        continue-on-error: true
+        run: python -m pytest tests/test_mamori_scanner.py -q
+        env:
+          PYTHONUTF8: "1"
+
+      # The numbers in docs/measurements.md were taken on a developer's machine.
+      # This is where they become reproducible by somebody who is not that
+      # developer.
+      - name: What installing mamori buys, measured here
+        continue-on-error: true
+        run: |
+          iriguchi --local --external eval
+          iriguchi --local --external --scanner mamori eval
+        env:
+          PYTHONUTF8: "1"
+
   lint:
     name: lint, types and layering
     runs-on: ubuntu-latest
