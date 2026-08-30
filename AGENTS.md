@@ -173,6 +173,20 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   keeps the refusal visible. **The complexity axis is the weaker of the two by
   construction**, which is affordable only because it chooses between
   destinations that are already safe.
+- **`ports/` holds two protocols, not the six the design names.** A port is written
+  when something implements it and something calls it; the rest wait for the
+  version that gives them an adapter (ADR-0011). The set of destinations a
+  machine has is **configuration in v0.1, not a probe** — `route --dry-run` is
+  told what is available and does not go and look, which is what lets the whole
+  of v0.1 run with the network poisoned.
+- `tests/contracts.py` holds a conformance suite per port. Its clauses are mistakes
+  somebody has made, not a restatement of the protocol, and `tests/test_port_contracts.py`
+  runs each clause against something built to break it — a suite nobody has seen
+  fail might be checking nothing. **The offsets clause states what it misses**: a
+  bounds check catches normalization that expands (`㍿` → four characters) and
+  cannot catch normalization that contracts (`e` + U+0301 → one), because a wrong
+  span is then still in bounds. No generic clause can; an adapter's own test has
+  to assert on the value under the span.
 - **Next, per `docs/proposals/0001-the-design.md` section 8:** six ports with
   conformance suites, the over-detecting fallback scanner, the rules complexity
   estimator, the CLI (`route`, `explain`, `config`, `doctor`, `eval`, `demo`),

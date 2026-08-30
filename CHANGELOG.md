@@ -28,5 +28,9 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   domain may import the standard library and nothing else.
 - `tests/conftest.py`: the network, poisoned for the whole suite. The import
   contracts prove nothing imports a socket; this proves nothing calls one.
+- `ports/`: `SensitivityScanner` and `ComplexityEstimator`, with conformance
+  suites in `tests/contracts.py` that an adapter inherits by subclassing.
+- ADR-0011: a port arrives with its adapter. The design names six; two have
+  both halves in v0.1, and the rest wait for the version that implements them.
 
 The first release will be `0.1.0`.
