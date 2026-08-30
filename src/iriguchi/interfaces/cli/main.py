@@ -26,7 +26,11 @@ from ...domain.destination import Destination, Route
 from ...errors import IriguchiError
 from ...evaluation.dataset import load_corpus
 from ...evaluation.scoring import run as run_evaluation
-from ...infrastructure.scanners.mamori_scanner import mamori_is_available
+from ...infrastructure.scanners.mamori_scanner import (
+    SiblingState,
+    mamori_is_available,
+    mamori_state,
+)
 from .render import render_decision
 
 __all__ = ["main"]
@@ -162,6 +166,12 @@ def cmd_doctor(config: IriguchiConfig, out: TextIO) -> int:
             "note: mamori is installed and not being used. The built-in fallback "
             "misses names without an honorific, English names, company names and "
             "addresses entirely. Pass --scanner mamori."
+        )
+    elif mamori_state()[0] is SiblingState.BROKEN:
+        lines.append(
+            f"warning: mamori is installed and will not import ({mamori_state()[1]}). "
+            "That is not the same as it being absent, and telling you to install it "
+            "would send you to fix the wrong thing. iriguchi is using the fallback."
         )
     else:
         lines.append(

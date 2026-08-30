@@ -322,6 +322,22 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   says about a document, because mamori never describes what a document is *for*.
   The test is not "does this field hold a value" but **"would this be safe to
   write down as: this person asked about X"**.
+- **Absent is not broken**, and a boolean cannot tell them apart.
+  `mamori_state()` returns `ABSENT` / `BROKEN` / `AVAILABLE`. `doctor` may ask a
+  boolean — it wants to know whether mamori can be *used* — but **a test gate
+  never may**: it has to skip on absent and **fail** on broken. Gated on the
+  boolean, `tests/test_mamori_scanner.py` disappeared entirely when mamori was
+  installed and unimportable, and the build went green at the moment the only
+  check of that boundary stopped running. akashi found the same shape in its
+  drift check, swallowing an `HTTPError` as a connection failure.
+- The same conflation produced two wrong messages, both the `policy.prefer-local`
+  mistake again: `config` and the constructor said **"mamori is not installed"**
+  to somebody whose install was broken, sending them to fix the wrong thing.
+- `ImportBlocker` in `tests/test_mamori_absent.py` patches `find_spec` in **both**
+  directions, so `absent` and `broken` are both testable whether or not mamori is
+  on the machine. Without that, `absent` was untestable on a developer's machine
+  and `broken` untestable in CI — and four tests failed the first time the suite
+  ran in a genuinely mamori-free environment.
 - **v0.1 exit criterion:** on the corpus, leak rate is zero and route accuracy is
   measured and written down; a test proves no socket opens on any local route;
   the wheel installs with zero runtime dependencies.
