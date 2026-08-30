@@ -8,7 +8,7 @@ What is *intended* next, and why, is in
 [docs/proposals](../proposals/0001-the-design.md) instead: ADRs record decisions
 already made, and a plan is neither.
 
-These ten were written before the first line of code. That is legitimate — a
+The first ten were written before the first line of code. That is legitimate — a
 decision that has been made can be recorded whether or not it has been
 implemented — and it is the reason the first commit can be reviewed at all. What
 is *not* legitimate, and is why there is no `architecture.md` yet, is a
@@ -26,3 +26,4 @@ current-state document for code that does not exist.
 | [0008](0008-the-invariant-is-the-warm-path.md) | The performance invariant is the warm path, measured |
 | [0009](0009-tsumugi-is-read-as-json.md) | tsumugi is read as JSON, and never imported |
 | [0010](0010-the-layering-is-a-test.md) | The layering is a test |
+| [0011](0011-a-port-arrives-with-its-adapter.md) | A port arrives with its adapter |
