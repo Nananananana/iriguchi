@@ -210,6 +210,26 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   one character at a time. Full-width folds, so `ｔａｎａｋａ＠…` is found; a
   combining mark does *not* compose, so those offsets stay one-to-one. The cost
   is that a pattern written against composed `café` misses the decomposed form.
+- The rules estimator is **the weaker of the two axes by construction**, and its
+  module docstring says so first rather than last. Semantic features dominate
+  difficulty prediction and they need a model, which ADR-0004 refuses in the
+  deciding path — so this is built from the complementary half alone. Affordable
+  only because complexity chooses between destinations sensitivity already
+  cleared.
+- **Escalating weights are 0.45 for a reason.** One reaches the middle band; two
+  combine to 1 - 0.55² = 0.6975, *under* the 0.7 threshold, so the short-circuit
+  is what carries them to the top. Raising those weights until the score reaches
+  the band on its own would make the short-circuit untestable decoration, and a
+  test asserts the gap.
+- Two rules exist for the ADR-0007 traps and should be read as a pair:
+  `long-input`'s weight is deliberately too small to reach the top band alone
+  (*long and easy* — a pasted log), and the escalating families exist because
+  nothing lexical sees *short and hard* (eleven characters asking for a proof).
+- `dense-vocabulary` is the weakest rule in the project and is documented as a
+  proxy: real rare-word rate needs a frequency list, and a wordlist is a
+  dependency in everything but the packaging. It counts **ASCII** tokens, so it
+  is blind to Japanese technical prose; `mixed-script` is what notices that, and
+  only when English terms are mixed in.
 - **Next, per `docs/proposals/0001-the-design.md` section 8:** six ports with
   conformance suites, the over-detecting fallback scanner, the rules complexity
   estimator, the CLI (`route`, `explain`, `config`, `doctor`, `eval`, `demo`),
