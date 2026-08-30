@@ -61,7 +61,10 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   opt-in via `--scanner mamori`, optional at runtime. It closes the fallback's
   largest gaps — a name with no honorific, an English name, a company — and
   carries no preview, confidence or detector name into a `Finding`.
-- ADR-0012: a decision inherits the classification of the prompt it describes.
+- ADR-0012: a decision inherits the classification of the prompt it describes,
+  amended once — the prohibitions were borrowed from mamori's ADR-0032 and were
+  incomplete here, because a rule id names a topic and mamori's records never
+  describe what a document is for.
 - `docs/measurements.md`: what installing mamori buys, what that measurement
   does not say, and what iriguchi is *not* measured against (RouterBench and
   LLMRouterBench measure cost against quality; this measures whether

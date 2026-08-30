@@ -315,6 +315,13 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   conformance suites, the over-detecting fallback scanner, the rules complexity
   estimator, the CLI (`route`, `explain`, `config`, `doctor`, `eval`, `demo`),
   and the evaluation corpus with `tools/generate_cases.py`.
+- **A rule id is a topic**, which is ADR-0012's amendment and the part most
+  likely to be missed. `complexity.formal-reasoning` fires on a closed set of
+  markers, so naming it says the prompt asked for a proof; three signals sketch
+  the request. No value is quoted and it is still more than mamori's record ever
+  says about a document, because mamori never describes what a document is *for*.
+  The test is not "does this field hold a value" but **"would this be safe to
+  write down as: this person asked about X"**.
 - **v0.1 exit criterion:** on the corpus, leak rate is zero and route accuracy is
   measured and written down; a test proves no socket opens on any local route;
   the wheel installs with zero runtime dependencies.

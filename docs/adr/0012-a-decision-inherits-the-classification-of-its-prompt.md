@@ -1,6 +1,8 @@
 # 12. A decision inherits the classification of the prompt it describes
 
-**Status:** accepted
+**Status:** accepted. One section below is an amendment: the list of
+prohibitions was borrowed from mamori's ADR-0032 and was incomplete for this
+domain, which that ADR's own amendment predicted.
 
 ## Context
 
@@ -77,6 +79,58 @@ There is no `--log-file`, and the absence is deliberate rather than unfinished.
 An operator who wants one is asking for the artifact this ADR exists to prevent,
 and the honest answer is that the thing they want to keep is the thing they
 should not.
+
+## Amended: the borrowed list was not exhaustive here
+
+mamori amended ADR-0032 while implementing it, and added a warning aimed at
+anybody borrowing its reasoning — which is what this ADR did:
+
+> So: borrow the test, and re-derive the prohibitions. Carrying this list across
+> unexamined would give a domain with dead records a rule harsher than its own
+> reasoning supports — and, worse, might let a domain with live ones think the
+> list is exhaustive when its own derivation would have found more.
+
+iriguchi is a domain with live records: the prompt still exists, or existed
+until the person deleted it. So the second half applies, and re-deriving finds a
+category mamori's list could not have contained.
+
+**A decision discloses what the prompt was about.** mamori's record says which
+*kinds of value* a document held. iriguchi's says that too, and then says what
+the request was *for*:
+
+```
+  signals
+    complexity.multi-step               weight 0.45  escalating
+    complexity.mixed-script             weight 0.20
+    complexity.formal-reasoning         weight 0.45  escalating
+```
+
+Each of those names a closed set of markers. `complexity.formal-reasoning` fires
+on `証明`, `補題`, `計算量`, `prove`, `theorem`, `algorithm` and eleven others;
+`complexity.write-code` on `実装`, `バグ`, `refactor`, `debug`. A rule id is
+therefore a statement about subject matter, and three of them together sketch
+the request: *somebody was debugging code and asked for a proof about an
+algorithm's complexity.*
+
+No value is quoted. No offset points at anything sensitive. And it is still more
+than mamori's record would ever say about a document, because mamori never
+describes what a document is *for*.
+
+Nothing in the decision above changes: the route was already that a decision is
+classified as highly as its prompt, and a thing that never travels cannot
+disclose a topic either. What changes is **the list somebody will check against**
+when they next argue for an audit trail. Given the original list — values,
+offsets, lengths, previews, confidences — they would find none of them present,
+conclude the record was safe, and ship a log of what every prompt a person typed
+was about. That log would satisfy every prohibition written here before this
+amendment.
+
+So the prohibition is stated in the form the derivation actually yields, rather
+than as a list of fields:
+
+> **A `Reason` names a rule, and a rule id is a topic.** Anything that would not
+> be safe to write down as "this person asked about X" is not made safe by the
+> absence of a value.
 
 ## What it costs
 
