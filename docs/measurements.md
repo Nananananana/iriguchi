@@ -196,19 +196,52 @@ being scored against the corpus it was developed with. What the borrowed half
 honestly shows is that the fallback is far worse than mamori *at mamori's own
 task*; it shows nothing about either on a stranger's prompts.
 
-The generated half is the only unseen data here and it has **six**
+The generated half is the only data *mamori* has not seen, and it has **six**
 must-stay-local cases, which is too few to support any miss rate at all. Both
 scanners score 0% on it, and that is a statement about the sample size.
 
 The one number that survives both objections is the direction of the
 over-detection trade, because it runs the same way on both halves: mamori finds
-more and holds back more. On the unseen half it holds back *less* than the
-fallback (6.7% against 20.0%), which is the opposite of the borrowed half and is
-also six cases' worth of evidence.
+more and holds back more. On that half it holds back *less* than the fallback
+(6.7% against 20.0%), which is the opposite of the borrowed half and is also six
+cases' worth of evidence.
 
-**The work this asks for** is more generated must-stay-local cases — the half of
-the corpus that no sibling has seen. That is the measurement that would make any
-of these numbers portable, and it does not exist yet.
+### Corrected: no part of this corpus is independent evidence about iriguchi
+
+This section previously said the work to commission was *more generated
+must-stay-local cases — the half of the corpus that no sibling has seen*, and
+that doing so would make these numbers portable. **The second half of that was
+wrong**, and it was wrong in the way this project keeps finding: a provenance
+label that reads as independence and is not.
+
+Two corrections, both from a cross-repository review:
+
+**Generating does not launder provenance. The generator is a hand.**
+`tools/generate_cases.py` was written by whoever writes iriguchi's rules, while
+looking at them. Twenty-one such cases or two hundred, they measure whether the
+rules do what their author intended — which is worth having as a regression
+floor and is not evidence about anybody else's prompts. "mamori has not seen
+them" and "they are independent of iriguchi" are different claims, and only the
+first is true.
+
+**Independence is a relation, not an attribute.** `Case.source` records who
+wrote a case, and that is necessary and not sufficient. The question is not
+*"did the scorer write this"* but *"could whoever wrote it see the rules being
+scored"* — and these six libraries share their design discussion, so a corpus
+borrowed from a sibling fails that test too. Not having written something is not
+the same as not having seen it.
+
+So, plainly: **the generated half is authored by iriguchi and the borrowed half
+by a sibling that can read iriguchi's ADRs. Neither is independent of what it is
+scoring.** Every figure in this document is a regression floor — a number that
+has not been allowed to get worse — and not a measured property of the world.
+mamori reached the same conclusion about its own leak rate.
+
+**What would actually be portable** is cases whose *text* was written by somebody
+who could not see these rules, with the labels applied here afterwards. Splitting
+the two hands is the point: text from elsewhere and labels from us is the
+cheapest arrangement that stops a corpus measuring its author's imagination. It
+does not exist, and no amount of generating will produce it.
 
 ## What this is not measured against
 
@@ -246,6 +279,11 @@ real with prompts where sensitivity had already settled it.
   and not enough to claim a false-positive rate. The number that would be a
   claim is the over-caution rate on the evaluation corpus, and that measurement
   does not exist yet.
+- **No part of the corpus is independent of what it scores.** The 21 generated
+  cases were written by iriguchi's author using iriguchi's rules; the 134
+  borrowed ones by a sibling that can read those rules. Every figure here is a
+  regression floor rather than a measured property of the world. See the
+  correction above.
 - The corpus is 155 cases, generated from templates and borrowed from a sibling.
   It says whether the rules do what the rules intend, **not** whether real
   prompts look like the templates, and it cannot tell you the miss rate on a
