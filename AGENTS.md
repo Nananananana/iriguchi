@@ -230,6 +230,24 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   dependency in everything but the packaging. It counts **ASCII** tokens, so it
   is blind to Japanese technical prose; `mixed-script` is what notices that, and
   only when English terms are mixed in.
+- **A proposer's failure is not a failed request.** `application/routing.py`
+  catches a `ScanError` and turns it into a restriction spanning the whole
+  prompt, so the route becomes local and a reason names the scanner that broke
+  (ADR-0002: *the most restrictive route available, not the most useful one*). A
+  broken scanner costs the external route, not the afternoon. It also catches
+  non-`ScanError` exceptions broadly and deliberately — the alternative is that a
+  `KeyError` in somebody's rule table becomes a leak.
+- An estimator failure is reported too, though nothing dangerous follows from
+  it: no signals is already the lowest band. Reported because a decision that
+  quietly lost an axis looks exactly like one where that axis had no opinion.
+- **The one failure nothing can catch** is a scanner that returns `()` while
+  lying. `TestTheOneItCannotCatch` shows that prompt going out. That is not a
+  defect in the use case — it is the consequence the port's raise-don't-return
+  rule exists to prevent, kept as a test so anybody tempted to relax the rule can
+  see what it buys.
+- `Reason.sort_key` orders spanless reasons before spanned ones, and within each
+  group by source then rule. **There is no notion of importance**, deliberately:
+  ordering by importance is a presentation decision and belongs to `--explain`.
 - **Next, per `docs/proposals/0001-the-design.md` section 8:** six ports with
   conformance suites, the over-detecting fallback scanner, the rules complexity
   estimator, the CLI (`route`, `explain`, `config`, `doctor`, `eval`, `demo`),

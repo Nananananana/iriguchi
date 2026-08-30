@@ -42,5 +42,8 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   across the two feature families it is allowed to use, three of them
   escalating, and a docstring that states plainly why this axis is the weaker
   of the two.
+- `application/routing.py`: `PromptRouter`, which asks both proposers and then
+  the policy. A proposer that fails produces a decision anyway — the most
+  restrictive one available — with a reason naming what broke.
 
 The first release will be `0.1.0`.
