@@ -187,6 +187,29 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   cannot catch normalization that contracts (`e` + U+0301 → one), because a wrong
   span is then still in bounds. No generic clause can; an adapter's own test has
   to assert on the value under the span.
+- **The fallback scanner is specified over-detection, not tolerated over-detection**
+  (ADR-0005). `tests/test_fallback_scanner.py` has three sections and the third
+  matters most: *what it catches*, *what it also catches* — order numbers, epoch
+  timestamps, a title swept up with a name — and *what it misses*. A test in the
+  last section starting to pass is good news; move it upstairs rather than
+  deleting it. The largest gap is a Japanese name with no honorific.
+- The scanner's stoplist (`お母さん`, `皆さん`, …) is what keeps the external
+  route reachable at all. It is permanently incomplete and does not need to be —
+  everything it misses is an over-detection. **The honorific rule's run is lazy**
+  and that is not a style choice: greedy, it matches `皆さんお疲れ様` in
+  `皆さんお疲れ様です`, which is neither stoplist entry, so the stoplist silently
+  protects nothing.
+- **Entropy thresholds are measured** (`docs/measurements.md`,
+  `tools/measure_entropy.py`): 4.5 bits for the base64-ish charset, 3.0 for hex
+  because hex tops out at 4.0, and **digits excluded entirely** because ten
+  symbols cap them at 3.32 and no threshold separates a card number from an order
+  number. Entropy also cannot reach a short structured key — `AKIA…` measures
+  3.68, below a documentation URL — so the vendor-prefix rule is the half that
+  catches those, not an optimisation on top.
+- **Normalization keeps an offset map** (`infrastructure/normalization.py`), folding
+  one character at a time. Full-width folds, so `ｔａｎａｋａ＠…` is found; a
+  combining mark does *not* compose, so those offsets stay one-to-one. The cost
+  is that a pattern written against composed `café` misses the decomposed form.
 - **Next, per `docs/proposals/0001-the-design.md` section 8:** six ports with
   conformance suites, the over-detecting fallback scanner, the rules complexity
   estimator, the CLI (`route`, `explain`, `config`, `doctor`, `eval`, `demo`),

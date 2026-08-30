@@ -61,6 +61,50 @@ of every figure above (`.pth` files run an import hook at startup). Worth knowin
 when reading a stopwatch during development; not a property of the shipped
 thing.
 
+## Shannon entropy, and where the thresholds came from
+
+`tools/measure_entropy.py`. Every value is invented -- a real key in a file that
+measures entropy would be a poor joke.
+
+| | length | entropy | charset | entropy rule fires |
+|---|---|---|---|---|
+| an `sk-` style key | 32 | **4.81** | mixed | yes |
+| a base64 blob | 48 | **4.68** | mixed | yes |
+| a sha256 hex digest | 64 | **3.67** | hex | yes |
+| a documentation URL | 47 | 4.14 | mixed | no |
+| a source file path | 48 | 3.99 | mixed | no |
+| run-together English | 31 | 3.72 | mixed | no |
+| a long English word | 20 | 2.95 | mixed | no |
+| a repeated character | 30 | 0.00 | hex | no |
+| an AWS-style key id | 20 | 3.68 | mixed | no |
+| an order number | 19 | 3.28 | mixed | no |
+| a card-shaped digit run | 16 | 0.34 | digits | no |
+| a uuid | 36 | 3.88 | mixed | no |
+
+Four things follow, and all four are in the code as comments:
+
+**4.5 bits for the base64-ish charset.** It is detect-secrets' default and the
+measurement agrees with it *here*: it sits above the documentation URL (4.14) and
+below both real secrets (4.68, 4.81). Note how little room that is. A threshold
+chosen for a 0.5-bit gap is not a robust threshold, which is why the rule also
+carries a length floor and why it is one rule among several rather than the
+detector.
+
+**Hex needs its own threshold, and it has to be lower.** A hex string cannot
+exceed 4.0 bits per character by construction, and a real sha256 measures 3.67 --
+so a 4.5 threshold would never fire on hex at all. It is 3.0.
+
+**Digits are excluded from the entropy rule entirely.** Ten symbols cap the
+entropy at log2(10) = 3.32, so any threshold low enough to catch a numeric secret
+catches every order number and epoch timestamp. detect-secrets reached the same
+conclusion. The over-detection is real and it belongs to the digit-run rule,
+which admits to it in its own comment rather than hiding inside a statistic.
+
+**Entropy misses short structured keys.** `AKIAIOSFODNN7EXAMPLE` measures 3.68 --
+*below the documentation URL* -- and 4.5 bits is mathematically unreachable under
+23 characters anyway. Format-aware prefixes are not an optimisation on top of
+entropy; they are the half that catches these at all.
+
 ## What these numbers do not say
 
 - One machine, one OS, two interpreter builds. Linux and macOS will differ,
@@ -72,8 +116,13 @@ thing.
   on an already-resident process — which is the number ADR-0008 makes the
   invariant. That measurement does not exist yet because the resident process
   does not exist yet.
-- Nothing here measures iriguchi. There is no iriguchi yet. Every figure is the
-  floor underneath it.
+- The entropy table is twelve hand-picked tokens, not a corpus. It says the
+  thresholds separate *these* twelve, which is enough to choose a starting value
+  and not enough to claim a false-positive rate. The number that would be a
+  claim is the over-caution rate on the evaluation corpus, and that measurement
+  does not exist yet.
+- The startup and memory figures do not measure iriguchi. They are the floor
+  underneath it.
 
 ## The probes
 
@@ -81,6 +130,8 @@ thing.
   stages. Windows only, deliberately: it is the platform these numbers are from,
   and a cross-platform abstraction would hide which one you are reading.
 - `tools/measure_startup.py` — subprocess round trip, seven runs, min and median.
+- `tools/measure_entropy.py` — Shannon entropy and the rule's verdict, over
+  twelve invented tokens.
 
 Both are committed, because a measurement whose script is not committed is an
 anecdote.

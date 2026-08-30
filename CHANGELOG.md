@@ -32,5 +32,11 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   suites in `tests/contracts.py` that an adapter inherits by subclassing.
 - ADR-0011: a port arrives with its adapter. The design names six; two have
   both halves in v0.1, and the rest wait for the version that implements them.
+- `infrastructure/normalization.py`: NFKC folding that keeps a map back to the
+  original offsets, so a scanner can match `ｔａｎａｋａ＠ｅｘａｍｐｌｅ．ｃｏｍ`
+  and still report spans into the text as given.
+- `infrastructure/scanners/`: the built-in fallback scanner and the entropy
+  rule behind one of its findings. Eight rules, each documenting which way it
+  leans and what it also fires on; thresholds measured rather than chosen.
 
 The first release will be `0.1.0`.
