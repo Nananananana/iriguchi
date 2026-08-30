@@ -21,12 +21,38 @@ from iriguchi.domain.sensitivity import Sensitivity, SensitivityLevel
 from iriguchi.errors import ScanError
 from iriguchi.infrastructure.estimators.rules import RulesEstimator
 from iriguchi.infrastructure.scanners.fallback import FallbackScanner
-from iriguchi.infrastructure.scanners.mamori_scanner import MamoriScanner, mamori_is_available
+from iriguchi.infrastructure.scanners.mamori_scanner import (
+    MamoriScanner,
+    SiblingState,
+    mamori_state,
+)
 from iriguchi.ports.scanner import SensitivityScanner
 
+_STATE, _DETAIL = mamori_state()
+
+#: **Skip on absent, never on broken.** The gate used to be
+#: `not mamori_is_available()`, which is true in both cases -- so a mamori that
+#: was installed and would not import made this entire file disappear and the
+#: build go green. This is the only place the mamori boundary is checked, and it
+#: went quiet exactly when the boundary had moved.
 pytestmark = pytest.mark.skipif(
-    not mamori_is_available(), reason="mamori is not installed; the seam has one side"
+    _STATE is SiblingState.ABSENT, reason="mamori is not installed; the seam has one side"
 )
+
+
+def test_mamori_is_installed_and_importable() -> None:
+    """A broken sibling is a finding, not a skip.
+
+    Runs whenever mamori is installed at all, so the difference between "absent"
+    and "cannot be imported" produces a failure with a reason rather than an
+    empty test run.
+    """
+    assert _STATE is SiblingState.AVAILABLE, (
+        f"mamori is installed and will not import: {_DETAIL}. Every test below would "
+        "otherwise have been skipped, and this file is the only place the mamori "
+        "boundary is checked."
+    )
+
 
 BOTH = frozenset(Destination)
 

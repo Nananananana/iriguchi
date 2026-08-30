@@ -65,6 +65,10 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   amended once — the prohibitions were borrowed from mamori's ADR-0032 and were
   incomplete here, because a rule id names a topic and mamori's records never
   describe what a document is for.
+- `mamori_state()` replaces a boolean that conflated "mamori is absent" with
+  "mamori is installed and will not import". The seam test suite now skips on
+  the first and fails on the second; `config`, `doctor` and the constructor no
+  longer tell somebody with a broken install to install what they have.
 - `docs/measurements.md`: what installing mamori buys, what that measurement
   does not say, and what iriguchi is *not* measured against (RouterBench and
   LLMRouterBench measure cost against quality; this measures whether

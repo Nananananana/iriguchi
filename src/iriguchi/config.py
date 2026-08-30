@@ -27,7 +27,11 @@ from .domain.destination import Destination
 from .errors import ConfigurationError
 from .infrastructure.estimators.rules import RulesEstimator
 from .infrastructure.scanners.fallback import FallbackScanner
-from .infrastructure.scanners.mamori_scanner import MamoriScanner, mamori_is_available
+from .infrastructure.scanners.mamori_scanner import (
+    MamoriScanner,
+    SiblingState,
+    mamori_state,
+)
 
 __all__ = ["ENV_PREFIX", "IriguchiConfig"]
 
@@ -126,10 +130,17 @@ class IriguchiConfig:
         A report rather than a dump. Somebody reading it should be able to
         answer "can anything leave this machine" without knowing the codebase.
         """
+        # Three states, not two. `mamori_is_available()` is false both when
+        # mamori is absent and when it is installed and will not import, and
+        # printing "not installed" for the second tells somebody to install what
+        # they already have. Same defect as `policy.prefer-local` had: a wrong
+        # stated reason, sending the reader to fix the wrong thing.
         if self.use_mamori:
             scanner = "mamori"
-        elif mamori_is_available():
+        elif mamori_state()[0] is SiblingState.AVAILABLE:
             scanner = "built-in fallback (mamori is installed but not selected)"
+        elif mamori_state()[0] is SiblingState.BROKEN:
+            scanner = "built-in fallback (mamori is installed and will not import)"
         else:
             scanner = "built-in fallback (mamori is not installed)"
 

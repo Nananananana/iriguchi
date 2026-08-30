@@ -36,13 +36,40 @@ long-lived store belonging to a routing decision that may end in a refusal.
 
 from __future__ import annotations
 
+import importlib.util
 from collections.abc import Sequence
+from enum import Enum
 
 from ...domain.sensitivity import Finding
 from ...domain.span import Span
 from ...errors import ScanError
 
-__all__ = ["MamoriScanner", "mamori_is_available"]
+__all__ = ["MamoriScanner", "SiblingState", "mamori_is_available", "mamori_state"]
+
+
+class SiblingState(Enum):
+    """Three states, because two of them mean opposite things to a test.
+
+    `mamori_is_available()` used to answer this with a boolean, and the boolean
+    conflated the first two. Both raise `ImportError`; only one of them is
+    somebody's ordinary configuration.
+
+    The failure that shape produces is silence. A test suite gated on "is it
+    available" skips its entire sibling seam when the sibling is *broken*, and
+    reports green -- so the one place that checks the seam goes quiet exactly
+    when the seam has moved. akashi found this class of bug in its own drift
+    check, where an `HTTPError` was being swallowed as a connection failure and
+    a 404 passed as "cannot reach".
+    """
+
+    #: Not installed. iriguchi is designed to work like this, and a test that
+    #: needs the seam should skip.
+    ABSENT = "absent"
+    #: Installed, and importing it fails. **A finding, never a skip.** Something
+    #: is wrong with an environment somebody meant to have working.
+    BROKEN = "broken"
+    AVAILABLE = "available"
+
 
 #: What to tell somebody who has not installed it. Not on PyPI yet, so the
 #: instruction is a checkout rather than a package name.
@@ -54,17 +81,37 @@ _MISSING = (
 )
 
 
+def mamori_state() -> tuple[SiblingState, str]:
+    """Which of the three, and the detail when there is one.
+
+    `find_spec` answers "is it installed" without running the package, so the
+    two `ImportError` cases separate. It can raise on its own account -- a
+    broken path entry, a finder that objects -- and that is not absence either.
+    """
+    try:
+        installed = importlib.util.find_spec("mamori") is not None
+    except (ImportError, ValueError) as failure:
+        return SiblingState.BROKEN, f"looking for mamori failed: {failure}"
+
+    if not installed:
+        return SiblingState.ABSENT, ""
+
+    try:
+        import mamori  # noqa: F401
+    except Exception as failure:
+        return SiblingState.BROKEN, f"{type(failure).__name__}: {failure}"
+    return SiblingState.AVAILABLE, ""
+
+
 def mamori_is_available() -> bool:
     """Whether the adapter can be constructed.
 
-    Used by `iriguchi doctor`, which has to be able to say mamori is absent
-    without that being an error.
+    What `iriguchi doctor` asks, and a boolean is the right answer to *that*
+    question -- an environment where mamori is broken can no more use it than
+    one where mamori is absent. Anything that needs to tell the two apart wants
+    `mamori_state()`, and a test gate always does.
     """
-    try:
-        import mamori  # noqa: F401
-    except ImportError:
-        return False
-    return True
+    return mamori_state()[0] is SiblingState.AVAILABLE
 
 
 class MamoriScanner:
@@ -73,10 +120,21 @@ class MamoriScanner:
     name = "mamori"
 
     def __init__(self) -> None:
-        try:
-            from mamori import PrivacyPolicy
-        except ImportError as missing:  # pragma: no cover -- needs mamori absent
-            raise ScanError(_MISSING) from missing
+        state, detail = mamori_state()
+        if state is SiblingState.ABSENT:
+            raise ScanError(_MISSING)
+        if state is SiblingState.BROKEN:
+            # Telling somebody to install what they already have is the
+            # `policy.prefer-local` mistake again: a wrong stated reason reads
+            # as authoritative, and sends them to fix the wrong thing.
+            raise ScanError(
+                f"mamori is installed and cannot be imported ({detail}). This is not "
+                "the same as it being absent -- something is wrong with an environment "
+                "you meant to have working, so iriguchi is refusing rather than "
+                "quietly using the fallback."
+            )
+
+        from mamori import PrivacyPolicy
 
         # Permissive so that a credential is *reported* rather than refused.
         # mamori's default policy blocks it, and a block here would become "the
