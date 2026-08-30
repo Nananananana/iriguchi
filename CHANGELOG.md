@@ -65,6 +65,11 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   amended once — the prohibitions were borrowed from mamori's ADR-0032 and were
   incomplete here, because a rule id names a topic and mamori's records never
   describe what a document is for.
+- `ports/channel.py` and `infrastructure/channels/`: the escalation channel.
+  `iriguchi route --explain` on an outbound route now shows the protected text
+  that would leave, and reports anything mamori caught that the scanner missed.
+  It protects; it does not send.
+- ADR-0013: iriguchi reads a protection record and keeps none.
 - CI runs `lint-imports` rather than `python -m importlinter.cli`, which
   printed nothing and exited 0 whatever the contracts said. The six import
   contracts had never been enforced in CI.

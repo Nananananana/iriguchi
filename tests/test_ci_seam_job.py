@@ -53,7 +53,28 @@ def test_the_seam_job_exists(seam: list[str]) -> None:
     """Removing it would make every claim about the mamori seam untested in CI
     again, which is the state this job was added to leave."""
     assert seam
-    assert any("test_mamori_scanner.py" in line for line in seam)
+    assert any("pytest" in line for line in seam)
+
+
+def test_it_runs_the_whole_suite_rather_than_named_files(seam: list[str]) -> None:
+    """A step that enumerates files drifts the moment a file is added.
+
+    This job first ran `tests/test_mamori_scanner.py`, the only mamori-gated
+    file at the time. `tests/test_escalation_channel.py` then arrived, skipped
+    everywhere else, and ran nowhere at all -- the silence this job exists to
+    remove, reintroduced by the fix for it.
+
+    The other jobs run this suite without mamori and this one runs it with. The
+    difference between them is the seam, and nothing has to be kept in step.
+    """
+    runs = [line for line in seam if "pytest" in line and "#" not in line]
+    assert runs, "the seam job must run the tests"
+    named = [line for line in runs if "tests/" in line or "tests\\" in line]
+    assert not named, (
+        f"{named} names files. Run the whole suite: this job's value is that it "
+        "runs with mamori present, and a list of files stops being complete the "
+        "first time somebody adds a mamori-gated test."
+    )
 
 
 def test_it_installs_mamori_from_a_checkout(seam: list[str]) -> None:

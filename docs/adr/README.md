@@ -28,3 +28,4 @@ current-state document for code that does not exist.
 | [0010](0010-the-layering-is-a-test.md) | The layering is a test |
 | [0011](0011-a-port-arrives-with-its-adapter.md) | A port arrives with its adapter |
 | [0012](0012-a-decision-inherits-the-classification-of-its-prompt.md) | A decision inherits the classification of the prompt it describes |
+| [0013](0013-iriguchi-reads-a-protection-record-and-keeps-none.md) | iriguchi reads a protection record and keeps none |

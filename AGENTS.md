@@ -146,7 +146,8 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
 
 ## Current state
 
-- Version `0.1.0.dev0`. **The domain exists; nothing above it does.**
+- Version `0.1.0.dev0`. v0.1 is built and headless; **v0.2's escalation channel
+  is in**, so `ESCALATED` is no longer a verdict with nothing behind it.
 - **License: Apache-2.0. Python: 3.12+. Runtime dependencies: 0**, checked in CI
   by installing without extras and asserting nothing came along.
 - **Built:** `domain/` — `Span`, `Destination`, `Route`, `Finding`,
@@ -342,6 +343,27 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   afterwards — the two hands split. **iriguchi has no scorer-side refusal**;
   mamori built one (`report.as_evidence_for(subject)`) and it is the shape to
   copy if this is ever enforced rather than documented.
+- **The escalation channel protects and does not send.** `prepare` returns what
+  *would* leave; handing it to anybody is a separate call this port does not
+  have, which is what lets `route --explain --dry-run` walk the outbound path.
+- **The protection record is read and never kept** (ADR-0013). Reading it does
+  one job: iriguchi only escalates when its own scanner said `CLEAR`, so anything
+  mamori protects on the way out is something the scanner **missed**, and that
+  becomes a `Reason` — a kind and a count, never a token, a scope or a policy
+  hash.
+- **Every disagreement with the contract is a refusal, never a partial read.** An
+  unrecognised `contract`; a `mode` of `surrogate` or `mixed` (iriguchi
+  understands `placeholder` only, and the schema requires such a consumer to
+  refuse); `reversible` false or absent. None of these degrades to sending
+  something less protected — there is no such path.
+- **mamori's own block is the last gate.** It refuses to protect a credential
+  rather than tokenising one, so a `PolicyViolationError` here means a scanner
+  already missed one. Going round it would send the thing two layers exist to
+  stop.
+- `config.channel()` exists for the same reason `config.router()` does: the
+  composition root is the one place allowed to name an adapter, and routing every
+  caller through it keeps `mamori-is-an-adapter` to **one** ignored edge instead
+  of one per caller.
 - **Next, per `docs/proposals/0001-the-design.md` section 8:** six ports with
   conformance suites, the over-detecting fallback scanner, the rules complexity
   estimator, the CLI (`route`, `explain`, `config`, `doctor`, `eval`, `demo`),

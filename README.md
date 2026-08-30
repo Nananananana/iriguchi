@@ -129,6 +129,35 @@ removed before difficulty was consulted, and there is no score in this system
 that difficulty could have out-voted. Note also that the reason names a *span*,
 `23-41`, and never the address.
 
+## What actually leaves
+
+With mamori installed, an outbound route can show you the text that would arrive
+— having sent nothing:
+
+```console
+$ iriguchi --local --external route --explain --dry-run     "田中と二つのアルゴリズムを比較して、計算量を証明してください。"
+
+  route        EXTERNAL   via mamori, protected on the way out
+  ...
+  would leave
+    <PERSON_001>と二つのアルゴリズムを比較して、計算量を証明してください。
+
+  and the scanner had missed
+    mamori-channel.protected-person   mamori protected 1 PERSON value(s) on the
+    way out, which the routing decision did not know about — the scanner that
+    cleared this prompt missed them.
+```
+
+That last section is the seam doing something neither library does alone. The
+built-in scanner **cannot find a name without an honorific** — its own largest
+documented gap — so it cleared this prompt and the router sent it. mamori caught
+the name on the way out, and the person is told the decision was made on less
+than the whole picture.
+
+Every refusal on that path leaves the prompt where it is. There is no
+configuration in which iriguchi sends something less protected instead
+([ADR-0013](docs/adr/0013-iriguchi-reads-a-protection-record-and-keeps-none.md)).
+
 ## What it scores
 
 ```console
@@ -182,7 +211,7 @@ arrives as a published JSON contract that iriguchi reads and never imports
 | | |
 |---|---|
 | **v0.1** ✅ | The router, headless. Domain, ports, fallback scanner, complexity estimator, CLI, evaluation corpus. No GUI, no network, no model. |
-| **v0.2** | The seams. mamori as scanner and as escalation channel; ollama as the local model; `iriguchi ask`. |
+| **v0.2** | The seams. mamori as scanner ✅ and as escalation channel ✅; ollama as the local model; `iriguchi ask`. |
 | **v0.3** | The shell. Tray residency, hotkey, popup — with measured performance floors on the warm path. |
 | **v0.4** | The Anchor Dashboard. Provenance from tsumugi and akashi, rendered — including what was left out. |
 | **v1.0** | Full-offline routing. No new intelligence. |
