@@ -1,0 +1,104 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "iriguchi"
+version = "0.1.0.dev0"
+description = "Local-first governance router for generative AI. Decide where each prompt is allowed to go -- locally, deterministically, and before anything leaves the machine."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Nananananana" }]
+keywords = ["llm", "routing", "privacy", "local-first", "slm", "governance", "japanese"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Natural Language :: Japanese",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Typing :: Typed",
+]
+
+# Zero. Not "few". See docs/adr/0001-the-domain-depends-on-nothing.md -- this
+# library sees every prompt a person types before anything else does, and every
+# runtime dependency is code with unsupervised read access to all of it.
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-cov",
+    "hypothesis>=6.90",
+    "ruff>=0.16",
+    "mypy>=1.10",
+    "import-linter>=2",
+    "pre-commit",
+]
+
+# There is deliberately no `siblings` extra yet. mamori is not on PyPI, so
+# declaring `mamori>=0.24` here makes the whole project unresolvable for
+# everyone -- a manifest that names a package nobody can fetch is a broken
+# install, not an optional feature. Until it is published, the seam is exercised
+# by installing it from a checkout:
+#
+#     uv pip install -e ../mamori
+#
+# The integration tests `importorskip` it, so its absence skips rather than
+# fails, and an import contract asserts nothing outside an adapter names it.
+
+[project.urls]
+Homepage = "https://github.com/Nananananana/iriguchi"
+Repository = "https://github.com/Nananananana/iriguchi"
+Issues = "https://github.com/Nananananana/iriguchi/issues"
+Changelog = "https://github.com/Nananananana/iriguchi/blob/main/CHANGELOG.md"
+
+# No [project.scripts] yet. The `iriguchi` console script is declared in v0.1,
+# alongside the CLI it would point at. An entry point to a module that does not
+# exist is a broken install that only fails when someone tries to use it.
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/iriguchi"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q -m 'not llm'"
+markers = [
+    # Tests that call a real local model. Excluded from CI, because a build
+    # that depends on a model having been pulled is a build that fails for
+    # reasons unrelated to the change. Run `pytest -m llm` before merging
+    # anything model-adjacent.
+    "llm: requires a running local model",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "C4", "S", "RUF"]
+ignore = [
+    "S101",   # assert: this is a test suite convention
+    # Full-width and CJK characters are the subject matter, not a typo. The
+    # complexity estimator reads script mix, and half the routing corpus is
+    # Japanese, so both forms appear in code, docstrings and fixtures on
+    # purpose.
+    "RUF001",
+    "RUF002",
+    "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S105", "S106", "S108"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["src/iriguchi"]
+strict = true
+warn_unreachable = true
+
+[tool.coverage.run]
+source = ["src/iriguchi"]

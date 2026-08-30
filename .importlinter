@@ -1,0 +1,96 @@
+[importlinter]
+include_external_packages = True
+root_packages =
+    iriguchi
+
+# The direction, asserted. The stdlib-only rule for the domain is a separate
+# check in tests/test_architecture.py, because import-linter cannot express
+# "everything except the standard library".
+[importlinter:contract:layers]
+name = Layer dependency direction
+type = layers
+layers =
+    iriguchi.interfaces
+    iriguchi.evaluation
+    iriguchi.application
+    iriguchi.infrastructure
+    iriguchi.ports
+    iriguchi.domain
+exhaustive = false
+
+[importlinter:contract:domain-purity]
+name = The domain layer knows nothing below it
+type = forbidden
+source_modules =
+    iriguchi.domain
+forbidden_modules =
+    iriguchi.ports
+    iriguchi.application
+    iriguchi.infrastructure
+    iriguchi.interfaces
+    iriguchi.evaluation
+
+# ADR-0001: the domain decides, and deciding needs no I/O. A domain that can
+# open a file can be given a different answer by whatever wrote the file.
+[importlinter:contract:domain-no-io]
+name = The domain layer does not touch the filesystem or the clock
+type = forbidden
+source_modules =
+    iriguchi.domain
+forbidden_modules =
+    pathlib
+    os
+    sqlite3
+    tomllib
+    argparse
+    subprocess
+
+# ADR-0004 and the promise the whole project rests on: a routing decision is
+# made before anything is sent, so the deciding path must have no way to send.
+#
+# Through v0.1 there is no outbound path at all, so this is stricter than the
+# eventual rule: nothing in the package may touch the network. When the first
+# networked adapter lands in v0.2, this splits into the per-package list ADR-0010
+# describes -- naming each permitted infrastructure package rather than excluding
+# the adapters, so that a new adapter has to be added here deliberately.
+[importlinter:contract:no-network]
+name = Nothing touches the network
+type = forbidden
+source_modules =
+    iriguchi.domain
+    iriguchi.ports
+    iriguchi.application
+    iriguchi.infrastructure
+    iriguchi.evaluation
+    iriguchi.interfaces
+forbidden_modules =
+    socket
+    ssl
+    http
+    urllib
+    asyncio
+
+# ADR-0005. mamori is an adapter's business and nobody else's: the core stands
+# alone, and a user who wants only a router gets one.
+[importlinter:contract:mamori-is-an-adapter]
+name = Only the adapters may know about mamori
+type = forbidden
+source_modules =
+    iriguchi.domain
+    iriguchi.ports
+    iriguchi.application
+    iriguchi.interfaces
+    iriguchi.evaluation
+forbidden_modules =
+    mamori
+
+# ADR-0009. tsumugi is never imported anywhere, infrastructure included: that
+# seam is a published JSON contract, and reading JSON is reading JSON. kiseki's
+# adapter is the precedent.
+[importlinter:contract:tsumugi-is-json]
+name = Nothing imports tsumugi
+type = forbidden
+source_modules =
+    iriguchi
+forbidden_modules =
+    tsumugi

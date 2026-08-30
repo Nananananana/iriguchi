@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / py${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+
+      # `-m 'not llm'` is the default in pyproject: CI never calls a model.
+      - name: Test
+        run: python -m pytest --cov=iriguchi --cov-report=term-missing
+        env:
+          PYTHONUTF8: "1"
+
+  # Zero runtime dependencies is a claim, so it is checked rather than stated.
+  # Install the wheel with no extras into a clean environment and assert that
+  # nothing came along with it.
+  no-dependencies:
+    name: zero runtime dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install with no extras
+        run: python -m pip install --upgrade pip && python -m pip install .
+
+      - name: Assert nothing else is installed
+        run: |
+          python - <<'PY'
+          import importlib.metadata as md
+          allowed = {"iriguchi", "pip", "setuptools", "wheel"}
+          extra = sorted(
+              d.metadata["Name"]
+              for d in md.distributions()
+              if d.metadata["Name"] and d.metadata["Name"].lower() not in allowed
+          )
+          assert not extra, f"iriguchi pulled in runtime dependencies: {extra}"
+          print("no runtime dependencies")
+          PY
+
+      - name: Import it
+        run: python -c "import iriguchi; print(iriguchi.__version__)"
+
+  lint:
+    name: lint, types and layering
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+
+      - name: Ruff
+        run: python -m ruff check .
+
+      - name: Format
+        run: python -m ruff format --check .
+
+      - name: Mypy
+        run: python -m mypy
+
+      - name: Import contracts
+        run: python -m importlinter.cli lint-imports
+
+  audit:
+    name: dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: python -m pip install --upgrade pip pip-audit && python -m pip install -e ".[dev]"
+
+      # iriguchi itself is installed editable and is not on PyPI, so it cannot
+      # be audited and has to be skipped. --strict would then fail on that skip
+      # rather than on a vulnerability, so it is left off: pip-audit still exits
+      # non-zero whenever a dependency has a known advisory.
+      - name: Audit
+        run: python -m pip_audit --skip-editable
