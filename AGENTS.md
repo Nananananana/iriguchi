@@ -134,6 +134,27 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
 
   The bottom four are judgement and stay judgement. Saying so is the point: a
   reader should not have to work out which half of this file is machinery.
+- **A third column exists and is easy to miss: rules somebody else holds.** Two
+  of iriguchi's guarantees are not enforced here at all —
+
+  | | held by |
+  |---|---|
+  | `mamori.protection-scope/1` means what it meant | mamori's contract freeze |
+  | a credential is blocked, not tokenised | mamori's ADR-0002 |
+
+  Both are load-bearing. The escalation channel treats `PolicyViolationError` as
+  its last gate, so if mamori stopped blocking credentials that gate would
+  vanish silently; and the refusal logic reads fields whose meaning mamori
+  defines.
+
+  **The pinned sha is the mechanism**, and only for half of it. Raising the pin
+  runs the seam tests against the new mamori, so a *behavioural* change is caught
+  there: `test_a_credential_is_the_last_gate` and the round-trip tests exercise
+  the real thing. A change in what a *field means*, without a contract bump, is
+  not caught — the three refusal tests use synthetic records, and a synthetic
+  record keeps agreeing with itself. That gap is real and is left open
+  deliberately: closing it would mean asserting mamori's semantics from here,
+  which is the coupling the document exists to remove.
 - **A check whose subject includes the prose about the check passes for the
   wrong reason.** Five times now: `siblings` in a comment explaining there is no
   siblings extra; `continue-on-error` in a comment explaining its absence;
