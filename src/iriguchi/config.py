@@ -25,6 +25,7 @@ from dataclasses import dataclass
 from .application.routing import PromptRouter
 from .domain.destination import Destination
 from .errors import ConfigurationError
+from .infrastructure.channels.mamori_channel import MamoriChannel
 from .infrastructure.estimators.rules import RulesEstimator
 from .infrastructure.scanners.fallback import FallbackScanner
 from .infrastructure.scanners.mamori_scanner import (
@@ -123,6 +124,22 @@ class IriguchiConfig:
         """
         scanner = MamoriScanner() if self.use_mamori else FallbackScanner()
         return PromptRouter(scanner=scanner, estimator=RulesEstimator())
+
+    def channel(self) -> MamoriChannel:
+        """The escalation channel this configuration describes.
+
+        Here rather than in the CLI for the same reason `router()` is: this is
+        the composition root, and it is the one place allowed to name an
+        adapter. It also keeps the `mamori-is-an-adapter` contract to a single
+        ignored edge instead of one per caller -- three ignores would have left
+        the contract mostly ignored on the paths that matter.
+
+        Raises:
+            EscalationRefusedError: when mamori is absent or broken. There is no
+                unprotected fallback, by construction: the alternative to
+                protecting an outbound prompt is not sending it.
+        """
+        return MamoriChannel()
 
     def describe(self) -> str:
         """What this configuration does with your prompts, in prose.

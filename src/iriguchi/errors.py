@@ -60,6 +60,29 @@ class EstimationError(RoutingError):
     """
 
 
+class EscalationRefusedError(IriguchiError):
+    """A prompt that was allowed to leave will not be sent after all.
+
+    Deliberately **not** a `RoutingError`. The route was decided correctly and
+    is not in doubt; what failed is the protection that the route depends on.
+    Conflating the two would let a caller retry the routing decision, which
+    would produce the same answer and the same refusal.
+
+    Every one of these leaves the prompt where it is. None is a degradation to
+    sending something less protected -- see
+    ``docs/adr/0013-iriguchi-reads-a-protection-record-and-keeps-none.md``.
+    """
+
+
+class RestorationError(IriguchiError):
+    """An answer came back and could not be fully restored.
+
+    Raised rather than returning what was restored so far. A partly restored
+    answer reads as complete and quotes a placeholder as though it were a fact,
+    which is worse than no answer at all.
+    """
+
+
 class ConfigurationError(IriguchiError):
     """A setting was missing, malformed, or not recognised.
 
@@ -80,8 +103,10 @@ class ContractError(IriguchiError):
 __all__ = [
     "ConfigurationError",
     "ContractError",
+    "EscalationRefusedError",
     "EstimationError",
     "IriguchiError",
+    "RestorationError",
     "RoutingError",
     "ScanError",
 ]

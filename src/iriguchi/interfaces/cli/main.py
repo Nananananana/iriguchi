@@ -23,7 +23,7 @@ from typing import TextIO
 from ...application.routing import PromptRouter
 from ...config import IriguchiConfig
 from ...domain.destination import Destination, Route
-from ...errors import IriguchiError
+from ...errors import EscalationRefusedError, IriguchiError
 from ...evaluation.dataset import load_corpus
 from ...evaluation.scoring import run as run_evaluation
 from ...infrastructure.scanners.mamori_scanner import (
@@ -130,10 +130,51 @@ def _read(prompt: str) -> str:
 
 def cmd_route(args: argparse.Namespace, config: IriguchiConfig, out: TextIO) -> int:
     router: PromptRouter = config.router()
-    decision = router.route(_read(args.prompt), config.available)
+    prompt = _read(args.prompt)
+    decision = router.route(prompt, config.available)
 
     print(render_decision(decision, verbose=args.explain), file=out)
+    if args.explain and decision.route is Route.EXTERNAL:
+        print(_what_would_leave(config, prompt), file=out)
     return EXIT_REFUSED if decision.route is Route.REFUSED else EXIT_OK
+
+
+def _what_would_leave(config: IriguchiConfig, prompt: str) -> str:
+    """The protected text, for an outbound route. Sends nothing.
+
+    The first thing `--dry-run` has ever had that is worth looking at: not
+    *where* a prompt would go but *what* would arrive. `prepare` protects and
+    returns; there is no send on that path, which is what lets an inspection
+    command walk it.
+
+    The escalation is closed immediately. It exists to be looked at, and the
+    mapping it holds is the highest-value object in the round trip -- holding
+    one open for the length of somebody's attention span is not a reason to
+    hold one.
+    """
+    try:
+        channel = config.channel()
+    except EscalationRefusedError as refused:
+        return f"\n  would leave    (cannot say: {refused})"
+
+    try:
+        escalation = channel.prepare(prompt)
+    except EscalationRefusedError as refused:
+        # Not a crash and not a downgrade. The route stands; the protection
+        # that route depends on refused, and the person needs to know which.
+        return f"\n  would leave    nothing -- the escalation was refused:\n      {refused}"
+
+    try:
+        lines = ["", "  would leave", f"    {escalation.protected_text}"]
+        if escalation.findings:
+            lines.append("")
+            lines.append("  and the scanner had missed")
+            lines.extend(
+                f"    {finding.rule:<40}{finding.detail}" for finding in escalation.findings
+            )
+        return "\n".join(lines)
+    finally:
+        escalation.close()
 
 
 def cmd_config(config: IriguchiConfig, out: TextIO) -> int:

@@ -99,6 +99,7 @@ forbidden_modules =
 ignore_imports =
     iriguchi.interfaces.cli.main -> iriguchi.infrastructure.scanners.mamori_scanner
     iriguchi.config -> iriguchi.infrastructure.scanners.mamori_scanner
+    iriguchi.config -> iriguchi.infrastructure.channels.mamori_channel
 
 # ADR-0009. tsumugi is never imported anywhere, infrastructure included: that
 # seam is a published JSON contract, and reading JSON is reading JSON. kiseki's
