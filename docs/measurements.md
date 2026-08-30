@@ -105,6 +105,68 @@ which admits to it in its own comment rather than hiding inside a statistic.
 23 characters anyway. Format-aware prefixes are not an optimisation on top of
 entropy; they are the half that catches these at all.
 
+## The router, over the corpus
+
+155 cases: 21 generated with adversaries planted (ADR-0007), 134 borrowed from
+mamori's labelled detection corpus. Run with `FallbackScanner` and
+`RulesEstimator`, no mamori installed, no model, no network.
+
+| | whole | generated | borrowed |
+|---|---|---|---|
+| cases | 155 | 21 | 134 |
+| **missed findings** | **63.5%** | | |
+| leak rate | 0.0% | 0.0% | 0.0% |
+| over-caution rate | 15.7% | 20.0% | 13.9% |
+| route accuracy | 98.7% | 90.5% | 100% |
+| band accuracy | 96.1% | 81.0% | 98.5% |
+| decision latency | 0.10 ms median | | 0.18 ms slowest |
+
+### The leak rate lied, and that is the finding
+
+The first version of the scorer reported **0% leak rate** and nothing else about
+coverage. Both of these were true at the same time:
+
+- no must-stay-local case was routed out;
+- **the scanner cleared 65.4% of them.**
+
+Those prompts are short business prose, so the complexity axis chose local on
+its own, and a missed finding that never became a route is invisible to an
+end-to-end measurement. The same miss on a prompt that happens to ask for a
+proof is a leak, with nothing about the scanner changed.
+
+So `missed findings` was added and is printed *first*, and the leak rate now
+carries the sentence "flattered by easy prompts" in the report itself. A metric
+that can be satisfied by luck is worse than no metric, because it is quoted.
+
+### What the corpus changed in the code
+
+Running it found one rule bug, and fixing that found a second:
+
+| | missed findings | over-caution |
+|---|---|---|
+| before | 65.4% | 15.7% |
+| `は`/`が` as credential separators | 63.5% | **17.6%** |
+| + the value may not start with kana or kanji | **63.5%** | **15.7%** |
+
+The rule required `:` or `=`. Japanese writes `パスワードは hunter2 です`, so it
+was blind to the language half this project's users write in. Adding the
+particles cost precision immediately — `パスワードは変更しましたので` became a
+finding — and requiring the captured value not to begin with kana or kanji
+bought it back. Net: strictly better on both axes.
+
+### 63.5% is not a bug, and it is not being fixed here
+
+The fallback scanner cannot find a name without an honorific, an English name, a
+company name or an address. mamori's corpus is full of all four. **63.5% is the
+measured form of ADR-0005's "install mamori"**, and it is published rather than
+fixed by widening the fallback until the number looks respectable — which is
+precisely how it would stop being the deliberately dumb thing it is supposed to
+be.
+
+`tests/test_evaluation.py` asserts it as a *range*, `0.4 <= rate <= 0.8`. The
+upper bound catches a collapse; the lower bound catches somebody quietly making
+the fallback clever.
+
 ## What these numbers do not say
 
 - One machine, one OS, two interpreter builds. Linux and macOS will differ,
@@ -121,6 +183,14 @@ entropy; they are the half that catches these at all.
   and not enough to claim a false-positive rate. The number that would be a
   claim is the over-caution rate on the evaluation corpus, and that measurement
   does not exist yet.
+- The corpus is 155 cases, generated from templates and borrowed from a sibling.
+  It says whether the rules do what the rules intend, **not** whether real
+  prompts look like the templates, and it cannot tell you the miss rate on a
+  stranger's actual work. Nothing in it substitutes for mamori's own detection
+  numbers.
+- The band labels on the 134 borrowed cases are rule-assigned, not judged, so
+  they say nothing about band accuracy. Read that figure against the 21
+  generated cases, where it is 81.0%.
 - The startup and memory figures do not measure iriguchi. They are the floor
   underneath it.
 
@@ -132,6 +202,8 @@ entropy; they are the half that catches these at all.
 - `tools/measure_startup.py` — subprocess round trip, seven runs, min and median.
 - `tools/measure_entropy.py` — Shannon entropy and the rule's verdict, over
   twelve invented tokens.
+- `tools/generate_cases.py` — the 21 adversarial cases, deterministically.
+- `tools/borrow_mamori_cases.py` — the 134 borrowed ones, run once and committed.
 
 Both are committed, because a measurement whose script is not committed is an
 anecdote.

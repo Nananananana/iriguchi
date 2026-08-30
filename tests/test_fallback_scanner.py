@@ -229,3 +229,38 @@ class TestThroughTheDomain:
     def test_a_prompt_without_one_is_clear(self) -> None:
         findings = FallbackScanner().scan("please summarise the attached article")
         assert Sensitivity.from_findings(findings).level is SensitivityLevel.CLEAR
+
+
+class TestTheJapaneseSeparator:
+    """Both halves of a change the evaluation corpus asked for.
+
+    The rule originally required `:` or `=`. Japanese writes
+    `パスワードは hunter2 です`, never `パスワード: hunter2`, so the rule was
+    blind to the language half this project's users write in — and the corpus
+    found it, which is the corpus doing its job.
+
+    Adding `は` and `が` cost precision immediately: `パスワードは変更しました`
+    became a finding. A rule that fires on every sentence mentioning a password
+    makes the external route unreachable, which is a different failure from
+    being cautious — the same argument as the honorific stoplist.
+    """
+
+    def test_a_topic_particle_separates_a_password_from_its_value(self) -> None:
+        assert ("credential-context", "hunter2sekret") in found("パスワードは hunter2sekret です")
+
+    def test_a_sentence_about_a_password_is_not_a_password(self) -> None:
+        assert "credential-context" not in rules(
+            "パスワードは変更しましたので、再度お試しください。"
+        )
+
+    def test_the_ascii_separator_still_works(self) -> None:
+        assert ("credential-context", "hunter2sekret") in found("password: hunter2sekret")
+
+    def test_what_the_tightening_costs(self) -> None:
+        """A passphrase written in kana is invisible to this rule.
+
+        Stated as a test rather than a comment, so that closing the gap is
+        visible as this test starting to fail. Rare, and it is what mamori is
+        for.
+        """
+        assert "credential-context" not in rules("パスワードはひみつのあいことばです")
