@@ -201,8 +201,17 @@ jobs:
       - name: Mypy
         run: python -m mypy
 
+      # **The console script, not `python -m importlinter.cli`.** The module form
+      # prints nothing and exits 0 whatever the contracts say -- verified against
+      # a real `domain -> ports` violation, which the console script catches with
+      # exit 1 and the module form passes in silence. This step had therefore
+      # never checked anything, including `Only the adapters may know about
+      # mamori`, which is the contract two of this week's changes were written to
+      # protect.
+      #
+      # `tests/test_ci_gates.py` keeps the module form from coming back.
       - name: Import contracts
-        run: python -m importlinter.cli lint-imports
+        run: lint-imports
 
   audit:
     name: dependency audit

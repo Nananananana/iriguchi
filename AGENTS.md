@@ -97,11 +97,26 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   `uv run lint-imports`, `uv run ruff check --fix .`, `uv run ruff format .`,
   `uv run pre-commit run --all-files`. If pre-commit rewrites anything,
   `git add` and run it again — a commit whose hooks failed did not happen.
+- **`lint-imports`, never `python -m importlinter.cli`.** The module form prints
+  nothing and exits 0 whatever the contracts say; CI ran it for the project's
+  whole life, so the six import contracts had never been enforced anywhere but a
+  developer's machine. `tests/test_ci_gates.py` keeps it from coming back.
+- **An exit code is evidence only once something has been shown to make it
+  non-zero.** That gate's silence was seen and dismissed earlier in the same
+  session, because it exited 0. Every guard added this week was checked by
+  breaking the thing it guards and watching it fail.
 - Windows: set `PYTHONUTF8=1`. This project reads Japanese text in every test.
 - Tests that call a real model carry the `llm` marker and are excluded from CI
   by default (`addopts = -m 'not llm'`); run `uv run pytest -m llm` before
   merging model-adjacent changes.
 - Read-only dumps for an assistant go **outside** the working tree.
+- **Pin a hypothesis counter-example as `@example` before touching the test
+  body.** The example database is keyed by a digest of the test function's
+  source, so adding a `print` or changing an assertion message silently orphans
+  every counter-example the test has accumulated — no error, no warning. There
+  are currently **no** `@example` decorators here and two files using hypothesis,
+  which means anything it has ever found lives only in gitignored
+  `.hypothesis/` and has never been seen by CI or by anyone else.
 
 ## Rules particular to this project
 
