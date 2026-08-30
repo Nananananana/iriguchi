@@ -105,6 +105,20 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   non-zero.** That gate's silence was seen and dismissed earlier in the same
   session, because it exited 0. Every guard added this week was checked by
   breaking the thing it guards and watching it fail.
+- **And "it went red" is not "the guard worked" — check it failed the way you
+  meant.** Renaming the seam job made every test in `test_ci_seam_job.py` die at
+  `job_block` with a bare `StopIteration`: a failing suite in which not one
+  assertion had run. `job_block` now states its own failure, and a test pins the
+  old shape *by exception type*. tsumugi found the mirror image — an injected
+  TOML error failing pytest at collection, logged by a `returncode != 0` check
+  as a confirmed failure of an assertion that never executed.
+- **A check whose subject includes the prose about the check passes for the
+  wrong reason.** Five times now: `siblings` in a comment explaining there is no
+  siblings extra; `continue-on-error` in a comment explaining its absence;
+  `python -m importlinter.cli` likewise; `@example` against a corpus full of
+  `@example.com`; and a test asserting `"StopIteration" not in str(error)`
+  against an error message that explains it replaced a `StopIteration`. Strip
+  comments, match by type, or match on something the explanation cannot contain.
 - Windows: set `PYTHONUTF8=1`. This project reads Japanese text in every test.
 - Tests that call a real model carry the `llm` marker and are excluded from CI
   by default (`addopts = -m 'not llm'`); run `uv run pytest -m llm` before

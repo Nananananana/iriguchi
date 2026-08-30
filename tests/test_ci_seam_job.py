@@ -34,10 +34,30 @@ WORKFLOW = Path(__file__).resolve().parent.parent / ".github" / "workflows" / "c
 PINNED_REF = re.compile(r"^\s+ref:\s+[0-9a-f]{40}(?:\s|$)")
 
 
-def job_block(name: str) -> list[str]:
-    """The lines of one job, by indentation. `jobs:` entries sit at two spaces."""
-    lines = WORKFLOW.read_text(encoding="utf-8").split("\n")
-    start = next(i for i, line in enumerate(lines) if line == f"  {name}:")
+def job_block(name: str, workflow: Path | None = None) -> list[str]:
+    """The lines of one job, by indentation. `jobs:` entries sit at two spaces.
+
+    Raises a *stated* failure when the job is not there, rather than letting
+    `next()` raise `StopIteration`. That distinction is the whole of this
+    function's care, and it was not free: renaming the job made every test in
+    this file die at this line with a bare `StopIteration` -- which is red, and
+    reads as the guards having caught something. They had not run at all.
+
+    **"It went red" is not "the guard worked."** tsumugi found the same shape in
+    its packaging tests, where an injected TOML error made pytest fail at
+    collection and a `returncode != 0` check recorded it as a confirmed failure
+    of an assertion that never executed.
+    """
+    lines = (workflow or WORKFLOW).read_text(encoding="utf-8").split("\n")
+    header = f"  {name}:"
+    if header not in lines:
+        raise AssertionError(
+            f"there is no `{name}` job in this workflow. Every other test in this "
+            f"file describes that job's shape, so if it has been renamed or "
+            f"removed then this is the finding -- and without this line they would "
+            f"all die with StopIteration and look like they had caught it."
+        )
+    start = lines.index(header)
     for offset, line in enumerate(lines[start + 1 :], start=start + 1):
         if line.strip() and not line.startswith("    "):
             return lines[start:offset]
@@ -139,3 +159,53 @@ def test_nothing_in_the_job_tolerates_failure(seam: list[str]) -> None:
         f"{len(tolerant)} step(s) tolerate failure. With the sibling pinned there "
         "is nothing left for tolerance to protect against: raise the pin instead."
     )
+
+
+class TestTheGuardsFailForTheReasonTheyName:
+    """Red is not enough. **The intended red is.**
+
+    Renaming the seam job used to make every test above die at `job_block` with
+    a bare `StopIteration`. That is a failing test suite, and somebody checking
+    "did breaking it turn things red" would have recorded the guards as working
+    when not one of them had reached an assertion.
+
+    tsumugi found the same shape from the other side: an injected TOML error
+    made pytest fail during collection, and a `returncode != 0` check logged it
+    as a confirmed failure of an assertion that never executed. Both are the
+    same rule — *whether it failed the way you meant*, not whether it failed.
+    """
+
+    def missing_job(self, tmp_path: Path) -> Path:
+        """The real workflow with the seam job renamed out of existence."""
+        path = tmp_path / "ci.yml"
+        path.write_text(
+            WORKFLOW.read_text(encoding="utf-8").replace(
+                "  seam:\n", "  seam-renamed-by-accident:\n"
+            ),
+            encoding="utf-8",
+        )
+        return path
+
+    def test_a_missing_job_says_so(self, tmp_path: Path) -> None:
+        with pytest.raises(AssertionError, match="there is no `seam` job"):
+            job_block("seam", self.missing_job(tmp_path))
+
+    def test_and_does_not_raise_stopiteration(self, tmp_path: Path) -> None:
+        """The specific way it used to fail, pinned so it cannot come back.
+
+        Checked by **type**, not by looking for the word in the message. The
+        first version of this test asserted `"StopIteration" not in str(...)`
+        and failed against the fix -- because the fix's own message explains
+        that it exists to replace a `StopIteration`. Fifth guard this week to
+        match its own explanation; the shape is a check whose subject includes
+        the prose about the check.
+        """
+        with pytest.raises(AssertionError) as raised:
+            job_block("seam", self.missing_job(tmp_path))
+        assert not isinstance(raised.value, StopIteration)
+
+    def test_a_job_that_is_present_still_parses(self, tmp_path: Path) -> None:
+        """The other half. A guard that fails on everything is not a guard."""
+        path = tmp_path / "ci.yml"
+        path.write_text(WORKFLOW.read_text(encoding="utf-8"), encoding="utf-8")
+        assert job_block("seam", path) == job_block("seam")
