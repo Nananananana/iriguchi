@@ -49,8 +49,18 @@ def workflow_commands() -> list[str]:
 
 
 def test_the_import_contracts_are_actually_run() -> None:
-    """The step has to exist before anything else here means anything."""
-    assert any("lint-imports" in line for line in workflow_commands())
+    """The step has to exist before anything else here means anything.
+
+    Verified by *removing* the step, not by changing how it is invoked. That
+    distinction cost seven guards in `test_ci_seam_job.py`, which all crashed
+    rather than asserting when the job they describe was renamed away -- every
+    break-and-watch run against them had injected a changed value and never an
+    absence.
+    """
+    assert any("lint-imports" in line for line in workflow_commands()), (
+        "no CI step runs the import contracts. Every other test in this file "
+        "describes how that step is invoked, so its absence is the finding."
+    )
 
 
 def test_it_uses_the_console_script_not_the_module_form() -> None:
@@ -73,4 +83,7 @@ def test_it_uses_the_console_script_not_the_module_form() -> None:
 def test_the_other_gates_are_present(tool: str) -> None:
     """Not about invocation form — these are checked because a gate silently
     disappearing from the workflow is the same failure with an easier cause."""
-    assert any(tool in line for line in workflow_commands()), f"no CI step runs {tool}"
+    assert any(tool in line for line in workflow_commands()), (
+        f"no CI step runs {tool}. A gate that has left the workflow fails the "
+        f"same way as one that never worked: silently, and green."
+    )
