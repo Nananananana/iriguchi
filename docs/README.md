@@ -42,6 +42,14 @@ learned it the expensive way.
   a rule the next reader will break for good reasons of their own.
 - **A number in a document is measured, or it is not written** — and it ships
   with its residual, meaning what the measurement does *not* say.
+- **A residual lives attached to what it qualifies, never in a file of its own.**
+  Every ADR has a *What it costs* section, `measurements.md` has *What these
+  numbers do not say*, and a limit on a value object goes in its docstring. A
+  `docs/concerns/` was considered and declined: a concern filed away from the
+  claim it bounds is a concern the person reading the claim does not see, and the
+  claim is where the reading happens. The cost of that choice is that a concern
+  spanning several documents has no single home and gets written in each — which
+  is duplication, and is cheaper than the alternative.
 
 ## Where the project is right now
 
