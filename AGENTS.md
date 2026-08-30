@@ -285,6 +285,32 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
 - Availability is `--local` / `--external` or `IRIGUCHI_*`, and **both default to
   off**. Somebody who has configured nothing gets refusals, not a router
   assuming a model exists. Unknown `IRIGUCHI_*` keys are refused, never ignored.
+- **mamori is a scanner adapter and nothing else yet.** It asks with a
+  *permissive* policy, as mamori's own `inspect` does: the default policy blocks
+  a credential, which would arrive as "the scanner broke" — same route, wrong
+  stated reason, and a wrong reason reads as authoritative. Permissive means
+  mamori reports and iriguchi's policy decides, which is ADR-0005 exactly.
+- **`--scanner mamori` is opt-in even when mamori is installed.** Changing the
+  scanner changes what leaves the machine, and that is not a thing to inherit
+  from what happens to be on the system. Asking for it without it installed is
+  an **error**, never a silent downgrade: somebody who passed the flag is
+  relying on it finding what the fallback cannot.
+- Two `.importlinter` edges are ignored, with the reason in the file: the
+  contract sees `interfaces -> config -> mamori_scanner -> mamori` and cannot
+  see that every `import mamori` is inside a function. The guarantee it was
+  protecting is asserted for real in `tests/test_mamori_absent.py`, which blocks
+  the import and drives the whole CLI, and in the CI job that installs the wheel
+  with no extras and runs it.
+- **ADR-0012: a decision inherits the classification of its prompt.** ADR-0006
+  keeps values out of a `Reason`; that is not sufficient. `mamori.national-id at
+  40-52` is a kind, a count and a length, and to a reader who does not hold the
+  prompt it is a pointer to which one was worth reading. So nothing writes a
+  decision to disk, nothing sends one anywhere, and there is no `--log-file` —
+  the absence is deliberate, not unfinished.
+- The mamori comparison (63.5% → 1.0% missed) is **measured on mamori's own
+  corpus** and is not a general figure. The only unseen data is 6 generated
+  must-stay-local cases. Growing that half is the measurement the project owes
+  itself.
 - **Next, per `docs/proposals/0001-the-design.md` section 8:** six ports with
   conformance suites, the over-detecting fallback scanner, the rules complexity
   estimator, the CLI (`route`, `explain`, `config`, `doctor`, `eval`, `demo`),

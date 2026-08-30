@@ -167,6 +167,69 @@ be.
 upper bound catches a collapse; the lower bound catches somebody quietly making
 the fallback clever.
 
+## What installing mamori buys
+
+Both scanners over the same 155 cases. mamori under a permissive policy, as its
+own `inspect` command uses, so that it reports a credential rather than refusing
+one.
+
+| | must-stay-local missed | may-leave over-detected |
+|---|---|---|
+| **whole corpus** | | |
+| built-in fallback | 63.5% (66/104) | 15.7% (8/51) |
+| mamori | **1.0%** (1/104) | 25.5% (13/51) |
+
+That is ADR-0005's "install mamori", measured. It is also **measured on mamori's
+home ground**, and the split says so:
+
+| | must-stay-local missed | may-leave over-detected |
+|---|---|---|
+| **borrowed (134 cases, from mamori's own corpus)** | | |
+| built-in fallback | 67.3% (66/98) | 13.9% (5/36) |
+| mamori | 1.0% (1/98) | 33.3% (12/36) |
+| **generated (21 cases, which mamori has never seen)** | | |
+| built-in fallback | 0.0% (0/6) | 20.0% (3/15) |
+| mamori | 0.0% (0/6) | 6.7% (1/15) |
+
+**The 1.0% is not a general figure and must not be quoted as one.** mamori is
+being scored against the corpus it was developed with. What the borrowed half
+honestly shows is that the fallback is far worse than mamori *at mamori's own
+task*; it shows nothing about either on a stranger's prompts.
+
+The generated half is the only unseen data here and it has **six**
+must-stay-local cases, which is too few to support any miss rate at all. Both
+scanners score 0% on it, and that is a statement about the sample size.
+
+The one number that survives both objections is the direction of the
+over-detection trade, because it runs the same way on both halves: mamori finds
+more and holds back more. On the unseen half it holds back *less* than the
+fallback (6.7% against 20.0%), which is the opposite of the borrowed half and is
+also six cases' worth of evidence.
+
+**The work this asks for** is more generated must-stay-local cases — the half of
+the corpus that no sibling has seen. That is the measurement that would make any
+of these numbers portable, and it does not exist yet.
+
+## What this is not measured against
+
+RouterBench (405k precomputed inferences, 11 models across 7 tasks) and
+LLMRouterBench (400k+ instances, 21 datasets, 33 models, January 2026) measure
+**cost against quality**: given a query, which model is the cheapest that answers
+it well enough.
+
+iriguchi measures whether **sensitivity correctly removes a destination**. These
+are not the same problem, and a reader who knows the routing literature will
+assume they are. The README says so — *"not an optimiser that happens to be
+careful"* — and this document is where the comparison would actually be
+attempted, so it says so here too.
+
+One half of it *is* comparable, and separating them is what would make that
+honest. The complexity estimate **after** the veto — local or escalate, on a
+prompt allowed to go either way — is exactly what those benchmarks measure. The
+report does not currently split the two stages, and it should before any
+comparison is drawn: `band accuracy` today mixes prompts where the choice was
+real with prompts where sensitivity had already settled it.
+
 ## What these numbers do not say
 
 - One machine, one OS, two interpreter builds. Linux and macOS will differ,
@@ -191,6 +254,11 @@ the fallback clever.
 - The band labels on the 134 borrowed cases are rule-assigned, not judged, so
   they say nothing about band accuracy. Read that figure against the 21
   generated cases, where it is 81.0%.
+- The mamori comparison is scored largely on mamori's own corpus. See the
+  paragraph under that table; the 1.0% is a home-ground figure.
+- Nothing here measures the escalation path, because there is no escalation
+  path. `ESCALATED` is a verdict with no protection behind it until
+  `mamori.protection-scope/1` is implemented and the channel is built.
 - The startup and memory figures do not measure iriguchi. They are the floor
   underneath it.
 

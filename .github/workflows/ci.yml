@@ -71,6 +71,26 @@ jobs:
       - name: Import it
         run: python -c "import iriguchi; print(iriguchi.__version__)"
 
+      # The other half of the mamori-is-optional promise. There is genuinely no
+      # mamori in this environment, so this is stronger than the import-blocking
+      # fixture in tests/test_mamori_absent.py -- and weaker in one way, since it
+      # cannot assert on behaviour. Both are wanted.
+      - name: Drive the CLI with no mamori and no corpus dependencies
+        run: |
+          iriguchi doctor
+          iriguchi --local --external route "田中さんに tanaka@example.com で連絡"
+          iriguchi --local --external eval
+        env:
+          PYTHONUTF8: "1"
+
+      - name: Asking for mamori without mamori must fail loudly
+        run: |
+          if iriguchi --local --scanner mamori route "hello"; then
+            echo "expected a failure, got success" && exit 1
+          fi
+        env:
+          PYTHONUTF8: "1"
+
   lint:
     name: lint, types and layering
     runs-on: ubuntu-latest
