@@ -51,5 +51,11 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   mamori's labelled samples once, offline, into a committed fixture.
 - The credential rule now accepts `は` and `が` as separators, and requires the
   captured value not to begin with kana or kanji. The corpus found both halves.
+- `config.py` and `interfaces/cli/`: the command line — `route`, `config`,
+  `doctor`, `demo`, `eval` — and the `iriguchi` console script.
+  `route --explain --dry-run` is the one the project is named after: it says
+  where a prompt would go and which rules decided, and opens no socket.
+- `policy.prefer-local` no longer claims a `HIGH` band "does not call for the
+  larger model" when the external destination was removed. The CLI found it.
 
 The first release will be `0.1.0`.

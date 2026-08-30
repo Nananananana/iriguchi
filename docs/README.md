@@ -45,18 +45,23 @@ learned it the expensive way.
 
 ## Where the project is right now
 
-**The domain exists; nothing above it does.** The repository holds the design
-([`proposals/0001-the-design.md`](proposals/0001-the-design.md)), the ten
-decisions that design rests on ([`adr/`](adr/)), the measurements that forced two
-of them ([`measurements.md`](measurements.md)), and `iriguchi.domain` — the
-values a routing decision is made of, and the policy that makes it.
+**v0.1 is built, and it is headless.** A prompt goes in, a decision comes out,
+and the whole of it runs with no GUI, no network and no model:
 
-There is not yet anything that produces a sensitivity or a complexity: no
-scanner, no estimator, no CLI. v0.1 is the rest of the headless router — six
-ports, a deliberately over-detecting fallback scanner, a rules complexity
-estimator, a CLI, and an evaluation corpus that scores it. No GUI, no network, no
-model. The proposal's section 8 has the rest.
+- `domain/` — the routing values and the policy, the only place a route is chosen
+- `ports/` — two protocols, with conformance suites their adapters inherit
+- `infrastructure/` — the deliberately-dumb fallback scanner and the rules estimator
+- `application/` — the use case that asks both proposers and then the policy
+- `evaluation/` — 155 labelled cases and the report that scores them
+- `interfaces/cli/` — `route`, `config`, `doctor`, `demo`, `eval`
 
-`architecture.md` is still deliberately absent. There is an architecture now, but
-only one layer of it, and a current-state document describing a seventh of a
-stack invites being read as describing the stack.
+**Not built:** everything with a seam or a surface. mamori as a scanner and as an
+escalation channel, ollama as a local model, `iriguchi ask` (v0.2); the tray and
+the popup (v0.3); the Anchor Dashboard (v0.4). The proposal's section 8 has the
+order and the reasons.
+
+`architecture.md` is still absent, and now for a different reason than before:
+there is an architecture, and `AGENTS.md` describes it, and the layer table there
+is asserted by `tests/test_architecture.py`. A second document saying the same
+thing is a second document to keep in step. It arrives when there is something
+`AGENTS.md` cannot hold.
