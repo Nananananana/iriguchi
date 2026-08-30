@@ -4,10 +4,9 @@
 model you use, and decides — locally, deterministically, before a single byte
 leaves your machine — where each prompt is allowed to go.
 
-> **Nothing is built yet.** This repository currently holds the design, the ten
-> decisions it rests on, and the measurements that forced two of them. See
-> [docs/README.md](docs/README.md) for where the project actually is. Everything
-> below describes what is being built, not what you can install.
+> **v0.1 is built and headless.** The router, the CLI, and a labelled corpus that
+> scores it — no GUI, no network, no model. The output below is real. See
+> [docs/README.md](docs/README.md) for what is not built yet.
 
 ---
 
@@ -69,43 +68,92 @@ whose dependency list is a threat model. There isn't one, and CI checks that by
 installing the wheel with no extras and asserting nothing came along
 ([ADR-0001](docs/adr/0001-the-domain-depends-on-nothing.md)).
 
-## What it will look like
+## What it does
+
+Three prompts, and the same two axes deciding all of them.
 
 ```console
-$ iriguchi route --explain --dry-run "Summarise the attached meeting notes"
+$ iriguchi --local --external route "この記事を三行で要約してください。"
 
-  route      LOCAL
-  sensitivity  clear          (no scanner finding)
-  complexity   low            summarise + 34 tokens
+  route        LOCAL      nothing leaves this machine
+  sensitivity  clear
+  complexity   low
 
   reasons
-    complexity.short-input          length 34 < 200
-    complexity.single-step          no multi-step marker
+    policy.prefer-local
+        complexity band low does not call for the larger model, and a local model is permitted
 
-  removed    nothing
-  sent       nothing
+  removed      nothing
+  sent         nothing
 ```
+
+Harder, and nothing sensitive in it, so it may go:
 
 ```console
-$ iriguchi route --explain --dry-run "Draft a reply to tanaka@example.com about the Q3 numbers"
+$ iriguchi --local --external route "この二つのアルゴリズムを比較して、計算量を証明してください。"
 
-  route      LOCAL
-  sensitivity  restricted     (1 finding)
-  complexity   medium
+  route        EXTERNAL   via mamori, protected on the way out
+  sensitivity  clear
+  complexity   high   (2 signals)  (two escalating markers)
 
   reasons
-    fallback.email-shape            span 20-38     [value withheld]
+    policy.escalate-on-band
+        complexity band high and the external destination is permitted
 
-  removed    EXTERNAL       a finding at 20-38 is not permitted to leave
-  sent       nothing
-
-  note: the built-in fallback scanner over-detects on purpose. Install
-        mamori alongside it for a scanner that can tell a real finding
-        from a shape.
+  removed      nothing
+  sent         nothing
 ```
 
-Nothing above runs yet. It is here so that the interface is designed before it
-is implemented, and so that the promises are concrete enough to be wrong.
+The same difficulty, one address added. **This is the whole point:**
+
+```console
+$ iriguchi --local --external route "この二つを比較して証明してください。連絡先は tanaka@example.com です。"
+
+  route        LOCAL      nothing leaves this machine
+  sensitivity  restricted   (1 finding)
+  complexity   high   (3 signals)  (two escalating markers)
+
+  reasons
+    policy.prefer-local
+        complexity band high would have called for the larger model, but the external
+        destination is not available
+
+  removed
+    external     restricted: 1 finding(s), the first from fallback.email-shape at 23-41;
+                 not permitted to leave
+  sent         nothing
+```
+
+The band is still `high`. It makes no difference, because the destination was
+removed before difficulty was consulted, and there is no score in this system
+that difficulty could have out-voted. Note also that the reason names a *span*,
+`23-41`, and never the address.
+
+## What it scores
+
+```console
+$ iriguchi --local --external eval
+
+cases                155
+missed findings       63.5%   <- the scanner's coverage; read this first
+leak rate              0.0%   <- end to end, floor of zero, flattered by easy prompts
+over-caution rate     15.7%
+route accuracy        98.7%
+band accuracy         96.1%
+decision latency       0.10 ms median
+```
+
+**Read the first number, and read it as a recommendation to install mamori.**
+The built-in scanner is deliberately dumb (ADR-0005) and cannot find a name
+without an honorific, an English name, a company name or an address. It misses
+63.5% of the corpus's must-stay-local cases, and that is published rather than
+fixed by widening it until the number looks better.
+
+The 0% leak rate underneath it is honest and nearly meaningless on its own —
+those prompts are easy, so the *complexity* axis kept them local, and a missed
+finding that never became a route is invisible end to end. The first version of
+this report had only the second number. [docs/measurements.md](docs/measurements.md)
+has the whole story.
 
 ## The family
 
@@ -128,7 +176,7 @@ arrives as a published JSON contract that iriguchi reads and never imports
 
 | | |
 |---|---|
-| **v0.1** | The router, headless. Domain, ports, fallback scanner, complexity estimator, CLI, evaluation corpus. No GUI, no network, no model. |
+| **v0.1** ✅ | The router, headless. Domain, ports, fallback scanner, complexity estimator, CLI, evaluation corpus. No GUI, no network, no model. |
 | **v0.2** | The seams. mamori as scanner and as escalation channel; ollama as the local model; `iriguchi ask`. |
 | **v0.3** | The shell. Tray residency, hotkey, popup — with measured performance floors on the warm path. |
 | **v0.4** | The Anchor Dashboard. Provenance from tsumugi and akashi, rendered — including what was left out. |
@@ -153,6 +201,16 @@ and it is what a build can honestly gate on
 
 Every number in this repository is measured, ships with the script that produced
 it, and states what it does not say.
+
+## Trying it
+
+```bash
+uv pip install -e ".[dev]" && iriguchi --local --external demo
+```
+
+Both destinations default to **off**, which is the fail-safe value: a person who
+has configured nothing gets refusals rather than a router quietly assuming a
+model exists. `iriguchi doctor` says what is missing and what its absence costs.
 
 ## Licence
 

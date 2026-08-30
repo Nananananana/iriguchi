@@ -67,8 +67,8 @@ interfaces --> application --> domain
 | `application/` | `domain`, `ports`, `errors` |
 | `infrastructure/` | `domain`, `ports`, `errors` |
 | `evaluation/` | `domain`, `ports`, `application`, `infrastructure` |
-| `config.py` | everything above |
-| `interfaces/` | everything above |
+| `config.py` | `domain`, `ports`, `application`, `infrastructure` |
+| `interfaces/` | everything above, `config` included |
 
 This table is executable: `tests/test_architecture.py` parses every module and
 asserts it, and `import-linter` asserts the direction across six contracts. A
@@ -270,6 +270,21 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   required `:` or `=`, so it was blind to `パスワードは hunter2 です`. Fixing that
   cost precision, and tightening the captured value bought it back. Both halves
   are tests, and `docs/measurements.md` has the before/after.
+- **`route --explain` output is a golden test.** An explanation nobody diffs is
+  an explanation that drifts, and this is what somebody reads when deciding
+  whether to trust the tool. Asserted whole rather than by substring: the
+  interesting failures are things that *disappear*, and a substring check cannot
+  see an absence.
+- **Ordering reasons for reading happens in `interfaces/cli/render.py`, not in
+  the domain.** `Reason.sort_key` is a total order and not a useful one for a
+  person; the domain has no notion of importance and giving it one would be a
+  domain change for a presentation concern.
+- Exit codes distinguish three things: `0` a decision, `2` a decision that was a
+  refusal, `1` no decision. **A refusal is not a failure** — a caller that cannot
+  tell them apart will retry a refusal forever.
+- Availability is `--local` / `--external` or `IRIGUCHI_*`, and **both default to
+  off**. Somebody who has configured nothing gets refusals, not a router
+  assuming a model exists. Unknown `IRIGUCHI_*` keys are refused, never ignored.
 - **Next, per `docs/proposals/0001-the-design.md` section 8:** six ports with
   conformance suites, the over-detecting fallback scanner, the rules complexity
   estimator, the CLI (`route`, `explain`, `config`, `doctor`, `eval`, `demo`),

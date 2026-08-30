@@ -128,16 +128,24 @@ class RoutingPolicy:
             return Route.EXTERNAL
 
         if Destination.LOCAL in permitted:
-            reasons.append(
-                Reason(
-                    rule="policy.prefer-local",
-                    source=_SOURCE,
-                    span=None,
-                    detail=(
-                        f"complexity band {complexity.band.value} does not call for the "
-                        f"larger model, and a local model is permitted"
-                    ),
+            # Two different reasons land here and they must not share a
+            # sentence. Either complexity did not ask to escalate, or it did and
+            # there was nowhere to escalate to -- and printing "band high does
+            # not call for the larger model" in the second case is a decision
+            # explaining itself wrongly, which is worse than not explaining. The
+            # CLI found this on its first run.
+            if complexity.prefers_the_larger_model:
+                detail = (
+                    f"complexity band {complexity.band.value} would have called for the "
+                    f"larger model, but the external destination is not available"
                 )
+            else:
+                detail = (
+                    f"complexity band {complexity.band.value} does not call for the "
+                    f"larger model, and a local model is permitted"
+                )
+            reasons.append(
+                Reason(rule="policy.prefer-local", source=_SOURCE, span=None, detail=detail)
             )
             return Route.LOCAL
 

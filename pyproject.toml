@@ -55,9 +55,8 @@ Repository = "https://github.com/Nananananana/iriguchi"
 Issues = "https://github.com/Nananananana/iriguchi/issues"
 Changelog = "https://github.com/Nananananana/iriguchi/blob/main/CHANGELOG.md"
 
-# No [project.scripts] yet. The `iriguchi` console script is declared in v0.1,
-# alongside the CLI it would point at. An entry point to a module that does not
-# exist is a broken install that only fails when someone tries to use it.
+[project.scripts]
+iriguchi = "iriguchi.interfaces.cli.main:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/iriguchi"]

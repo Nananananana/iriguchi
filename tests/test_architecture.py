@@ -42,8 +42,14 @@ ALLOWED: dict[str, frozenset[str]] = {
     "infrastructure": frozenset({"domain", "ports"}),
     # Measurement runs the real pipeline, so it reaches the application.
     "evaluation": frozenset({"domain", "ports", "application", "infrastructure"}),
+    # Settings assemble everything, so they may name everything. This is the one
+    # place outside `interfaces` that is allowed to know which adapter is the
+    # default, and `IriguchiConfig.router()` is the whole of that knowledge.
+    "config": frozenset({"domain", "ports", "application", "infrastructure"}),
     # The outside edge. Nothing imports it.
-    "interfaces": frozenset({"domain", "ports", "application", "infrastructure", "evaluation"}),
+    "interfaces": frozenset(
+        {"domain", "ports", "application", "infrastructure", "evaluation", "config"}
+    ),
     # Exceptions are shared by everything and import nothing.
     "errors": frozenset(),
 }

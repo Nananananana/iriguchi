@@ -11,6 +11,7 @@ name = Layer dependency direction
 type = layers
 layers =
     iriguchi.interfaces
+    iriguchi.config
     iriguchi.evaluation
     iriguchi.application
     iriguchi.infrastructure
@@ -29,6 +30,7 @@ forbidden_modules =
     iriguchi.infrastructure
     iriguchi.interfaces
     iriguchi.evaluation
+    iriguchi.config
 
 # ADR-0001: the domain decides, and deciding needs no I/O. A domain that can
 # open a file can be given a different answer by whatever wrote the file.
