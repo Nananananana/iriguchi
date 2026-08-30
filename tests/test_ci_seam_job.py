@@ -22,15 +22,16 @@ configuration does not add a dependency to test it with.
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
 
 WORKFLOW = Path(__file__).resolve().parent.parent / ".github" / "workflows" / "ci.yml"
 
-#: The steps that may fail without failing the job. Everything before them is
-#: setup, and setup failing means the job proved nothing.
-TOLERANT_STEPS = frozenset({"The seam", "What installing mamori buys, measured here"})
+#: A forty-character hex sha, and nothing looser. A branch name or a tag both
+#: move, and a moving ref is what makes a re-run able to turn red into green.
+PINNED_REF = re.compile(r"^\s+ref:\s+[0-9a-f]{40}(?:\s|$)")
 
 
 def job_block(name: str) -> list[str]:
@@ -77,30 +78,43 @@ def test_it_refuses_to_run_on_an_absent_sibling(seam: list[str]) -> None:
     )
 
 
-def test_the_job_as_a_whole_does_not_tolerate_failure(seam: list[str]) -> None:
-    """`continue-on-error` at the job level is what hid tsumugi's broken install.
+def test_the_sibling_is_pinned_to_a_commit(seam: list[str]) -> None:
+    """Unpinned, this job's answer depends on when it ran.
 
-    Wanting a sibling's release not to block a merge is reasonable. This is the
-    wrong lever for it: it also swallows "we could not install the sibling at
-    all", and those two are not the same finding. Pin the checkout to a ref.
+    A re-run that turns red into green is not a check. And the bump commit is
+    the notification the family otherwise has no mechanism for: six libraries
+    moving independently means a producer can move without anybody noticing,
+    and raising this sha turns that into something somebody has to look at.
+
+    A branch or a tag would not do. Both move.
     """
-    job_level = [line for line in seam if line.startswith("    continue-on-error")]
-    assert not job_level, (
-        "the seam job must not tolerate its own setup failing. If a mamori "
-        "release is blocking merges, pin the checkout to a ref instead."
+    assert any(PINNED_REF.match(line) for line in seam), (
+        "the sibling checkout must name a full commit sha. A branch or a tag "
+        "moves, and then a re-run can turn this job green without anything "
+        "here having changed."
     )
 
 
-def test_only_the_steps_after_setup_tolerate_failure(seam: list[str]) -> None:
-    """Named explicitly, so adding a third tolerant step is a deliberate act."""
-    tolerant: list[str] = []
-    current = ""
-    for line in seam:
-        if line.strip().startswith("- name:"):
-            current = line.split("- name:", 1)[1].strip()
-        elif line.strip() == "continue-on-error: true":
-            tolerant.append(current)
-    assert set(tolerant) == TOLERANT_STEPS, (
-        f"tolerant steps are {sorted(tolerant)}; expected {sorted(TOLERANT_STEPS)}. "
-        "A step that may fail silently is a step that may stop checking anything."
+def test_nothing_in_the_job_tolerates_failure(seam: list[str]) -> None:
+    """The pin removes the need for tolerance rather than covering it up.
+
+    An earlier version let the seam step fail without failing the job, so that
+    a mamori release could not block an unrelated merge. With the sha pinned a
+    mamori release cannot reach this job at all, so a failure means *iriguchi*
+    broke the seam against a sibling that has not moved — which is precisely
+    the finding that should stop a merge.
+
+    `continue-on-error` at the job level is also what let tsumugi's equivalent
+    spend an unknown period failing to install mamori while reporting success.
+    """
+    # Comment lines in this job explain why there is no `continue-on-error`,
+    # so match what YAML would read rather than what the file contains. Three
+    # separate guards today have matched their own explanation; the shape to
+    # watch for is a check whose subject includes the prose about the check.
+    tolerant = [
+        line for line in seam if line.split("#", 1)[0].strip().startswith("continue-on-error")
+    ]
+    assert not tolerant, (
+        f"{len(tolerant)} step(s) tolerate failure. With the sibling pinned there "
+        "is nothing left for tolerance to protect against: raise the pin instead."
     )

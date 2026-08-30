@@ -99,10 +99,26 @@ jobs:
 
       # mamori is not on PyPI, so there is no `siblings` extra to install -- a
       # manifest naming a package nobody can fetch is a broken install rather
-      # than an optional feature. The sibling comes from its own repository.
+      # than an optional feature. (`pyproject.toml` cannot carry a direct git
+      # reference either: hatchling refuses to build one without
+      # `allow-direct-references`, and setting that flag to clear the error gets
+      # the distribution rejected at upload instead. If a PR ever adds that
+      # flag, that is what it is doing.)
+      #
+      # **Pinned, and the pin is the point.** Unpinned, this job's result
+      # depends on when it ran, and a re-run that turns red into green is not a
+      # check. Pinned, a mamori release cannot reach this build at all -- so the
+      # tolerance that would otherwise be needed stops being needed, rather than
+      # covering something up.
+      #
+      # And the bump commit is the notification. Six libraries moving
+      # independently means nobody notices a producer moving; raising this sha
+      # turns that into a commit somebody has to look at, with the seam tests
+      # running against the new one before it lands.
       - uses: actions/checkout@v7
         with:
           repository: Nananananana/mamori
+          ref: dd9e4868968f999c72f6d353acb9bd98f213e0c4  # 0.26.0
           path: .sibling-mamori
 
       - uses: actions/setup-python@v7
@@ -137,18 +153,18 @@ jobs:
         env:
           PYTHONUTF8: "1"
 
-      # Only *these* steps tolerate failure, and the split is the point.
+      # No `continue-on-error`, anywhere in this job, and the pin is why.
       #
-      # A sibling's release changing behaviour should tell us rather than block
-      # an unrelated merge -- tsumugi's reasoning, and it is right. But applying
-      # that to the whole job is what let tsumugi's equivalent fail to install
-      # mamori and stay green: setup failing means the job proved nothing, which
-      # is not the same finding as the seam having moved.
+      # The earlier version tolerated failure here so that a mamori release
+      # could not block an unrelated merge. With the sha pinned, a mamori
+      # release cannot reach this job at all, so a failure means *iriguchi*
+      # broke the seam against a mamori that has not moved -- which is exactly
+      # the finding that should stop a merge.
       #
-      # So: setup is red, the seam is an annotation. If a mamori release starts
-      # blocking work here, pin the checkout above to a ref -- do not widen this.
+      # Removing the need for tolerance beats tolerating: tsumugi's equivalent
+      # job carried `continue-on-error` at the job level and spent an unknown
+      # period failing to install mamori at all while reporting success.
       - name: The seam
-        continue-on-error: true
         run: python -m pytest tests/test_mamori_scanner.py -q
         env:
           PYTHONUTF8: "1"
@@ -157,7 +173,6 @@ jobs:
       # This is where they become reproducible by somebody who is not that
       # developer.
       - name: What installing mamori buys, measured here
-        continue-on-error: true
         run: |
           iriguchi --local --external eval
           iriguchi --local --external --scanner mamori eval
