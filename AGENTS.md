@@ -131,16 +131,34 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
 
 ## Current state
 
-- Version `0.1.0.dev0`. **Nothing is implemented.** The repository holds the
-  design, ten ADRs, the measurements, and the project scaffold.
+- Version `0.1.0.dev0`. **The domain exists; nothing above it does.**
 - **License: Apache-2.0. Python: 3.12+. Runtime dependencies: 0**, checked in CI
   by installing without extras and asserting nothing came along.
-- **Next, per `docs/proposals/0001-the-design.md` section 8:** v0.1 is the
-  router, headless — `domain/` (`Route`, `Sensitivity`, `Complexity`, `Reason`,
-  `RoutingDecision`, `RoutingPolicy`), six ports with conformance suites, the
-  over-detecting fallback scanner, the rules complexity estimator, the CLI
-  (`route`, `explain`, `config`, `doctor`, `eval`, `demo`), and the evaluation
-  corpus with `tools/generate_cases.py`.
+- **Built:** `domain/` — `Span`, `Destination`, `Route`, `Finding`,
+  `Sensitivity`, `Signal`, `Complexity`, `Reason`, `Removal`, `RoutingDecision`,
+  `RoutingPolicy` — and `errors.py`. 100% covered, `mypy --strict` clean, and the
+  invariants fuzzed by hypothesis in `tests/test_routing_properties.py`. Nothing
+  is re-exported from `iriguchi/__init__.py`: a top-level name is a promise about
+  a public API, and the API is not settled until something outside the domain
+  uses it.
+- Two combining rules to know before editing either axis. Complexity signals
+  combine as independent evidence (`1 - prod(1 - w)`), not by adding: bounded by
+  construction and monotonic, so a prompt that trips forty rules needs no cap —
+  and a cap is what makes the fortieth signal free while the fourth was not. On
+  top of that, **two or more escalating signals reach the top band regardless of
+  the score**, because the case weighted scoring is worst at is a prompt asking
+  for two hard things at once, where each marker is individually cheap and the
+  sum lands in the middle.
+- `SignalKind` has no `SEMANTIC` member, deliberately. The literature is
+  consistent that semantic features dominate difficulty prediction; they need a
+  model, and ADR-0004 refuses a model in the deciding path. Leaving the name out
+  keeps the refusal visible. **The complexity axis is the weaker of the two by
+  construction**, which is affordable only because it chooses between
+  destinations that are already safe.
+- **Next, per `docs/proposals/0001-the-design.md` section 8:** six ports with
+  conformance suites, the over-detecting fallback scanner, the rules complexity
+  estimator, the CLI (`route`, `explain`, `config`, `doctor`, `eval`, `demo`),
+  and the evaluation corpus with `tools/generate_cases.py`.
 - **v0.1 exit criterion:** on the corpus, leak rate is zero and route accuracy is
   measured and written down; a test proves no socket opens on any local route;
   the wheel installs with zero runtime dependencies.

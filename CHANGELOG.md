@@ -18,5 +18,10 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   `mypy --strict`, six `import-linter` contracts, `pre-commit`, and a CI matrix
   over Linux and Windows that additionally asserts the wheel installs with
   nothing alongside it.
+- The domain layer: `Span`, `Destination` and `Route`, `Finding` and
+  `Sensitivity`, `Signal` and `Complexity`, `Reason` and `Removal`,
+  `RoutingDecision`, and `RoutingPolicy` — the only place a route is chosen.
+  Pure, stdlib only, no I/O, 100% covered, with the leak-impossibility invariant
+  fuzzed by hypothesis rather than only exampled.
 
-Nothing is implemented. The first release will be `0.1.0`.
+The first release will be `0.1.0`.

@@ -45,12 +45,18 @@ learned it the expensive way.
 
 ## Where the project is right now
 
-**Nothing is built.** The repository holds the design
+**The domain exists; nothing above it does.** The repository holds the design
 ([`proposals/0001-the-design.md`](proposals/0001-the-design.md)), the ten
-decisions that design rests on ([`adr/`](adr/)), and the measurements that
-forced two of them ([`measurements.md`](measurements.md)).
+decisions that design rests on ([`adr/`](adr/)), the measurements that forced two
+of them ([`measurements.md`](measurements.md)), and `iriguchi.domain` — the
+values a routing decision is made of, and the policy that makes it.
 
-v0.1 is the router, headless: a domain, six ports, a deliberately over-detecting
-fallback scanner, a rules complexity estimator, a CLI, and an evaluation corpus
-that scores it. No GUI, no network, no model. The proposal's section 8 has the
-rest.
+There is not yet anything that produces a sensitivity or a complexity: no
+scanner, no estimator, no CLI. v0.1 is the rest of the headless router — six
+ports, a deliberately over-detecting fallback scanner, a rules complexity
+estimator, a CLI, and an evaluation corpus that scores it. No GUI, no network, no
+model. The proposal's section 8 has the rest.
+
+`architecture.md` is still deliberately absent. There is an architecture now, but
+only one layer of it, and a current-state document describing a seventh of a
+stack invites being read as describing the stack.
