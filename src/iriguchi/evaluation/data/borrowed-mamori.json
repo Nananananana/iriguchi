@@ -1,0 +1,1080 @@
+{
+  "format_version": 1,
+  "name": "borrowed-mamori",
+  "source": "borrowed:mamori",
+  "description": "Routing cases derived from mamori's labelled detection corpus (ja-core.json, en-core.json, zh-core.json), Apache-2.0, by the same author. A sample carrying an annotated entity becomes must_stay_local; a negative sample becomes may_leave. Every value in mamori's corpus is invented. Regenerate with tools/borrow_mamori_cases.py -- do not hand-edit, because the next regeneration will discard the edit. These cases measure the sensitivity axis; their band labels are rule-assigned and say nothing about band accuracy.",
+  "samples": [
+    {
+      "id": "mamori-en-001",
+      "prompt": "Dear Jane Doe,\n\nThanks for your note. I will follow up on Friday.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-001)."
+    },
+    {
+      "id": "mamori-en-002",
+      "prompt": "Mr. John Smith will attend on behalf of Acme Inc.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-002). Title-anchored name; the title itself is not part of the value."
+    },
+    {
+      "id": "mamori-en-003",
+      "prompt": "Hi Sarah,\nplease review the attached before Thursday.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-003)."
+    },
+    {
+      "id": "mamori-en-004",
+      "prompt": "Thanks for your help.\n\nRegards,\nMichael Chen",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-004). Sign-off anchored."
+    },
+    {
+      "id": "mamori-en-005",
+      "prompt": "Full name: Priya Raman\nDepartment: Engineering",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-005)."
+    },
+    {
+      "id": "mamori-en-006",
+      "prompt": "I spoke to Jane Doe about the migration yesterday.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-006). Known gap: an unanchored name. Expected to leak until the model tier lands."
+    },
+    {
+      "id": "mamori-en-007",
+      "prompt": "The Quarterly Business Review is scheduled for Monday.",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-007). Negative: capitalised phrase, not a name."
+    },
+    {
+      "id": "mamori-en-008",
+      "prompt": "Monday works for me. Tuesday does not.",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-008). Negative: sentence openers."
+    },
+    {
+      "id": "mamori-en-009",
+      "prompt": "Reach me at jane.doe@example.com or (415) 555-0198.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-009)."
+    },
+    {
+      "id": "mamori-en-010",
+      "prompt": "Call 415-555-0198 before noon.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-010). NANP with hyphens."
+    },
+    {
+      "id": "mamori-en-011",
+      "prompt": "Order [[?PHONE:4155550198]] shipped this morning.",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-011). Ten bare digits are an order number to the anchored rules and a possible phone number to the wide ones. Tolerated."
+    },
+    {
+      "id": "mamori-en-012",
+      "prompt": "International line: +1 415 555 0198",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-012). E.164, matched by the universal rule."
+    },
+    {
+      "id": "mamori-en-013",
+      "prompt": "SSN 123-45-6789 is on file for the new hire.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-013)."
+    },
+    {
+      "id": "mamori-en-014",
+      "prompt": "Social Security Number: 123456789",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-014). Unhyphenated form behind a label."
+    },
+    {
+      "id": "mamori-en-015",
+      "prompt": "Ticket 666-45-6789 was closed last week.",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-015). Negative: area 666 is never issued."
+    },
+    {
+      "id": "mamori-en-016",
+      "prompt": "Ship to 1600 Pennsylvania Avenue, Washington, ZIP code: 20500",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-016)."
+    },
+    {
+      "id": "mamori-en-017",
+      "prompt": "Springfield, IL 62704-1234",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-017). ZIP+4 stands on its own."
+    },
+    {
+      "id": "mamori-en-018",
+      "prompt": "Part 62704 is back in stock.",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-018). Negative: five bare digits need a label. The wide ZIP rule needs a state abbreviation in front, so this stays a true negative under both stances."
+    },
+    {
+      "id": "mamori-en-019",
+      "prompt": "Our London office is at SW1A 1AA.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-019)."
+    },
+    {
+      "id": "mamori-en-020",
+      "prompt": "We shipped 1600 Widgets Today.",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-020). Negative: a number followed by capitalised words is not an address."
+    },
+    {
+      "id": "mamori-en-021",
+      "prompt": "Date of birth: March 4, 1985",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-021)."
+    },
+    {
+      "id": "mamori-en-022",
+      "prompt": "Shipped on 1985-04-01 and delivered a week later.",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-022). Negative: a shipping date is not a date of birth."
+    },
+    {
+      "id": "mamori-en-023",
+      "prompt": "Card 5500005555555559 was declined.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-023)."
+    },
+    {
+      "id": "mamori-en-024",
+      "prompt": "Reference [[?IDENTIFIER:1234567812345678]] in the ledger.",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-024). Sixteen digits failing Luhn. Not a card; the wide tier still reads it as an identifier, which is the trade. Tolerated."
+    },
+    {
+      "id": "mamori-en-025",
+      "prompt": "The contract is with Globex Corporation until March.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-025)."
+    },
+    {
+      "id": "mamori-en-026",
+      "prompt": "Initech LLC and Umbrella Ltd have both signed.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-026)."
+    },
+    {
+      "id": "mamori-en-027",
+      "prompt": "The contract is with Acme.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-027). Known gap: a trading name with no legal suffix."
+    },
+    {
+      "id": "mamori-en-028",
+      "prompt": "Employee ID: A-12345 starts on the 3rd.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-028)."
+    },
+    {
+      "id": "mamori-en-029",
+      "prompt": "Project: Nightingale is on track for Q3.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-029)."
+    },
+    {
+      "id": "mamori-en-030",
+      "prompt": "Runbook: https://wiki.corp.local/runbook",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-030)."
+    },
+    {
+      "id": "mamori-en-031",
+      "prompt": "Docs are at https://example.com/docs for anyone who needs them.",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-031). Negative: a public URL."
+    },
+    {
+      "id": "mamori-en-032",
+      "prompt": "The staging box is 10.0.4.17; production is behind the LB.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-032)."
+    },
+    {
+      "id": "mamori-en-033",
+      "prompt": "Resolver is 8.8.8.8 in that environment.",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-033). Negative: a public IP."
+    },
+    {
+      "id": "mamori-en-034",
+      "prompt": "password: hunter2spring for the shared account",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-034)."
+    },
+    {
+      "id": "mamori-en-035",
+      "prompt": "Connection string: mysql://svc:pw@db.internal.example.com/app",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-035)."
+    },
+    {
+      "id": "mamori-en-036",
+      "prompt": "Dear Mary Smith-Jones,\n\nyour appointment is confirmed.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-036). Hyphenated surname."
+    },
+    {
+      "id": "mamori-en-037",
+      "prompt": "Attn: Robert Lang -- invoice attached.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-037)."
+    },
+    {
+      "id": "mamori-en-038",
+      "prompt": "Please confirm receipt by end of day. Thanks.",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-038). Negative: an entire message with nothing to protect."
+    },
+    {
+      "id": "mamori-en-039",
+      "prompt": "Dear Jane Doe,\n\nCC john.smith@example.org and ops@example.org.\n\nRegards,\nMichael Chen",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-039). Several types across a whole message."
+    },
+    {
+      "id": "mamori-en-040",
+      "prompt": "Dr. Alan Turing reviewed the draft.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-040). Title-anchored, two words."
+    },
+    {
+      "id": "mamori-en-041",
+      "prompt": "Contact: Yuki Tanaka (Tokyo office)",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-041). Label-anchored, romanised Japanese name."
+    },
+    {
+      "id": "mamori-en-042",
+      "prompt": "Revenue was up 12% year on year; headcount is unchanged.",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-042). Negative for v0.1: business-sensitive in context, which is not modelled."
+    },
+    {
+      "id": "mamori-en-043",
+      "prompt": "Ping a.b+tag@mail.corp.example.co.uk if the build breaks.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-043)."
+    },
+    {
+      "id": "mamori-en-044",
+      "prompt": "Retry step 2 after error_404 on line 17.",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-044). Negative: placeholder-shaped noise that must not be mistaken for one."
+    },
+    {
+      "id": "mamori-en-045",
+      "prompt": "Hello Tom,\n\nthe invoice for Acme Inc. is attached. Employee ID: C-4477.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-045)."
+    },
+    {
+      "id": "mamori-en-046",
+      "prompt": "Dear Priya Raman,\n\nPriya Raman is leading the migration. Please loop Priya Raman in.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-046). Co-occurrence: the salutation settles the first mention, and nothing marks the other two."
+    },
+    {
+      "id": "mamori-en-047",
+      "prompt": "Mr. John Smith called.\nJohn Smith wants the report by Friday.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-047). Co-occurrence across lines from a title anchor."
+    },
+    {
+      "id": "mamori-en-048",
+      "prompt": "Dear Ann,\n\nthe announcement goes out Monday. Announcements are drafted already.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-048). Propagation must respect word boundaries: Ann is a seed, Announcement is not an occurrence of it."
+    },
+    {
+      "id": "mamori-en-049",
+      "prompt": "Dear Jane Doe,\n\nplease confirm by Friday.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-049). Single mention: propagation must not invent extra occurrences."
+    },
+    {
+      "id": "mamori-en-050",
+      "prompt": "The staging password is hunter2spring, can you check the deploy?",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-050). A password written in prose. Added in 0.12 after `mamori audit` reported that the rule for it, shipped in 0.10, had never fired on any sample."
+    },
+    {
+      "id": "mamori-en-051",
+      "prompt": "My password is fine, I just cannot reach the gateway.",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-051). Negative: talking about a password is not disclosing one. Blocking this would stop a request over an ordinary sentence, which is the most disruptive false positive this library can produce."
+    },
+    {
+      "id": "mamori-en-052",
+      "prompt": "Reach the London office on 020 7946 0958.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-052). A UK-style number: leading zero, space separated. en.PHONE.2 existed for this and had no sample until 0.12."
+    },
+    {
+      "id": "mamori-en-055",
+      "prompt": "Reach me at jane.doe @ example.com before Friday.",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori en-core (en-055). An address with the @ held apart by spaces. Not a valid address and a perfectly ordinary way for one to appear: a line wrapped, a word processor tidying up, somebody spacing it out on purpose."
+    },
+    {
+      "id": "mamori-ja-001",
+      "prompt": "田中太郎さんへ tanaka@example.com から連絡がありました。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-001)."
+    },
+    {
+      "id": "mamori-ja-002",
+      "prompt": "佐藤花子様\nお世話になっております。株式会社さくら商事の鈴木一郎です。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-002)."
+    },
+    {
+      "id": "mamori-ja-003",
+      "prompt": "担当は高橋部長です。ご連絡先は090-1234-5678。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-003). Title used as an honorific."
+    },
+    {
+      "id": "mamori-ja-004",
+      "prompt": "凪沢さんに確認してください。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-004). Surname outside the dictionary; the honorific carries it."
+    },
+    {
+      "id": "mamori-ja-005",
+      "prompt": "本日の会議は15時からです。議題は来期の予算配分について。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-005). Negative: nothing sensitive."
+    },
+    {
+      "id": "mamori-ja-006",
+      "prompt": "請求先 〒100-0001 東京都千代田区千代田1-1",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-006)."
+    },
+    {
+      "id": "mamori-ja-007",
+      "prompt": "注文番号は[[?PHONE:0312345678]]です。至急ご確認ください。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-007). An unseparated digit run is an order number to the anchored rules and a possible phone number to the wide ones. Tolerated: both readings are right for the stance that produced them."
+    },
+    {
+      "id": "mamori-ja-008",
+      "prompt": "固定電話は03-1234-5678、携帯は080-9876-5432です。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-008)."
+    },
+    {
+      "id": "mamori-ja-009",
+      "prompt": "生年月日: 1985-04-01 / 社員番号: A-12345",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-009)."
+    },
+    {
+      "id": "mamori-ja-010",
+      "prompt": "納品日は2026-03-31、検収は翌週を予定しています。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-010). Negative: a delivery date is not a date of birth."
+    },
+    {
+      "id": "mamori-ja-011",
+      "prompt": "マイナンバーは123456789018です。取り扱いにご注意ください。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-011)."
+    },
+    {
+      "id": "mamori-ja-012",
+      "prompt": "伝票番号 [[?IDENTIFIER:123456789012]] を参照してください。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-012). Twelve digits with a failing My Number check digit. The anchored rule refuses it; the wide tier reads any long digit run as an identifier. Tolerated."
+    },
+    {
+      "id": "mamori-ja-013",
+      "prompt": "カード番号4111111111111111で決済しました。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-013)."
+    },
+    {
+      "id": "mamori-ja-014",
+      "prompt": "社内Wikiはhttps://wiki.corp.local/projectにあります。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-014)."
+    },
+    {
+      "id": "mamori-ja-015",
+      "prompt": "公式サイトは https://example.com/ja をご覧ください。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-015). Negative: a public URL is not internal."
+    },
+    {
+      "id": "mamori-ja-016",
+      "prompt": "検証環境のホストは192.168.10.24です。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-016)."
+    },
+    {
+      "id": "mamori-ja-017",
+      "prompt": "バージョン 1.2.3 へのアップデートを適用しました。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-017). Negative: a version string is not an IP address."
+    },
+    {
+      "id": "mamori-ja-018",
+      "prompt": "取引先はさくら商事株式会社、担当は井上美咲さんです。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-018)."
+    },
+    {
+      "id": "mamori-ja-019",
+      "prompt": "有限会社みどりから見積もりが届きました。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-019)."
+    },
+    {
+      "id": "mamori-ja-020",
+      "prompt": "田中商事への発注は完了しています。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-020). Known gap: a trading name with no legal suffix. The name rule correctly stands aside, and the company rule cannot see it -- so it leaks."
+    },
+    {
+      "id": "mamori-ja-021",
+      "prompt": "プロジェクト名: あおぞら の進捗を共有します。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-021)."
+    },
+    {
+      "id": "mamori-ja-022",
+      "prompt": "連絡先はｔａｎａｋａ＠ｅｘａｍｐｌｅ．ｃｏｍです。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-022). Full-width email. Detection runs on normalized text; replacement must hit the original."
+    },
+    {
+      "id": "mamori-ja-023",
+      "prompt": "山田さんと山田さんは同姓の別人です。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-023). Two mentions of one identity: the same placeholder must be reused."
+    },
+    {
+      "id": "mamori-ja-024",
+      "prompt": "ジョン・スミスさんが来社されます。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-024). Katakana full name."
+    },
+    {
+      "id": "mamori-ja-025",
+      "prompt": "森林の保全について環境省の資料を確認しました。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-025). Negative: 森 and 林 are both surnames; 森林 is a forest."
+    },
+    {
+      "id": "mamori-ja-026",
+      "prompt": "原因の調査を進めています。金額は確定していません。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-026). Negative: 原 and 金 are surnames inside ordinary words."
+    },
+    {
+      "id": "mamori-ja-027",
+      "prompt": "山口県の営業所に移管しました。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-027). Negative: a place, not a person."
+    },
+    {
+      "id": "mamori-ja-028",
+      "prompt": "お客様各位\n平素より格別のご高配を賜り厚く御礼申し上げます。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-028). Negative: polite address is not a name."
+    },
+    {
+      "id": "mamori-ja-029",
+      "prompt": "パスワード: kaigi2026spring でログインしてください。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-029)."
+    },
+    {
+      "id": "mamori-ja-030",
+      "prompt": "接続先はpostgres://appuser:s3cret@db.example.com:5432/ordersです。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-030)."
+    },
+    {
+      "id": "mamori-ja-031",
+      "prompt": "渡辺課長より、中村主任へ引き継ぎ願います。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-031)."
+    },
+    {
+      "id": "mamori-ja-032",
+      "prompt": "株式会社あさひ製作所の小林健太さんからkobayashi@asahi.example.jp宛にご返信ください。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-032)."
+    },
+    {
+      "id": "mamori-ja-033",
+      "prompt": "〒530-0001 大阪府大阪市北区梅田3-1-3 へ発送しました。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-033)."
+    },
+    {
+      "id": "mamori-ja-034",
+      "prompt": "品番 [[?POSTAL_CODE:100-0001]] の在庫は十分にあります。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-034). NNN-NNNN without the postal marker is a part number to the anchored rules and a possible postal code to the wide ones. Tolerated."
+    },
+    {
+      "id": "mamori-ja-035",
+      "prompt": "田中太郎さんの連絡先はtanaka@example.com、電話は090-1234-5678、所属は株式会社さくら商事です。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-035). Four types in one sentence, adjacent. Tests overlap resolution."
+    },
+    {
+      "id": "mamori-ja-036",
+      "prompt": "社員番号: B-98765 の佐々木さんが退職されます。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-036)."
+    },
+    {
+      "id": "mamori-ja-037",
+      "prompt": "誕生日: 1990年7月15日 のお祝いを準備します。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-037)."
+    },
+    {
+      "id": "mamori-ja-038",
+      "prompt": "承知しました。明日までに対応いたします。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-038). Negative: a complete reply with nothing to protect."
+    },
+    {
+      "id": "mamori-ja-039",
+      "prompt": "清水様、大野様、横山様\n以上3名でお願いします。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-039)."
+    },
+    {
+      "id": "mamori-ja-040",
+      "prompt": "合同会社ひまわりとの契約を更新しました。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-040)."
+    },
+    {
+      "id": "mamori-ja-041",
+      "prompt": "テスト用アカウントはqa+staging@example.co.jpです。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-041)."
+    },
+    {
+      "id": "mamori-ja-042",
+      "prompt": "ステージングはhttps://staging.internal:8443/healthで確認できます。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-042)."
+    },
+    {
+      "id": "mamori-ja-043",
+      "prompt": "第3四半期の売上は前年比112%でした。詳細は添付をご覧ください。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-043). Negative: a percentage is not an identifier. Business-sensitive in context, which v0.1 does not model."
+    },
+    {
+      "id": "mamori-ja-044",
+      "prompt": "斎藤先生に監修をお願いしています。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-044)."
+    },
+    {
+      "id": "mamori-ja-045",
+      "prompt": "田中 太郎さんと田中太郎さんは同一人物です。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-045). Spacing variant: both must resolve to one identity."
+    },
+    {
+      "id": "mamori-ja-046",
+      "prompt": "凪沢さんへ\n\n本件は凪沢の担当となりました。凪沢まで直接ご連絡ください。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-046). Co-occurrence: an honorific settles the first mention, and nothing marks the rest. Only the propagation pass reaches them."
+    },
+    {
+      "id": "mamori-ja-047",
+      "prompt": "株式会社あおい技研と契約しました。\n株式会社あおい技研の窓口は営業部です。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-047). Co-occurrence for a company name repeated across lines."
+    },
+    {
+      "id": "mamori-ja-048",
+      "prompt": "件名: 鷲見様への回答\n\n鷲見様\n平素よりお世話になっております。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-048). Co-occurrence in a subject line, where the honorific already anchors both."
+    },
+    {
+      "id": "mamori-ja-049",
+      "prompt": "担当は高橋課長です。至急ご確認ください。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-049). Single mention: propagation must not invent extra occurrences."
+    },
+    {
+      "id": "mamori-ja-050",
+      "prompt": "共有アカウントのパスワードはkaigi2026springです。ご確認ください。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-050). 散文中のパスワード。0.10で規則を足したが標本が無く、0.12の `mamori audit` が「一度も発火していない」と報告して発覚した。"
+    },
+    {
+      "id": "mamori-ja-051",
+      "prompt": "パスワードは変更しましたので、再度お試しください。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-051). 否定標本。パスワードの話をしているだけで、開示はしていない。ここでブロックすると普通の文でリクエストが止まる。"
+    },
+    {
+      "id": "mamori-ja-052",
+      "prompt": "お客様番号: C-88213 の件でご連絡いたしました。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-052). お客様番号。0.13で規則を足したが標本が無く、`mamori audit` が「一度も発火していない」と即座に報告した。v0.12と同じ失敗を同じ場所でやりかけた。"
+    },
+    {
+      "id": "mamori-ja-053",
+      "prompt": "差出人: 横山\n宛先: サポート窓口\n\nお世話になっております。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-053). 差出人ラベル + 漢字姓。0.13以前はラベル規則がカタカナにしか届かず、ja-doc-006 で2回漏れていた。"
+    },
+    {
+      "id": "mamori-ja-054",
+      "prompt": "打ち合わせには森健太が出席します。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori ja-core (ja-054). 一文字の姓に名がついた形。林・森・原・岡は姓であり、同時に木立・森・原因・丘でもある。名がなければ名詞のほうが多いので、0.25から一文字姓は名を必須とし、敬称・ラベル・名のいずれかが要る。"
+    },
+    {
+      "id": "mamori-zh-001",
+      "prompt": "尊敬的张伟先生，请拨打13812345678与我们联系。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-001)."
+    },
+    {
+      "id": "mamori-zh-002",
+      "prompt": "请联系李明经理，邮箱是liming@example.com。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-002)."
+    },
+    {
+      "id": "mamori-zh-003",
+      "prompt": "合作方是北京云图科技有限公司。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-003)."
+    },
+    {
+      "id": "mamori-zh-004",
+      "prompt": "这是北京云图科技有限公司的张伟。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-004). The company rule must not swallow the leading 这是 or the trailing name."
+    },
+    {
+      "id": "mamori-zh-005",
+      "prompt": "身份证号11010519491231002X，请妥善保管。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-005)."
+    },
+    {
+      "id": "mamori-zh-006",
+      "prompt": "订单号 [[?IDENTIFIER:110105194912310021]] 已发货。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-006). Eighteen digits with a failing check character. Not a resident ID; the wide tier reads any long digit run as an identifier. Tolerated."
+    },
+    {
+      "id": "mamori-zh-007",
+      "prompt": "座机 010-12345678，邮编 100081。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-007)."
+    },
+    {
+      "id": "mamori-zh-008",
+      "prompt": "编号 [[?POSTAL_CODE:100081]] 的物料已入库。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-008). Six bare digits without the postcode label. Tolerated: the anchored rule refuses it, the wide one accepts it, and neither is wrong."
+    },
+    {
+      "id": "mamori-zh-009",
+      "prompt": "地址：北京市海淀区中关村大街1号",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-009)."
+    },
+    {
+      "id": "mamori-zh-010",
+      "prompt": "出生日期: 1985-04-01，工号: A-12345",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-010)."
+    },
+    {
+      "id": "mamori-zh-011",
+      "prompt": "交货日期是 2026-03-31，请安排验收。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-011). Negative: a delivery date."
+    },
+    {
+      "id": "mamori-zh-012",
+      "prompt": "项目名称: 夜莺 进展顺利。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-012)."
+    },
+    {
+      "id": "mamori-zh-013",
+      "prompt": "各位女士，欢迎参加本次说明会。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-013). Negative: polite address, not a name."
+    },
+    {
+      "id": "mamori-zh-014",
+      "prompt": "发给王氏集团处理即可。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-014). An organisation, not a person. 王 is a surname, so the name rule must stand aside for the company rule."
+    },
+    {
+      "id": "mamori-zh-015",
+      "prompt": "我下周去江苏省出差。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-015). Negative: a province, not a person."
+    },
+    {
+      "id": "mamori-zh-016",
+      "prompt": "收到消息我很高兴，方便的时候请回复。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-016). Negative: 高兴 and 方便 both begin with a surname character. This is the case the LOW-confidence rule exists to survive."
+    },
+    {
+      "id": "mamori-zh-017",
+      "prompt": "负责人是张伟，请知悉。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-017). Dictionary-anchored: no honorific to lean on."
+    },
+    {
+      "id": "mamori-zh-018",
+      "prompt": "作者是欧阳修，宋代人。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-018). Compound surname."
+    },
+    {
+      "id": "mamori-zh-019",
+      "prompt": "密码: huiyi2026chun，请及时修改。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-019)."
+    },
+    {
+      "id": "mamori-zh-020",
+      "prompt": "内网文档在https://wiki.corp.local/zh。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-020)."
+    },
+    {
+      "id": "mamori-zh-021",
+      "prompt": "已确认，明天之前处理完毕。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-021). Negative: a whole reply with nothing to protect."
+    },
+    {
+      "id": "mamori-zh-022",
+      "prompt": "王强女士与陈静老师都会出席。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-022)."
+    },
+    {
+      "id": "mamori-zh-023",
+      "prompt": "尊敬的诸葛云先生：\n本次评审由诸葛云主持，请在会前把材料发给诸葛云。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-023). Co-occurrence. In Chinese this is not an optimisation -- there is nothing else to anchor the later mentions on."
+    },
+    {
+      "id": "mamori-zh-024",
+      "prompt": "合同方为云图科技有限公司。\n云图科技有限公司已完成签署。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-024). Co-occurrence for a company name."
+    },
+    {
+      "id": "mamori-zh-025",
+      "prompt": "请李明经理审阅，谢谢。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-025). Single mention: propagation must not invent extra occurrences."
+    },
+    {
+      "id": "mamori-zh-026",
+      "prompt": "共享账号的密码是huiyi2026chun，请及时修改。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-026). 散文中的密码。0.10 加了规则却没有样本，0.12 的 `mamori audit` 报告它从未命中才发现。"
+    },
+    {
+      "id": "mamori-zh-027",
+      "prompt": "密码已经改过了，请重新登录试试。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Borrowed from mamori zh-core (zh-027). 否定样本：在谈论密码，而不是在泄露密码。"
+    }
+  ]
+}

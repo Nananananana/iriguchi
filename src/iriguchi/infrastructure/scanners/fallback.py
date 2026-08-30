@@ -139,8 +139,21 @@ _RULES: tuple[_Rule, ...] = (
         re.compile(
             r"(?i:password|passwd|secret|token|api[_\- ]?key|access[_\- ]?key"
             r"|パスワード|秘密鍵|アクセスキー)"
-            r"\s*[:=]\s*"
-            r"(\S{3,})"
+            # `は` and `が` are separators too. The corpus found this: Japanese
+            # writes `パスワードは hunter2 です`, never `パスワード: hunter2`,
+            # so a rule with only ASCII separators is blind to the language half
+            # of this project's users write in.
+            r"\s*(?:[:=]|は|が)\s*"
+            # The value may not *start* with kana or kanji. Without this,
+            # `パスワードは変更しましたので…` -- "the password has been
+            # changed" -- is a finding, and the corpus caught it doing that.
+            # A rule that fires on every sentence mentioning a password makes
+            # the external route unreachable, which is a different failure
+            # from being cautious.
+            #
+            # What it costs: a passphrase written in kana is invisible to this
+            # rule. That is rare, and it is what mamori is for.
+            r"(?![ぁ-んァ-ヶ一-鿿])(\S{3,})"
         ),
         group=1,
     ),

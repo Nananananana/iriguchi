@@ -45,5 +45,11 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `application/routing.py`: `PromptRouter`, which asks both proposers and then
   the policy. A proposer that fails produces a decision anyway — the most
   restrictive one available — with a reason naming what broke.
+- `evaluation/`: the corpus (155 cases), its loader, and the scorer. Six
+  figures, one of them a gate. `tools/generate_cases.py` plants the
+  adversaries deterministically; `tools/borrow_mamori_cases.py` converts
+  mamori's labelled samples once, offline, into a committed fixture.
+- The credential rule now accepts `は` and `が` as separators, and requires the
+  captured value not to begin with kana or kanji. The corpus found both halves.
 
 The first release will be `0.1.0`.

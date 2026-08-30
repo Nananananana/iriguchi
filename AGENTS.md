@@ -248,6 +248,28 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
 - `Reason.sort_key` orders spanless reasons before spanned ones, and within each
   group by source then rule. **There is no notion of importance**, deliberately:
   ordering by importance is a presentation decision and belongs to `--explain`.
+- **The corpus is 155 cases**: 21 generated with adversaries planted, 134
+  borrowed from mamori's labelled detection corpus. Borrowed by a tool that runs
+  once and commits its output — `evaluation/` may not import mamori, and finding
+  an installed package's data directory requires exactly that. The corpus works
+  with mamori absent.
+- **Read `missed findings` before `leak rate`.** The scorer originally reported
+  a 0% leak rate while the scanner was clearing 65% of the must-stay-local
+  cases: those prompts were easy, complexity chose local on its own, and a miss
+  that never became a route is invisible end to end. A metric satisfiable by
+  luck is worse than no metric, because it gets quoted.
+- **63.5% missed findings is published, not fixed.** It is the measured form of
+  ADR-0005's "install mamori". The test asserts it as a *range* — the upper
+  bound catches a collapse, the lower bound catches somebody quietly making the
+  fallback clever, which is how it would stop being the dumb thing it is.
+- A case labels sensitivity and band; **it never labels a route**. The scorer
+  asks the policy what the labels imply. Writing the route into a fixture would
+  copy the policy into the corpus, and then a policy change would need a corpus
+  edit to stay "correct" — which is how a corpus stops being evidence.
+- The eval gate did its job on its first run: it found the credential rule
+  required `:` or `=`, so it was blind to `パスワードは hunter2 です`. Fixing that
+  cost precision, and tightening the captured value bought it back. Both halves
+  are tests, and `docs/measurements.md` has the before/after.
 - **Next, per `docs/proposals/0001-the-design.md` section 8:** six ports with
   conformance suites, the over-detecting fallback scanner, the rules complexity
   estimator, the CLI (`route`, `explain`, `config`, `doctor`, `eval`, `demo`),
