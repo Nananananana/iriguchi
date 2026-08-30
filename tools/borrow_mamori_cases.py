@@ -124,6 +124,25 @@ def main() -> int:
                 "format_version": 1,
                 "name": "borrowed-mamori",
                 "source": "borrowed:mamori",
+                # **Two hands, and they are different ones.** mamori wrote the
+                # prose; a rule in this file assigned the labels. Recorded as
+                # `borrowed:mamori` alone, that was one word for two hands --
+                # and the more flattering half was the one it named.
+                #
+                # This is the split tsumugi and akashi arrived at separately,
+                # and the reason it matters here is that "text from elsewhere,
+                # labels from us" is the only arrangement in this corpus that
+                # measures anything other than its author's imagination.
+                "provenance": {
+                    "text": {
+                        "produced_by": "mamori evaluation corpus",
+                        "authored_by": "mamori",
+                    },
+                    "labels": {
+                        "produced_by": "tools/borrow_mamori_cases.py",
+                        "authored_by": "iriguchi",
+                    },
+                },
                 "description": (
                     "Routing cases derived from mamori's labelled detection corpus "
                     f"({', '.join(read)}), Apache-2.0, by the same author. A sample "

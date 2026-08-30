@@ -417,6 +417,19 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   and these six libraries share their design discussion — so a corpus borrowed
   from a sibling fails that test as surely as one written here. Not having
   written something is not the same as not having seen it.
+- **Provenance is a field, not a sentence.** Each corpus file records the hands
+  behind its *text* and its *labels* separately, and the loader refuses a file
+  that does not say. It used to be prose in a `description`, which no loader can
+  check and no reader can query. `unrecorded` is an explicit value: an empty
+  field reads as *nothing to declare*, a word says *not written down*, and those
+  are opposite claims about the same absence.
+- **It was recorded while it was still a fact.** One hand wrote
+  `tools/generate_cases.py` and that hand is known, so the entry states rather
+  than guesses. tsumugi reached the same position with twenty cases whose value
+  said `drafted` and where nothing recorded *by what* — the honest repair was
+  then impossible and the dishonest one (a default) was one line away. **The
+  window here closes the first time a model drafts a case**, because `generated`
+  would then mean two things.
 - **Generating does not launder provenance: the generator is a hand.**
   `tools/generate_cases.py` was written by whoever writes the rules, while
   looking at them. More cases from it raise the regression floor and cannot

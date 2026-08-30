@@ -65,6 +65,9 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   amended once — the prohibitions were borrowed from mamori's ADR-0032 and were
   incomplete here, because a rule id names a topic and mamori's records never
   describe what a document is for.
+- `Provenance` and `Hand` on every corpus case: which hand wrote the text and
+  which wrote the labels, recorded per file and refused when absent. Written
+  while both are still facts rather than guesses.
 - `ports/channel.py` and `infrastructure/channels/`: the escalation channel.
   `iriguchi route --explain` on an outbound route now shows the protected text
   that would leave, and reports anything mamori caught that the scanner missed.

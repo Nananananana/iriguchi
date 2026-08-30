@@ -2,6 +2,16 @@
   "format_version": 1,
   "name": "borrowed-mamori",
   "source": "borrowed:mamori",
+  "provenance": {
+    "text": {
+      "produced_by": "mamori evaluation corpus",
+      "authored_by": "mamori"
+    },
+    "labels": {
+      "produced_by": "tools/borrow_mamori_cases.py",
+      "authored_by": "iriguchi"
+    }
+  },
   "description": "Routing cases derived from mamori's labelled detection corpus (ja-core.json, en-core.json, zh-core.json), Apache-2.0, by the same author. A sample carrying an annotated entity becomes must_stay_local; a negative sample becomes may_leave. Every value in mamori's corpus is invented. Regenerate with tools/borrow_mamori_cases.py -- do not hand-edit, because the next regeneration will discard the edit. These cases measure the sensitivity axis; their band labels are rule-assigned and say nothing about band accuracy.",
   "samples": [
     {

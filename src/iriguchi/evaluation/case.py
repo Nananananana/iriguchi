@@ -16,12 +16,73 @@ the router actually decided. What is being measured is the two proposers.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 
 from ..domain.complexity import ComplexityBand
 
-__all__ = ["Case", "SensitivityClass", "TrapKind"]
+__all__ = ["UNRECORDED", "Case", "Hand", "Provenance", "SensitivityClass", "TrapKind"]
+
+#: What a provenance field says when nobody wrote one down. An explicit value,
+#: never an empty string: **an empty field reads as "nothing to declare", and a
+#: word says "not written down"**, which are opposite claims about the same
+#: absence.
+UNRECORDED = "unrecorded"
+
+
+@dataclass(frozen=True, slots=True)
+class Hand:
+    """Who produced one part of a case, and what they used.
+
+    Two fields because they answer different questions and only one of them is
+    usually asked. `produced_by` is the instrument -- a script, a corpus, a
+    model. `authored_by` is whose judgement is in it, which for a script means
+    *whoever wrote the script*, not the script.
+
+    That distinction is the entire point of this type. A generator is a hand:
+    text produced by `tools/generate_cases.py` carries the judgement of whoever
+    wrote that file, and calling it "generated" hides the author behind the
+    instrument.
+    """
+
+    produced_by: str = UNRECORDED
+    authored_by: str = UNRECORDED
+
+    def __post_init__(self) -> None:
+        for name in ("produced_by", "authored_by"):
+            if not getattr(self, name).strip():
+                raise ValueError(
+                    f"{name} is empty. Use {UNRECORDED!r} if it is not known -- an "
+                    "empty field reads as nothing to declare, which is a different "
+                    "claim from not having written it down."
+                )
+
+
+@dataclass(frozen=True, slots=True)
+class Provenance:
+    """The hands behind a case, split because they are usually different.
+
+    tsumugi and akashi arrived at the same split independently, and it is the
+    cheapest arrangement that stops a corpus measuring its author's imagination:
+    **text from elsewhere and labels from here**. A corpus that records one hand
+    cannot express that, and reports the more flattering half by default.
+
+    iriguchi's borrowed cases are exactly this shape -- mamori wrote the prose,
+    a rule here assigned the labels -- and before this type existed they were
+    recorded as `borrowed:mamori`, one word for two hands.
+    """
+
+    text: Hand
+    labels: Hand
+
+    @property
+    def is_recorded(self) -> bool:
+        return UNRECORDED not in (
+            self.text.produced_by,
+            self.text.authored_by,
+            self.labels.produced_by,
+            self.labels.authored_by,
+        )
 
 
 class SensitivityClass(Enum):
@@ -91,8 +152,13 @@ class Case:
     trap: TrapKind
     #: Where the prompt came from: `generated`, `borrowed:mamori/ja-core`.
     #: Kept so a bad number can be attributed to a source rather than to the
-    #: corpus as a whole.
+    #: corpus as a whole. A **category**, and not a hand -- see `provenance`,
+    #: which is the field that says whose judgement is in the case.
     source: str
+    #: The hands behind it. Defaults to unrecorded rather than to this
+    #: repository: a default here would be a guess written into the field whose
+    #: whole job is to hold a fact.
+    provenance: Provenance = field(default_factory=lambda: Provenance(text=Hand(), labels=Hand()))
     #: Required for anything that is not `PLAIN`, and for anything a reader
     #: would otherwise "fix". A trap with no note is a case the next person
     #: relabels.

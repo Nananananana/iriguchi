@@ -19,7 +19,7 @@ import json
 from pathlib import Path
 
 from ..domain.complexity import ComplexityBand
-from .case import Case, SensitivityClass, TrapKind
+from .case import UNRECORDED, Case, Hand, Provenance, SensitivityClass, TrapKind
 
 __all__ = ["DATA_DIR", "load_case", "load_cases", "load_corpus"]
 
@@ -30,7 +30,46 @@ DATA_DIR = Path(__file__).parent / "data"
 FORMAT_VERSION = 1
 
 
-def load_case(raw: dict[str, object], source: str) -> Case:
+def read_provenance(document: dict[str, object], name: str) -> Provenance:
+    """The hands behind one file, refusing a file that does not say.
+
+    File-level rather than per-case, because every case in a file comes from
+    the same pair of hands and repeating it 134 times would be 134 chances for
+    one of them to drift.
+
+    **Refuses rather than defaulting.** A default here would write a guess into
+    the field whose only job is to hold a fact, which is how tsumugi lost the
+    provenance of twenty cases permanently: the value said `drafted` and nothing
+    recorded what had drafted them, so the honest repair was impossible and the
+    dishonest one was one line away.
+    """
+    raw = document.get("provenance")
+    if not isinstance(raw, dict):
+        raise ValueError(
+            f"{name} declares no provenance. Every corpus file says whose text and "
+            f"whose labels it holds, or {UNRECORDED!r} where that is genuinely not "
+            "known -- but not silence, which reads as nothing to declare."
+        )
+    unknown = sorted(set(raw) - {"text", "labels"})
+    if unknown:
+        raise ValueError(f"{name} has unknown provenance keys {unknown}")
+
+    def hand(part: str) -> Hand:
+        entry = raw.get(part)
+        if not isinstance(entry, dict):
+            raise ValueError(f"{name} does not say who produced its {part}")
+        extra = sorted(set(entry) - {"produced_by", "authored_by"})
+        if extra:
+            raise ValueError(f"{name}'s {part} provenance has unknown keys {extra}")
+        return Hand(
+            produced_by=str(entry.get("produced_by", UNRECORDED)),
+            authored_by=str(entry.get("authored_by", UNRECORDED)),
+        )
+
+    return Provenance(text=hand("text"), labels=hand("labels"))
+
+
+def load_case(raw: dict[str, object], source: str, provenance: Provenance) -> Case:
     """One case from its JSON form.
 
     Unknown keys are refused rather than ignored. A misspelled `trap` that
@@ -50,6 +89,7 @@ def load_case(raw: dict[str, object], source: str) -> Case:
         band=ComplexityBand(raw["band"]),
         trap=TrapKind(raw.get("trap", "plain")),
         source=source,
+        provenance=provenance,
         note=str(raw.get("note", "")),
     )
 
@@ -64,7 +104,8 @@ def load_cases(path: Path) -> tuple[Case, ...]:
             f"{FORMAT_VERSION}. Refusing rather than guessing."
         )
     source = str(document.get("source", path.stem))
-    return tuple(load_case(raw, source) for raw in document["samples"])
+    provenance = read_provenance(document, path.name)
+    return tuple(load_case(raw, source, provenance) for raw in document["samples"])
 
 
 def load_corpus(directory: Path | None = None) -> tuple[Case, ...]:
