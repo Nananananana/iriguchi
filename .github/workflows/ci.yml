@@ -164,8 +164,17 @@ jobs:
       # Removing the need for tolerance beats tolerating: tsumugi's equivalent
       # job carried `continue-on-error` at the job level and spent an unknown
       # period failing to install mamori at all while reporting success.
+      # **The whole suite, not a list of files.** The first version of this step
+      # named `tests/test_mamori_scanner.py`, which was the only mamori-gated
+      # file when it was written. Adding `tests/test_escalation_channel.py`
+      # meant 54 tests that skip everywhere else ran nowhere at all -- the same
+      # silence this job was created to remove, reintroduced by the fix for it.
+      #
+      # A step that enumerates files drifts the moment a file is added. Running
+      # everything cannot: the other jobs run this suite without mamori, this
+      # one runs it with, and the difference between them is the seam.
       - name: The seam
-        run: python -m pytest tests/test_mamori_scanner.py -q
+        run: python -m pytest -q
         env:
           PYTHONUTF8: "1"
 
