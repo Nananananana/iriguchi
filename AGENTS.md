@@ -112,6 +112,28 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   old shape *by exception type*. tsumugi found the mirror image — an injected
   TOML error failing pytest at collection, logged by a `returncode != 0` check
   as a confirmed failure of an assertion that never executed.
+- **Verify a guard by *removing* what it guards, not only by changing it.** A
+  loosened thing still parses; a deleted one does not, and the difference is
+  where seven guards were found crashing instead of asserting. Every
+  break-and-watch run in this repository before that had injected a changed
+  value and never an absence — a blind spot shaped exactly like the thing being
+  guarded against.
+- **Which of these rules are commands and which are only sentences**, because a
+  rule you can quote is not a rule you have installed:
+
+  | rule | enforced by |
+  |---|---|
+  | `lint-imports`, not the module form | `tests/test_ci_gates.py` |
+  | the seam job is pinned and intolerant | `tests/test_ci_seam_job.py` |
+  | absent is not broken | `mamori_state()` and its tests |
+  | a decision carries no value | `tests/test_domain_values.py` greps the output |
+  | a rule id is a topic (ADR-0012) | **nothing** |
+  | a guard must not match its own prose | **nothing** |
+  | pin a hypothesis example before editing the test | **nothing** |
+  | verify by removal, not only by change | **nothing** |
+
+  The bottom four are judgement and stay judgement. Saying so is the point: a
+  reader should not have to work out which half of this file is machinery.
 - **A check whose subject includes the prose about the check passes for the
   wrong reason.** Five times now: `siblings` in a comment explaining there is no
   siblings extra; `continue-on-error` in a comment explaining its absence;
