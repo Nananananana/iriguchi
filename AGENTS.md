@@ -141,6 +141,24 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   is re-exported from `iriguchi/__init__.py`: a top-level name is a promise about
   a public API, and the API is not settled until something outside the domain
   uses it.
+- **The rules are executable.** `tests/test_architecture.py` holds `ALLOWED`,
+  which is the authority for the layer table above; the table describes it. The
+  domain's standard-library imports are an **allow-list**, not a deny-list, so a
+  new one is a deliberate line in that file. A separate test names the stdlib
+  modules the domain may never import and says why for each — `os` and `pathlib`
+  because a domain that can open a file can be told a different answer by it,
+  `time` and `random` because a decision is a function of its inputs.
+- **`tests/conftest.py` poisons the network for the whole suite**, autouse.
+  `import-linter` proves nothing *imports* a socket; this proves nothing *calls*
+  one, which is a different claim — a call reached through `urllib` names no
+  socket in this repository. The poison is an `AssertionError`, not an
+  `OSError`, because fail-closed code is entitled to catch `OSError` and fall
+  back, and that is the behaviour worth catching. v0.2's adapters opt out with
+  `@pytest.mark.network` per test; the default is never relaxed.
+- All four guards were checked by injecting a violation of each and confirming
+  red — including a function-level `import urllib` inside `RoutingPolicy.decide`,
+  which is how a forbidden dependency actually arrives, because it looks local
+  and harmless.
 - Two combining rules to know before editing either axis. Complexity signals
   combine as independent evidence (`1 - prod(1 - w)`), not by adding: bounded by
   construction and monotonic, so a prompt that trips forty rules needs no cap —

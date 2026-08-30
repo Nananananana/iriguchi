@@ -71,6 +71,10 @@ markers = [
     # reasons unrelated to the change. Run `pytest -m llm` before merging
     # anything model-adjacent.
     "llm: requires a running local model",
+    # Opts a test out of the autouse network poisoning in tests/conftest.py.
+    # Nothing in v0.1 uses it; it exists so that v0.2's adapters make their
+    # exception visible per test rather than by relaxing the default.
+    "network: may use a real socket",
 ]
 
 [tool.ruff]

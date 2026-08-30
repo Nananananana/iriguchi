@@ -23,5 +23,10 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   `RoutingDecision`, and `RoutingPolicy` — the only place a route is chosen.
   Pure, stdlib only, no I/O, 100% covered, with the leak-impossibility invariant
   fuzzed by hypothesis rather than only exampled.
+- `tests/test_architecture.py`: the layer table, walked with `ast` and asserted
+  module by module — including the rule no import contract can express, that the
+  domain may import the standard library and nothing else.
+- `tests/conftest.py`: the network, poisoned for the whole suite. The import
+  contracts prove nothing imports a socket; this proves nothing calls one.
 
 The first release will be `0.1.0`.
