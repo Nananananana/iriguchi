@@ -57,5 +57,14 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   where a prompt would go and which rules decided, and opens no socket.
 - `policy.prefer-local` no longer claims a `HIGH` band "does not call for the
   larger model" when the external destination was removed. The CLI found it.
+- `infrastructure/scanners/mamori_scanner.py`: mamori as a `SensitivityScanner`,
+  opt-in via `--scanner mamori`, optional at runtime. It closes the fallback's
+  largest gaps — a name with no honorific, an English name, a company — and
+  carries no preview, confidence or detector name into a `Finding`.
+- ADR-0012: a decision inherits the classification of the prompt it describes.
+- `docs/measurements.md`: what installing mamori buys, what that measurement
+  does not say, and what iriguchi is *not* measured against (RouterBench and
+  LLMRouterBench measure cost against quality; this measures whether
+  sensitivity removes a destination).
 
 The first release will be `0.1.0`.

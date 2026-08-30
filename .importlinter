@@ -85,6 +85,20 @@ source_modules =
     iriguchi.evaluation
 forbidden_modules =
     mamori
+# The CLI asks `mamori_is_available()` so that `doctor` can say mamori is absent
+# without the tool failing to start. That is a transitive path to `mamori` and
+# import-linter is right to see it -- but every `import mamori` in the adapter is
+# inside a function, so importing the module does not require the package.
+#
+# The contract cannot express "optional". What it is really protecting is that
+# `import iriguchi` works with mamori absent, and that is asserted where it can
+# be asserted for real: `tests/test_mamori_absent.py` makes the import fail and
+# drives the whole CLI, and the `zero runtime dependencies` CI job installs the
+# wheel with no extras and runs it. The per-file ban on *naming* mamori outside
+# an adapter is still enforced, by tests/test_architecture.py.
+ignore_imports =
+    iriguchi.interfaces.cli.main -> iriguchi.infrastructure.scanners.mamori_scanner
+    iriguchi.config -> iriguchi.infrastructure.scanners.mamori_scanner
 
 # ADR-0009. tsumugi is never imported anywhere, infrastructure included: that
 # seam is a published JSON contract, and reading JSON is reading JSON. kiseki's

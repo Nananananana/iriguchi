@@ -27,6 +27,7 @@ from .domain.destination import Destination
 from .errors import ConfigurationError
 from .infrastructure.estimators.rules import RulesEstimator
 from .infrastructure.scanners.fallback import FallbackScanner
+from .infrastructure.scanners.mamori_scanner import MamoriScanner, mamori_is_available
 
 __all__ = ["ENV_PREFIX", "IriguchiConfig"]
 
@@ -62,6 +63,11 @@ class IriguchiConfig:
 
     local: bool = False
     external: bool = False
+    #: Use mamori as the scanner. Defaults to off even when mamori is
+    #: installed: a change of scanner changes what leaves this machine, and
+    #: that is not something to inherit from what happens to be on the
+    #: system. `iriguchi doctor` says when it is available and unused.
+    use_mamori: bool = False
 
     @property
     def available(self) -> frozenset[Destination]:
@@ -104,8 +110,15 @@ class IriguchiConfig:
 
         The one place the CLI is allowed to name an adapter. Everything above it
         takes a `PromptRouter` and does not know what is inside.
+
+        Raises:
+            ScanError: if mamori was asked for and is not installed. Refusing is
+                right: somebody who passed `--scanner mamori` is relying on it
+                finding what the fallback cannot, and quietly giving them the
+                fallback instead would be the worst available outcome.
         """
-        return PromptRouter(scanner=FallbackScanner(), estimator=RulesEstimator())
+        scanner = MamoriScanner() if self.use_mamori else FallbackScanner()
+        return PromptRouter(scanner=scanner, estimator=RulesEstimator())
 
     def describe(self) -> str:
         """What this configuration does with your prompts, in prose.
@@ -113,9 +126,17 @@ class IriguchiConfig:
         A report rather than a dump. Somebody reading it should be able to
         answer "can anything leave this machine" without knowing the codebase.
         """
+        if self.use_mamori:
+            scanner = "mamori"
+        elif mamori_is_available():
+            scanner = "built-in fallback (mamori is installed but not selected)"
+        else:
+            scanner = "built-in fallback (mamori is not installed)"
+
         lines = [
             f"local model       {'available' if self.local else 'not configured'}",
             f"external service  {'available' if self.external else 'not configured'}",
+            f"scanner           {scanner}",
             "",
         ]
         if not self.available:

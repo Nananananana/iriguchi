@@ -26,6 +26,7 @@ from ...domain.destination import Destination, Route
 from ...errors import IriguchiError
 from ...evaluation.dataset import load_corpus
 from ...evaluation.scoring import run as run_evaluation
+from ...infrastructure.scanners.mamori_scanner import mamori_is_available
 from .render import render_decision
 
 __all__ = ["main"]
@@ -68,6 +69,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="whether an external service is reachable (default: from IRIGUCHI_EXTERNAL)",
     )
 
+    parser.add_argument(
+        "--scanner",
+        choices=("fallback", "mamori"),
+        default=None,
+        help=(
+            "which sensitivity scanner to use. Defaults to the built-in fallback even "
+            "when mamori is installed: changing the scanner changes what leaves this "
+            "machine, and that is not a thing to inherit from what happens to be on "
+            "the system."
+        ),
+    )
+
     commands = parser.add_subparsers(dest="command", required=True)
 
     route = commands.add_parser("route", help="where would this prompt go, and why")
@@ -103,6 +116,7 @@ def _config(args: argparse.Namespace) -> IriguchiConfig:
     return IriguchiConfig(
         local=from_env.local if args.local is None else args.local,
         external=from_env.external if args.external is None else args.external,
+        use_mamori=args.scanner == "mamori",
     )
 
 
@@ -137,11 +151,25 @@ def cmd_doctor(config: IriguchiConfig, out: TextIO) -> int:
             "is refused. That is fail-closed working as intended (ADR-0002), and it is "
             "also most of what you would want to ask."
         )
-    lines.append(
-        "note: the built-in scanner over-detects on purpose and misses names without "
-        "an honorific, English names, company names and addresses entirely. Install "
-        "mamori for a scanner that does not. See docs/measurements.md for the number."
-    )
+    if config.use_mamori:
+        lines.append(
+            "scanner: mamori. It misses far less than the fallback -- 1.0% against "
+            "67.3% on its own corpus -- and over-detects more, which is the trade. "
+            "See docs/measurements.md, including what that measurement does not say."
+        )
+    elif mamori_is_available():
+        lines.append(
+            "note: mamori is installed and not being used. The built-in fallback "
+            "misses names without an honorific, English names, company names and "
+            "addresses entirely. Pass --scanner mamori."
+        )
+    else:
+        lines.append(
+            "note: the built-in scanner over-detects on purpose and misses names "
+            "without an honorific, English names, company names and addresses "
+            "entirely. Install mamori for a scanner that does not, and see "
+            "docs/measurements.md for the number."
+        )
     print("\n".join(lines), file=out)
     return EXIT_OK
 

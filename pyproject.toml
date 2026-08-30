@@ -103,5 +103,19 @@ files = ["src/iriguchi"]
 strict = true
 warn_unreachable = true
 
+# mamori is an optional adapter dependency and is deliberately absent from CI --
+# that absence is the thing the `zero runtime dependencies` job exists to prove.
+# Its imports in `infrastructure/scanners/mamori_scanner.py` are all inside
+# functions and guarded, but mypy pinned to an environment without the package
+# cannot see a module that is not there.
+#
+# What this costs: the adapter's calls into mamori are not type-checked. They are
+# checked by `tests/test_mamori_scanner.py`, which runs against the real mamori
+# and is skipped where it is absent -- so that checking happens on a developer's
+# machine and not in CI. Worth knowing before changing that file.
+[[tool.mypy.overrides]]
+module = "mamori.*"
+ignore_missing_imports = true
+
 [tool.coverage.run]
 source = ["src/iriguchi"]
