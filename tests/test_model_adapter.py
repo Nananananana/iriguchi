@@ -26,6 +26,7 @@ from iriguchi.infrastructure.models.openai_compatible import (
     DEFAULT_TIMEOUT,
     MAX_RESPONSE_BYTES,
     PERMITTED_SCHEMES,
+    UNRECORDED_TEMPERATURE,
     OpenAICompatibleModel,
 )
 from iriguchi.ports.model import Model
@@ -135,6 +136,46 @@ class TestTheTimeout:
     def test_a_nonpositive_timeout_is_refused(self, bad: float) -> None:
         with pytest.raises(ModelError, match="positive"):
             OpenAICompatibleModel("http://host/v1", "m", timeout=bad)
+
+
+class TestTheSamplingIsSaidOutLoud:
+    """An unset temperature is a fact about a run, and it used to be a silence.
+
+    The first version recorded it as `TEMPERATURE_IS_THE_SERVERS = True`, which
+    **names the thing it does not record**: whose setting decided, never what
+    the setting was. bench spotted the shape -- it is `origin: drafted` with
+    nothing saying drafted *by what*, which cost tsumugi twenty cases
+    permanently.
+
+    It matters at this corpus size for a reason that is arithmetic rather than
+    taste: **21 cases, so one band changing is 4.76 points.** If sampling can
+    move one case the noise floor is about five points, and a difference under
+    fifteen cannot be read at all.
+    """
+
+    def test_an_unset_temperature_reads_as_unrecorded_not_as_a_default(self) -> None:
+        model = OpenAICompatibleModel("http://host/v1", "m")
+        assert model.sampling == UNRECORDED_TEMPERATURE
+        assert "unrecorded" in model.sampling
+
+    def test_an_unset_temperature_is_not_sent_at_all(self, sent: list[Any]) -> None:
+        """Not sent as a default. Sending one would make this process the
+        author of a setting it then could not report honestly."""
+        OpenAICompatibleModel("http://host/v1", "m").answer("hello")
+        assert "temperature" not in json.loads(sent[0][0].data)
+
+    def test_a_set_temperature_is_sent_and_reported(self, sent: list[Any]) -> None:
+        model = OpenAICompatibleModel("http://host/v1", "m", temperature=0.0)
+        model.answer("hello")
+        assert json.loads(sent[0][0].data)["temperature"] == 0.0
+        assert model.sampling == "temperature 0"
+
+    def test_zero_is_not_confused_with_unset(self, sent: list[Any]) -> None:
+        """`if self._temperature:` would have dropped exactly the value the
+        measurement needs. Falsy and absent are different, and this is the
+        cheapest place in the file to get that wrong."""
+        OpenAICompatibleModel("http://host/v1", "m", temperature=0.0).answer("hello")
+        assert json.loads(sent[0][0].data)["temperature"] == 0.0
 
 
 class TestEveryFailureRaises:

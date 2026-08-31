@@ -40,7 +40,8 @@ __all__ = [
     "DEFAULT_TIMEOUT",
     "MAX_RESPONSE_BYTES",
     "PERMITTED_SCHEMES",
-    "TEMPERATURE_IS_THE_SERVERS",
+    "RETRY_WOULD_NEED_A_KNOWN_TEMPERATURE",
+    "UNRECORDED_TEMPERATURE",
     "OpenAICompatibleModel",
 ]
 
@@ -76,8 +77,21 @@ PERMITTED_SCHEMES = frozenset({"http", "https"})
 #: than the typical one, on the slowest supported path. That does not exist.
 DEFAULT_TIMEOUT = 600.0
 
-#: **This module sends no `temperature`**, so the server's default decides, and
-#: that is why the no-retry decision below rests on the weaker of two arguments.
+#: What `sampling` says when nothing set a temperature.
+#:
+#: An earlier version of this file recorded the same fact as
+#: `TEMPERATURE_IS_THE_SERVERS = True`, which **names the thing it does not
+#: record**: it says whose setting decided and never what the setting was.
+#: bench spotted it as the shape tsumugi lost twenty cases to -- `origin:
+#: drafted`, with nothing anywhere saying drafted *by what*.
+#:
+#: iriguchi cannot know a server's default without asking, and asking is a
+#: request it has no reason to make. So the honest value is the word, not a
+#: silence and not a guess: **the temperature was the server's, and this
+#: process did not observe it.**
+UNRECORDED_TEMPERATURE = "the server's default, unrecorded"
+
+#: Why the retry decision rests on the weaker of two arguments.
 #:
 #: The weaker one is iriguchi's and holds regardless: a retry multiplies a
 #: timeout, and mamori's three thirty-second attempts plus backoff came to
@@ -86,17 +100,13 @@ DEFAULT_TIMEOUT = 600.0
 #:
 #: The stronger one is bench's and is conditional: **at temperature 0 a failure
 #: is not transient.** They measured llama3.1:8b returning a repetition loop in
-#: seven of eight documents under greedy decoding, and a retry there is an
-#: operation that reliably obtains the same failure again. The remaining moves
-#: are change the prompt, change the model, or accept the loss -- and retry is
-#: not among them.
+#: seven of eight documents under greedy decoding, where a retry is an operation
+#: that reliably obtains the same failure again -- leaving change the prompt,
+#: change the model, or accept the loss, and retry is not among them.
 #:
-#: That argument does not apply here yet, because nothing sets the temperature.
-#: **Whether it should is a real decision and not this commit's**: `ask` is
-#: somebody asking a question, where the server's default is defensible, and the
-#: ADR-0004 measurement is a comparison, where it is not. Named so that the
-#: measurement does not inherit an unstated setting.
-TEMPERATURE_IS_THE_SERVERS = True
+#: It does not apply whenever `temperature` is left unset, which is the default
+#: here, because then the server decides and a failure may well be transient.
+RETRY_WOULD_NEED_A_KNOWN_TEMPERATURE = True
 
 #: Bodies larger than this are refused rather than buffered. mamori dropped
 #: their proxy's cap to 8 MB after finding that protecting a 534 KB document
@@ -115,6 +125,7 @@ class OpenAICompatibleModel:
         *,
         timeout: float = DEFAULT_TIMEOUT,
         api_key: str | None = None,
+        temperature: float | None = None,
     ) -> None:
         if timeout <= 0:
             raise ModelError(f"timeout must be positive; got {timeout!r}")
@@ -132,6 +143,11 @@ class OpenAICompatibleModel:
         self._model = model
         self._timeout = timeout
         self._api_key = api_key
+        # `None` means the field is not sent at all, which is not the same as
+        # sending a default -- the server's own configuration then applies and
+        # this process never learns what it was. `sampling` is where that gets
+        # said out loud.
+        self._temperature = temperature
 
     @property
     def name(self) -> str:
@@ -142,12 +158,28 @@ class OpenAICompatibleModel:
         """
         return f"{self._model} at {self._base_url}"
 
+    @property
+    def sampling(self) -> str:
+        """What decided the randomness, for a report to quote.
+
+        A comparison that does not state this is a comparison nobody can
+        repeat, and bench's arithmetic says why it matters at this corpus size:
+        **21 cases, so one band changing is 4.76 points.** If sampling can move
+        a single case, the noise floor is about five points and a difference
+        under fifteen cannot be read.
+        """
+        if self._temperature is None:
+            return UNRECORDED_TEMPERATURE
+        return f"temperature {self._temperature:g}"
+
     def answer(self, prompt: str) -> str:
-        payload = {
+        payload: dict[str, object] = {
             "model": self._model,
             "messages": [{"role": "user", "content": prompt}],
             "stream": False,
         }
+        if self._temperature is not None:
+            payload["temperature"] = self._temperature
         headers = {"Content-Type": "application/json"}
         if self._api_key:
             headers["Authorization"] = f"Bearer {self._api_key}"
