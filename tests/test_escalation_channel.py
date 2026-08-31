@@ -207,12 +207,22 @@ class TestWhatItRefuses:
         with pytest.raises(EscalationRefusedError, match="not reversible"):
             channel._read(a_record(reversible=False))
 
-    def test_an_absent_reversible_reads_as_false(self) -> None:
-        """A wrong `true` fails silently, so absence takes the safe reading."""
+    def test_an_absent_reversible_is_refused_as_a_missing_required_field(self) -> None:
+        """It used to be refused for reading as false, and the reasoning was
+        sound: a wrong `true` fails silently, so absence takes the safe reading.
+
+        It is refused earlier now, because `reversible` is one of the schema's
+        eight required keys and a document without one is not a record of this
+        contract at all. **The safe reading of an absent field is still the
+        rule** -- `_read` keeps `record.get("reversible", False)` -- and this
+        test is renamed rather than deleted because the two refusals are
+        different claims about the same document, and only one of them can be
+        reached from here.
+        """
         channel = MamoriChannel()
         record = a_record()
         del record["reversible"]
-        with pytest.raises(EscalationRefusedError, match="not reversible"):
+        with pytest.raises(EscalationRefusedError, match="requires"):
             channel._read(record)
 
     def test_none_of_these_is_a_degradation(self) -> None:

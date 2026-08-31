@@ -18,9 +18,16 @@ does: iriguchi only escalates when its own scanner said `CLEAR`, so anything
 mamori protected is something iriguchi's scanner missed, and the person is the
 only one who can act on that.
 
-**Every disagreement with the contract is a refusal**, never a partial read. The
-schema is explicit that a consumer understanding only `placeholder` must refuse
-`surrogate` and `mixed`; this one understands only `placeholder`.
+**Every disagreement with the contract is a refusal**, never a partial read --
+and that means every obligation, not the ones this module found convenient.
+Required keys, the closed key set, the placeholder entry shape. A consumer as
+loose as this one was is a consumer claiming a strictness it does not have.
+
+**The contract identifier is the field that carries the state, and it is read
+first.** A record holding surrogates declares `.../1+surrogate` and is refused
+by the check already here. This module used to say `mode` was that mechanism,
+quoting a version of the schema that has since moved the rule -- and which now
+says plainly that `mode` is *not* a switch selecting which array to read.
 
 **mamori's own block is the last gate.** It refuses to protect a credential at
 all (its ADR-0002). A credential reaching here means a scanner already missed
@@ -43,12 +50,34 @@ _SOURCE = "mamori-channel"
 #: The one contract this build knows how to read. An unrecognised one is
 #: refused rather than parsed for the fields it happens to recognise -- the
 #: schema says so, and it is the same rule iriguchi applies to its own settings.
+#:
+#: **This is the field that carries the state**, and reading it first is the
+#: whole mechanism. A record holding any surrogate declares
+#: `mamori.protection-scope/1+surrogate`, so a token-only consumer refuses it
+#: through the check it already has rather than through a rule it has to
+#: remember every time. `mode` used to be where that lived; the schema moved it
+#: here and now says outright that `mode` is *not* a switch selecting which
+#: array to read.
 CONTRACT = "mamori.protection-scope/1"
 
-#: The only substitution mode iriguchi understands. Under `surrogate` the
-#: protected text deliberately announces nothing, so a `placeholders` list is
-#: not an enumeration of what was protected and reading it as one is exactly
-#: the quiet failure the contract exists to prevent.
+#: Every key the schema requires. Missing one means the document is not a record
+#: of this contract, whatever its `contract` field says.
+REQUIRED = frozenset(
+    {"contract", "by", "scope", "reversible", "mode", "placeholders", "protected", "masked"}
+)
+
+#: Every key the schema permits. It sets `additionalProperties: false`, so a key
+#: outside this set is not a newer producer being helpful -- it is a document
+#: this build cannot claim to have understood.
+PERMITTED = REQUIRED | {"recall", "policy_hash"}
+
+#: What one entry of `placeholders` must be, exactly.
+PLACEHOLDER_KEYS = frozenset({"token", "kind"})
+
+#: The substitution mode iriguchi understands. Kept as a check and **not** as
+#: the mechanism: the contract identifier above is what stops a half-read. This
+#: is a consistency check on a summary field, which is a far smaller claim than
+#: the one this constant used to carry.
 UNDERSTOOD_MODE = "placeholder"
 
 
@@ -183,6 +212,49 @@ class MamoriChannel:
                 f"reads {CONTRACT!r}. Refusing rather than reading the fields it "
                 "happens to recognise."
             )
+
+        missing = REQUIRED - set(record)
+        if missing:
+            raise EscalationRefusedError(
+                f"the protection record is missing {sorted(missing)}, which the "
+                f"published schema requires. A document short of a required field is "
+                "not a record of this contract, whatever its `contract` says."
+            )
+
+        unknown = set(record) - PERMITTED
+        if unknown:
+            raise EscalationRefusedError(
+                f"the protection record carries {sorted(unknown)}, which the published "
+                f"schema does not permit -- it sets `additionalProperties: false`. An "
+                "unexpected key is not a newer producer being helpful; it is a document "
+                "this build cannot claim to have understood."
+            )
+
+        # The one the contract identifier is *for*. A record declaring the plain
+        # contract while carrying surrogates is the half-read the whole
+        # mechanism exists to stop: `placeholders` would enumerate part of what
+        # was protected, and reading it as all of it is the quiet failure. The
+        # schema states it as an `if`/`then`; iriguchi runs no validator, so it
+        # states it here.
+        surrogates = record.get("protected") or ()
+        if surrogates:
+            raise EscalationRefusedError(
+                f"the record declares {CONTRACT!r} and lists {len(surrogates)} "
+                "surrogate-protected value(s). The schema forbids that combination, "
+                "and the reason is the mistake this consumer would otherwise make: "
+                "`placeholders` would enumerate part of what was protected, and "
+                "reading it as the whole would be believing a half record."
+            )
+
+        for entry in record.get("placeholders", ()):
+            keys = set(entry)
+            if keys != PLACEHOLDER_KEYS:
+                raise EscalationRefusedError(
+                    f"a `placeholders` entry has keys {sorted(keys)}; the schema "
+                    f"requires exactly {sorted(PLACEHOLDER_KEYS)}. A missing `kind` "
+                    "would be counted as UNKNOWN, and an extra field could hold a "
+                    "value, which this record is defined to carry none of."
+                )
 
         mode = record.get("mode")
         if mode != UNDERSTOOD_MODE:
