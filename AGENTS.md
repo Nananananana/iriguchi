@@ -116,10 +116,20 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
 - Any test that invokes the CLI isolates itself: chdir to `tmp_path` and strip
   `IRIGUCHI_*`. A CLI test that writes into a developer's real configuration is
   a bug waiting in every future test file.
-- Checks before every green commit: `uv run pytest -q`, `uv run mypy src`,
+- Checks before every green commit: `uv run pytest -q`, `uv run mypy`,
   `uv run lint-imports`, `uv run ruff check --fix .`, `uv run ruff format .`,
   `uv run pre-commit run --all-files`. If pre-commit rewrites anything,
   `git add` and run it again — a commit whose hooks failed did not happen.
+- **`uv run mypy`, with no path.** This line said `uv run mypy src` for two
+  releases, and `pyproject.toml` said `files = ["src/iriguchi"]` — two places
+  agreeing on a scope narrower than what they protect, which is why nobody
+  noticed. A path argument *overrides* `files`, so widening the setting alone
+  would have changed nothing for anybody following this line.
+- **`uv run mypy --platform linux` before pushing anything that touches
+  `tools/`.** The lint job runs on Linux while the test matrix runs both, so a
+  Windows-only probe type-checks clean here and fails there. That flag
+  reproduces the CI job locally in about a second, and it is cheaper than
+  finding out from a red check.
 - **`lint-imports`, never `python -m importlinter.cli`.** The module form prints
   nothing and exits 0 whatever the contracts say; CI ran it for the project's
   whole life, so the six import contracts had never been enforced anywhere but a

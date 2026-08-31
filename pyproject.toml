@@ -120,6 +120,23 @@ warn_unreachable = true
 # checked by `tests/test_mamori_scanner.py`, which runs against the real mamori
 # and is skipped where it is absent -- so that checking happens on a developer's
 # machine and not in CI. Worth knowing before changing that file.
+# `tools/measure_memory.py` is a Windows probe and says so three times over: its
+# docstring, `main()`'s platform guard, and the environment line in
+# `docs/measurements.md`. **The lint job runs on Linux**, where `ctypes.WinDLL`
+# is absent from the stubs and everything past the guard is correctly dead code.
+#
+# Excluding the file would reopen the hole widening `files` just closed, so it
+# stays in scope with exactly two codes off.
+#
+# What this costs: a genuine typo in a `ctypes` attribute name in that file --
+# `WinDLLL` -- would now be caught on Windows and not on Linux, and the lint job
+# is the Linux one. The file's own numbers are reproduced by running it, which
+# only happens on Windows, so that is where the mistake would surface.
+
+[[tool.mypy.overrides]]
+module = "measure_memory"
+disable_error_code = ["attr-defined", "unreachable"]
+
 [[tool.mypy.overrides]]
 module = "mamori.*"
 ignore_missing_imports = true
