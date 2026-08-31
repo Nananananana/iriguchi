@@ -14,6 +14,13 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Ten architecture decision records, `docs/adr/0001` through `0010`.
 - `docs/measurements.md` and the two probes in `tools/`, which measured the
   original specification's performance invariants and found neither reachable.
+- `iriguchi ask`: route a prompt, then answer it. The only command that sends.
+  `--dry-run` shows what would leave and sends nothing, which is a different
+  flag from `route --dry-run` because routing cannot send at all.
+- `IRIGUCHI_LOCAL_URL`, `LOCAL_MODEL`, `EXTERNAL_URL`, `EXTERNAL_MODEL`,
+  `EXTERNAL_KEY`. No defaults: `ask` will not guess an address. `route` needs
+  none of them, and `iriguchi config` now names a destination that can be
+  routed to and not asked.
 - `ports/model.py` and `infrastructure/models/`: the fourth port, and the one
   adapter behind it. The same shape for a model on this machine and a model on
   somebody else's, because that difference is a hostname.

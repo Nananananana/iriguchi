@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import sys
 from collections.abc import Sequence
+from dataclasses import replace
 from typing import TextIO
 
 from ...application.routing import PromptRouter
@@ -103,6 +104,24 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    ask = commands.add_parser("ask", help="route this prompt, then answer it")
+    ask.add_argument("prompt", help="the prompt. Use - to read standard input.")
+    ask.add_argument(
+        "--explain",
+        action="store_true",
+        help="print every finding and signal, not just the reasons",
+    )
+    ask.add_argument(
+        "--dry-run",
+        action="store_true",
+        help=(
+            "decide, show what would be sent, and send nothing. Not the same flag "
+            "as `route --dry-run`, which is accepted and ignored because routing "
+            "cannot send at all; here it is the difference between a question "
+            "answered and a question asked."
+        ),
+    )
+
     commands.add_parser("config", help="what this configuration does with your prompts")
     commands.add_parser("doctor", help="what is available, and what a missing piece costs")
     commands.add_parser("demo", help="a few prompts through the router")
@@ -115,11 +134,24 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def _config(args: argparse.Namespace) -> IriguchiConfig:
-    """The flags win over the environment; the environment wins over nothing."""
-    from_env = IriguchiConfig.from_env()
-    return IriguchiConfig(
-        local=from_env.local if args.local is None else args.local,
-        external=from_env.external if args.external is None else args.external,
+    """The flags win over the environment; the environment wins over nothing.
+
+    `replace` rather than a fresh `IriguchiConfig(...)`. The constructor call
+    listed the three fields that existed when it was written, so every field
+    added afterwards would have been read from the environment and then
+    silently dropped here -- and `ask`'s endpoint settings were about to be the
+    first. A copy-with-overrides carries what it was not told about.
+    """
+    return replace(
+        IriguchiConfig.from_env(),
+        **{
+            name: value
+            for name, value in (
+                ("local", args.local),
+                ("external", args.external),
+            )
+            if value is not None
+        },
         use_mamori=args.scanner == "mamori",
     )
 
@@ -137,6 +169,49 @@ def cmd_route(args: argparse.Namespace, config: IriguchiConfig, out: TextIO) -> 
     if args.explain and decision.route is Route.EXTERNAL:
         print(_what_would_leave(config, prompt), file=out)
     return EXIT_REFUSED if decision.route is Route.REFUSED else EXIT_OK
+
+
+def cmd_ask(args: argparse.Namespace, config: IriguchiConfig, out: TextIO) -> int:
+    """The only command that sends, and the only one that can be wrong twice.
+
+    A refusal is printed and nothing runs. Everything else prints the route
+    first, then the answer -- in that order on purpose, so that a person reading
+    a terminal sees where their words went before they see what came back.
+    """
+    from ...application.asking import Asker
+
+    prompt = _read(args.prompt)
+    asker = Asker(
+        router=config.router(),
+        local=config.local_answerer() if config.local else None,
+        external=config.external_answerer() if config.external else None,
+        channel=config.channel() if config.external else None,
+    )
+
+    if args.dry_run:
+        decision = asker.router.route(prompt, config.available)
+        print(render_decision(decision, verbose=args.explain), file=out)
+        if decision.route is Route.EXTERNAL:
+            print(_what_would_leave(config, prompt), file=out)
+        print("\nNothing was asked. Drop --dry-run to send it.", file=out)
+        return EXIT_REFUSED if decision.route is Route.REFUSED else EXIT_OK
+
+    answer = asker.ask(prompt, config.available)
+    print(render_decision(answer.decision, verbose=args.explain), file=out)
+    if not answer.answered:
+        return EXIT_REFUSED
+
+    # ADR-0013: iriguchi only escalates when its own scanner said CLEAR, so
+    # anything mamori protected on the way out is something the scanner missed.
+    # Printed before the answer, because it is about the decision rather than
+    # about the reply, and a person scrolling to the answer would never see it
+    # underneath.
+    for missed in answer.missed:
+        print(f"\n  missed by the scanner  {missed.detail}", file=out)
+
+    print(f"\n{answer.model} answered:\n", file=out)
+    print(answer.text, file=out)
+    return EXIT_OK
 
 
 def _what_would_leave(config: IriguchiConfig, prompt: str) -> str:
@@ -256,6 +331,8 @@ def main(argv: Sequence[str] | None = None, out: TextIO | None = None) -> int:
         config = _config(args)
         if args.command == "route":
             return cmd_route(args, config, stream)
+        if args.command == "ask":
+            return cmd_ask(args, config, stream)
         if args.command == "config":
             return cmd_config(config, stream)
         if args.command == "doctor":
