@@ -50,11 +50,22 @@ forbidden_modules =
 # ADR-0004 and the promise the whole project rests on: a routing decision is
 # made before anything is sent, so the deciding path must have no way to send.
 #
-# Through v0.1 there is no outbound path at all, so this is stricter than the
-# eventual rule: nothing in the package may touch the network. When the first
-# networked adapter lands in v0.2, this splits into the per-package list ADR-0010
-# describes -- naming each permitted infrastructure package rather than excluding
-# the adapters, so that a new adapter has to be added here deliberately.
+# Through v0.1 there was no outbound path at all, so this was stricter than the
+# eventual rule: nothing in the package may touch the network.
+#
+# v0.2 landed the first thing that has to send, and the exemption is written as
+# **one named import** rather than by dropping `iriguchi.infrastructure` from the
+# sources or listing the packages that are still banned. Both of those permit the
+# *next* adapter silently -- a new package under `infrastructure/` would simply
+# not be covered -- and the comment this replaces asked for the opposite: that a
+# new adapter has to be added here deliberately. An `ignore_imports` line is the
+# spelling where that is true, because the exemption is a path and not a
+# category.
+#
+# What is still banned, and is the actual promise: `domain`, `ports`,
+# `application`, `evaluation`, `interfaces`, and every part of `infrastructure`
+# except this one module. The deciding path has no way to send, which is what
+# ADR-0004 claims and what `route --dry-run` rests on.
 [importlinter:contract:no-network]
 name = Nothing touches the network
 type = forbidden
@@ -71,6 +82,8 @@ forbidden_modules =
     http
     urllib
     asyncio
+ignore_imports =
+    iriguchi.infrastructure.models.openai_compatible -> urllib
 
 # ADR-0005. mamori is an adapter's business and nobody else's: the core stands
 # alone, and a user who wants only a router gets one.

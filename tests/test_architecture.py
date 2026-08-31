@@ -287,3 +287,45 @@ class TestTheSiblingsAreOptional:
             f"{path.relative_to(PACKAGE_ROOT)} imports tsumugi. That seam is a "
             "published JSON contract; reading it is reading JSON. ADR-0009."
         )
+
+
+class TestOnlyOneModuleMaySend:
+    """ADR-0004, at the AST level, and the promise the project rests on.
+
+    `import-linter`'s `no-network` contract asserts the same thing and is what
+    runs in CI. This exists for the reason the mamori rule does: a contract
+    failure names a module graph, and somebody who has just written
+    `import urllib` needs to read *why* that is wrong rather than where.
+
+    The exemption is a path and not a category, in both places. Dropping
+    `iriguchi.infrastructure` from the contract's sources, or listing the
+    packages still banned, would permit the *next* adapter silently -- a new
+    package under `infrastructure/` would simply not be covered. Naming the one
+    module means a second one has to be added here on purpose.
+    """
+
+    #: The only module allowed to reach a network, and the reason it is a module
+    #: rather than a package: the next adapter must be a deliberate edit here.
+    MAY_SEND = "infrastructure/models/openai_compatible.py"
+
+    SENDING = frozenset({"socket", "ssl", "http", "urllib", "asyncio"})
+
+    @pytest.mark.parametrize("path", ALL_FILES, ids=FILE_IDS)
+    def test_nothing_else_imports_a_way_to_send(self, path: Path) -> None:
+        relative = path.relative_to(PACKAGE_ROOT).as_posix()
+        found = sorted(imported_roots(path) & self.SENDING)
+        if relative == self.MAY_SEND:
+            assert found, (
+                f"{self.MAY_SEND} is the one module exempted from the no-network "
+                "rule and imports nothing that sends. Either it moved, in which "
+                "case this constant is stale and the exemption now covers "
+                "nothing, or the exemption is no longer needed and should go."
+            )
+            return
+        assert not found, (
+            f"{relative} imports {found}. A routing decision is made before "
+            f"anything is sent, so the deciding path must have no way to send "
+            f"(ADR-0004) -- and `route --dry-run` promising that nothing left "
+            f"rests on it. If this is a new outbound adapter, it needs an ADR "
+            f"and its own line in `.importlinter`, not an import."
+        )

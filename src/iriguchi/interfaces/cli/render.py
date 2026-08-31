@@ -42,7 +42,7 @@ def _source_rank(source: str) -> tuple[int, str]:
         return (len(_SOURCE_ORDER), source)
 
 
-def render_decision(decision: RoutingDecision, *, verbose: bool = False) -> str:
+def render_decision(decision: RoutingDecision, *, sent: str, verbose: bool = False) -> str:
     """The whole account, for a person.
 
     Args:
@@ -75,7 +75,17 @@ def render_decision(decision: RoutingDecision, *, verbose: bool = False) -> str:
     else:
         lines.append("  removed      nothing")
 
-    lines.append("  sent         nothing")
+    # **Required, and with no default.** This line read `sent nothing`
+    # unconditionally, which was true for as long as `route` was the only
+    # caller and nothing in the package could send. `ask` reused the renderer
+    # and the line became a false statement printed directly above an answer
+    # from a model.
+    #
+    # Whether anything was sent is not a property of a decision; it is a
+    # property of what the command did with one. A default here would let the
+    # next command inherit whichever claim happened to be written down, which
+    # is how this one survived.
+    lines.append(f"  sent         {sent}")
 
     if verbose:
         lines.extend(_detail(decision))

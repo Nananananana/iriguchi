@@ -20,13 +20,14 @@ from __future__ import annotations
 
 import os
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .application.routing import PromptRouter
 from .domain.destination import Destination
 from .errors import ConfigurationError
 from .infrastructure.channels.mamori_channel import MamoriChannel
 from .infrastructure.estimators.rules import RulesEstimator
+from .infrastructure.models.openai_compatible import OpenAICompatibleModel
 from .infrastructure.scanners.fallback import FallbackScanner
 from .infrastructure.scanners.mamori_scanner import (
     MamoriScanner,
@@ -40,7 +41,27 @@ ENV_PREFIX = "IRIGUCHI_"
 
 #: Every key this build understands. Anything else under the prefix is a typo,
 #: and is refused.
-KNOWN_KEYS = frozenset({"LOCAL", "EXTERNAL"})
+#:
+#: `LOCAL` and `EXTERNAL` say what this machine can reach and are all `route`
+#: needs. The four that follow are what `ask` needs to actually send, and they
+#: are separate on purpose: routing is answerable with no endpoint configured
+#: at all, which is what keeps the deciding path testable with no network.
+KNOWN_KEYS = frozenset(
+    {
+        "LOCAL",
+        "EXTERNAL",
+        "LOCAL_URL",
+        "LOCAL_MODEL",
+        "EXTERNAL_URL",
+        "EXTERNAL_MODEL",
+        "EXTERNAL_KEY",
+    }
+)
+
+#: Settings whose values must never be printed. `describe()` reports every
+#: other field; a key is the one thing here worth stealing, and a report that
+#: quotes it turns "what does this configuration do" into a disclosure.
+SECRET_KEYS = frozenset({"EXTERNAL_KEY"})
 
 _TRUE = frozenset({"1", "true", "yes", "on"})
 _FALSE = frozenset({"0", "false", "no", "off"})
@@ -73,6 +94,18 @@ class IriguchiConfig:
     #: that is not something to inherit from what happens to be on the
     #: system. `iriguchi doctor` says when it is available and unused.
     use_mamori: bool = False
+
+    #: Where the local model answers, and which one. No default: ollama listens
+    #: on 11434 and guessing it would mean `ask` sends to whatever is on that
+    #: port, which on a shared machine is not necessarily a model of yours.
+    #: `LOCAL=1` still means "a local model exists" for routing, because `route`
+    #: needs no endpoint -- these are only required by `ask`, and it says so.
+    local_url: str = ""
+    local_model: str = ""
+    external_url: str = ""
+    external_model: str = ""
+    #: Never printed. See `SECRET_KEYS`.
+    external_key: str = field(default="", repr=False)
 
     @property
     def available(self) -> frozenset[Destination]:
@@ -108,7 +141,44 @@ class IriguchiConfig:
         return cls(
             local=_flag("LOCAL", found["LOCAL"]) if "LOCAL" in found else False,
             external=_flag("EXTERNAL", found["EXTERNAL"]) if "EXTERNAL" in found else False,
+            local_url=found.get("LOCAL_URL", ""),
+            local_model=found.get("LOCAL_MODEL", ""),
+            external_url=found.get("EXTERNAL_URL", ""),
+            external_model=found.get("EXTERNAL_MODEL", ""),
+            external_key=found.get("EXTERNAL_KEY", ""),
         )
+
+    def local_answerer(self) -> OpenAICompatibleModel:
+        """The local model, or a refusal naming what is missing.
+
+        Composition root again: this is the one place allowed to name an
+        adapter. A missing setting is reported as a setting rather than as a
+        connection failure -- somebody who has not configured an endpoint should
+        be told that, not told that a host they never named is unreachable.
+        """
+        return self._answerer("LOCAL", self.local_url, self.local_model, None)
+
+    def external_answerer(self) -> OpenAICompatibleModel:
+        """The external model, or a refusal naming what is missing."""
+        return self._answerer(
+            "EXTERNAL", self.external_url, self.external_model, self.external_key or None
+        )
+
+    @staticmethod
+    def _answerer(which: str, url: str, model: str, key: str | None) -> OpenAICompatibleModel:
+        missing = [
+            f"{ENV_PREFIX}{which}_{name}"
+            for name, value in (("URL", url), ("MODEL", model))
+            if not value.strip()
+        ]
+        if missing:
+            raise ConfigurationError(
+                f"{missing} is not set, so there is nowhere to send and nothing to "
+                f"ask for. `route` needs neither -- deciding where a prompt may go "
+                f"does not require an endpoint -- but `ask` sends, and it will not "
+                f"guess an address."
+            )
+        return OpenAICompatibleModel(url.strip(), model.strip(), api_key=key)
 
     def router(self) -> PromptRouter:
         """The router this configuration describes.
@@ -141,6 +211,20 @@ class IriguchiConfig:
         """
         return MamoriChannel()
 
+    @staticmethod
+    def _endpoint(on: bool, url: str, model: str) -> str:
+        """Three states, not two.
+
+        "available" for a destination with nowhere to send would be the same
+        defect `describe` already avoids for mamori: a true sentence that sends
+        the reader to fix the wrong thing.
+        """
+        if not on:
+            return "not configured"
+        if url.strip() and model.strip():
+            return f"available    {model.strip()} at {url.strip()}"
+        return "available for routing, no endpoint for asking"
+
     def describe(self) -> str:
         """What this configuration does with your prompts, in prose.
 
@@ -162,11 +246,33 @@ class IriguchiConfig:
             scanner = "built-in fallback (mamori is not installed)"
 
         lines = [
-            f"local model       {'available' if self.local else 'not configured'}",
-            f"external service  {'available' if self.external else 'not configured'}",
+            f"local model       {self._endpoint(self.local, self.local_url, self.local_model)}",
+            f"external service  "
+            f"{self._endpoint(self.external, self.external_url, self.external_model)}",
             f"scanner           {scanner}",
             "",
         ]
+        # A destination declared available with no endpoint behind it is a real
+        # state and a confusing one: `route` says a prompt may go there and
+        # `ask` refuses. Both are correct -- deciding needs no endpoint -- and a
+        # person who reads only the first would reasonably think they were set
+        # up. Said here rather than discovered at the moment of sending.
+        half = [
+            name
+            for name, on, url, model in (
+                ("LOCAL", self.local, self.local_url, self.local_model),
+                ("EXTERNAL", self.external, self.external_url, self.external_model),
+            )
+            if on and not (url.strip() and model.strip())
+        ]
+        if half:
+            lines.append(
+                f"{half} can be routed to and not asked. `route` needs no endpoint and "
+                f"will say a prompt may go there; `ask` needs one and will refuse. Set "
+                f"{[f'{ENV_PREFIX}{name}_URL' for name in half]} and the matching "
+                f"_MODEL to close the gap."
+            )
+            lines.append("")
         if not self.available:
             lines.append(
                 "Nothing is available, so every prompt is refused. Set "

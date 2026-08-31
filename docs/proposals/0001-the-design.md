@@ -321,6 +321,12 @@ to a routing path.
   and `EscalationChannel` pointed at mamori's OpenAI-compatible proxy rather
   than at an upstream directly. iriguchi never sends raw text anywhere, and a
   test asserts it.
+  **Superseded by [ADR-0014](../adr/0014-ask-holds-its-own-upstream.md).** These
+  two sentences contradict each other: through the proxy, iriguchi sends
+  unprotected text to `127.0.0.1:8100` and mamori protects it there, so raw text
+  crosses a socket. The channel protects in-process and keeps the promise the
+  second sentence makes. Written here rather than corrected, because a proposal
+  that quietly matches the code stops being evidence of what was decided when.
 - The ollama adapter for the local model.
 - `iriguchi ask` — the only command with an outbound path, named in an
   allow-list a test asserts, and it says where it is sending before it sends.
