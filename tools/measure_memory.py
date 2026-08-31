@@ -64,7 +64,10 @@ def working_set_mb() -> float:
     )
     if not ok:
         raise OSError(ctypes.get_last_error(), "K32GetProcessMemoryInfo failed")
-    return counters.WorkingSetSize / 1048576
+    # `ctypes` fields are `Any`, so this arithmetic and the number it
+    # produces were unchecked -- in a file whose whole purpose is to put a
+    # figure into `docs/measurements.md`.
+    return float(counters.WorkingSetSize) / 1048576
 
 
 def main() -> int:

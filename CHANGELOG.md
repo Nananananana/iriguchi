@@ -65,6 +65,9 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   amended once — the prohibitions were borrowed from mamori's ADR-0032 and were
   incomplete here, because a rule id names a topic and mamori's records never
   describe what a document is for.
+- mypy now reads `tests/` and `tools/` as well as `src/`. It had read only
+  `src/` since v0.1, and two real type errors were sitting in the generator
+  that writes the corpus and the tool that produces a published number.
 - `Provenance` and `Hand` on every corpus case: which hand wrote the text and
   which wrote the labels, recorded per file and refused when absent. Written
   while both are still facts rather than guesses.

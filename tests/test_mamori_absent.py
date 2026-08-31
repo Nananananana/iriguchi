@@ -93,12 +93,12 @@ class ImportBlocker:
                 return answer
             return self._real_find_spec(name, package)
 
-        importlib.util.find_spec = spec_for  # type: ignore[assignment]
+        importlib.util.find_spec = spec_for
         return self
 
     def __exit__(self, *exc: object) -> None:
         builtins.__import__ = self._real_import
-        importlib.util.find_spec = self._real_find_spec  # type: ignore[assignment]
+        importlib.util.find_spec = self._real_find_spec
         sys.modules.update(self._saved)
 
 

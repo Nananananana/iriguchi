@@ -154,7 +154,7 @@ class TestTheGeneratorIsReproducible:
 
     def test_the_oracle_refuses_a_corpus_that_is_all_one_class(self) -> None:
         sys.path.insert(0, str(REPO_ROOT / "tools"))
-        from generate_cases import check  # type: ignore[import-not-found]
+        from generate_cases import check
 
         problems = check(
             [
@@ -172,7 +172,7 @@ class TestTheGeneratorIsReproducible:
 
     def test_the_oracle_refuses_a_real_looking_address(self) -> None:
         sys.path.insert(0, str(REPO_ROOT / "tools"))
-        from generate_cases import check  # type: ignore[import-not-found]
+        from generate_cases import check
 
         problems = check(
             [
