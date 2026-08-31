@@ -177,25 +177,26 @@ def cmd_ask(args: argparse.Namespace, config: IriguchiConfig, out: TextIO) -> in
     A refusal is printed and nothing runs. Everything else prints the route
     first, then the answer -- in that order on purpose, so that a person reading
     a terminal sees where their words went before they see what came back.
+
+    **`--dry-run` returns before anything that can send is constructed**, and
+    that is a structural promise rather than an ordering one. The first version
+    built the `Asker` first, which builds the channel, which needs mamori -- so
+    `ask --dry-run` failed outright on a machine without it, having refused to
+    do the one thing the flag exists for. A flag that means "decide and send
+    nothing" cannot require the sending half to be available.
     """
     from ...application.asking import Asker
 
     prompt = _read(args.prompt)
+    if args.dry_run:
+        return _decide_only(args, config, prompt, out)
+
     asker = Asker(
         router=config.router(),
         local=config.local_answerer() if config.local else None,
         external=config.external_answerer() if config.external else None,
         channel=config.channel() if config.external else None,
     )
-
-    if args.dry_run:
-        decision = asker.router.route(prompt, config.available)
-        print(render_decision(decision, verbose=args.explain), file=out)
-        if decision.route is Route.EXTERNAL:
-            print(_what_would_leave(config, prompt), file=out)
-        print("\nNothing was asked. Drop --dry-run to send it.", file=out)
-        return EXIT_REFUSED if decision.route is Route.REFUSED else EXIT_OK
-
     answer = asker.ask(prompt, config.available)
     print(render_decision(answer.decision, verbose=args.explain), file=out)
     if not answer.answered:
@@ -212,6 +213,21 @@ def cmd_ask(args: argparse.Namespace, config: IriguchiConfig, out: TextIO) -> in
     print(f"\n{answer.model} answered:\n", file=out)
     print(answer.text, file=out)
     return EXIT_OK
+
+
+def _decide_only(args: argparse.Namespace, config: IriguchiConfig, prompt: str, out: TextIO) -> int:
+    """Decide, show what would leave, and construct nothing that could send.
+
+    `_what_would_leave` protects and closes; there is no send on that path,
+    which is what lets an inspection command walk it, and it says so in prose
+    when the protection is unavailable rather than failing the command.
+    """
+    decision = config.router().route(prompt, config.available)
+    print(render_decision(decision, verbose=args.explain), file=out)
+    if decision.route is Route.EXTERNAL:
+        print(_what_would_leave(config, prompt), file=out)
+    print("\nNothing was asked. Drop --dry-run to send it.", file=out)
+    return EXIT_REFUSED if decision.route is Route.REFUSED else EXIT_OK
 
 
 def _what_would_leave(config: IriguchiConfig, prompt: str) -> str:

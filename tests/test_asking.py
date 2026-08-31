@@ -383,6 +383,71 @@ class TestTheCommandLine:
         assert code == cli.EXIT_OK
         assert "Nothing was asked" in printed
 
+    def test_dry_run_builds_no_model(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """The precise promise, and it is narrower than the first draft of this
+        test assumed.
+
+        The dry-run path **does** build the channel, because showing what would
+        leave means protecting the text -- and a channel provably cannot send:
+        `prepare` protects and returns, and sending is a different method on a
+        different object. That separability is exactly what ADR-0014 says the
+        proxy cannot offer, so exercising it here is the point rather than a
+        leak.
+
+        What it must never build is a `Model`. That is the thing with a socket.
+        """
+
+        def refuse(*args: object, **kwargs: object) -> None:
+            raise AssertionError("the dry-run path built a model")
+
+        monkeypatch.setattr(IriguchiConfig, "local_answerer", refuse)
+        monkeypatch.setattr(IriguchiConfig, "external_answerer", refuse)
+        code, printed = self._run(
+            ["ask", "--dry-run", WANTS_THE_BIG_ONE],
+            monkeypatch,
+            IRIGUCHI_LOCAL="1",
+            IRIGUCHI_LOCAL_URL="http://127.0.0.1:11434/v1",
+            IRIGUCHI_LOCAL_MODEL="a-model",
+            IRIGUCHI_EXTERNAL="1",
+            IRIGUCHI_EXTERNAL_URL="https://api.example.com/v1",
+            IRIGUCHI_EXTERNAL_MODEL="a-big-model",
+        )
+        assert code == cli.EXIT_OK
+        assert "Nothing was asked" in printed
+
+    def test_dry_run_works_when_the_protection_is_unavailable(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The regression CI caught and this machine could not.
+
+        The first version built the `Asker` before reading `--dry-run`, and an
+        `Asker` builds the channel, and the channel needs mamori. So on a
+        machine without it `ask --dry-run` failed outright -- having refused to
+        do the one thing the flag exists for. It passed here because mamori is
+        installed on this machine, and failed on both Linux runners.
+
+        `_what_would_leave` had always handled this and said so in prose. The
+        eager construction went around it.
+        """
+
+        def absent(*args: object, **kwargs: object) -> None:
+            raise EscalationRefusedError("mamori is not installed")
+
+        monkeypatch.setattr(IriguchiConfig, "channel", absent)
+        code, printed = self._run(
+            ["ask", "--dry-run", WANTS_THE_BIG_ONE],
+            monkeypatch,
+            IRIGUCHI_LOCAL="1",
+            IRIGUCHI_LOCAL_URL="http://127.0.0.1:11434/v1",
+            IRIGUCHI_LOCAL_MODEL="a-model",
+            IRIGUCHI_EXTERNAL="1",
+            IRIGUCHI_EXTERNAL_URL="https://api.example.com/v1",
+            IRIGUCHI_EXTERNAL_MODEL="a-big-model",
+        )
+        assert code == cli.EXIT_OK
+        assert "cannot say" in printed
+        assert "Nothing was asked" in printed
+
 
 class TestTheWiringGuards:
     """Two things that were one edit away from being silently wrong."""
@@ -466,6 +531,38 @@ class TestTheWiringGuards:
             }
         )
         assert "no endpoint for asking" not in config.describe()
+
+    def test_the_external_answerer_carries_the_key_and_does_not_show_it(self) -> None:
+        """The composition root is where the key stops being a string in the
+        environment and becomes a header, and it is the last place it is
+        visible. `name` is printed before every send."""
+        config = IriguchiConfig.from_env(
+            {
+                "IRIGUCHI_EXTERNAL": "1",
+                "IRIGUCHI_EXTERNAL_URL": "https://api.example.com/v1",
+                "IRIGUCHI_EXTERNAL_MODEL": "a-big-model",
+                "IRIGUCHI_EXTERNAL_KEY": "sk-do-not-print-this",
+            }
+        )
+        model = config.external_answerer()
+        assert model.name == "a-big-model at https://api.example.com/v1/"
+        assert "sk-do-not-print-this" not in model.name
+        assert "sk-do-not-print-this" not in repr(model)
+
+    def test_the_local_answerer_is_given_no_key(self) -> None:
+        """There is no `IRIGUCHI_LOCAL_KEY`, and a local endpoint that wants
+        one is a hosted service behind a loopback address, which is a different
+        conversation than this build is having."""
+        config = IriguchiConfig.from_env(
+            {
+                "IRIGUCHI_LOCAL": "1",
+                "IRIGUCHI_LOCAL_URL": "http://127.0.0.1:11434/v1",
+                "IRIGUCHI_LOCAL_MODEL": "a-model",
+                "IRIGUCHI_EXTERNAL_KEY": "sk-do-not-print-this",
+            }
+        )
+        model = config.local_answerer()
+        assert model._api_key is None
 
     def test_the_key_is_not_in_what_config_prints(self) -> None:
         """`iriguchi config` answers "what does this do with my prompts". A
