@@ -118,7 +118,14 @@ jobs:
       - uses: actions/checkout@v7
         with:
           repository: Nananananana/mamori
-          ref: dd9e4868968f999c72f6d353acb9bd98f213e0c4  # 0.26.0
+          # Raised from dd9e486 (0.26.0) because the pinned one predated
+          # `Carried, not stated: surrogates get their own contract identifier`.
+          # **CI was verifying iriguchi against a contract mamori no longer
+          # publishes** -- the pin held the seam still and held it in the past,
+          # and a pin nothing re-examines is a fixture rather than a version.
+          # The conformance tests are what noticed; they fail when this sha's
+          # schema and iriguchi's reader describe different documents.
+          ref: f791ba07869585c7666d312bb967e78117ba56f4  # 0.27.0
           path: .sibling-mamori
 
       - uses: actions/setup-python@v7

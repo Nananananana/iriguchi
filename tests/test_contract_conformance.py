@@ -139,6 +139,33 @@ class TestTheHandWrittenConstantsMatchTheRealSchema:
         path = importlib.resources.files("mamori").joinpath("schemas/protection-scope-1.json")
         return json.loads(path.read_text(encoding="utf-8"))  # type: ignore[no-any-return]
 
+    @classmethod
+    def _at(cls, *keys: str) -> Any:
+        """Walk the schema, saying what is missing rather than raising KeyError.
+
+        The first real run of these tests failed with three bare `KeyError`s,
+        because the seam job pinned a mamori from **before** the contract
+        identifier was split -- so `contract` had a `const` and no `enum`, and
+        there was no `allOf` at all. The diagnosis was right there and the test
+        did not say it: a guard that crashes reports that it broke, not what it
+        found. That was fixed in seven other guards here on the same day and
+        written straight back into new ones.
+        """
+        node: Any = cls._schema()
+        walked: list[str] = []
+        for key in keys:
+            if not isinstance(node, dict) or key not in node:
+                raise AssertionError(
+                    f"the installed mamori's schema has no {key!r} at "
+                    f"{'.'.join(walked) or '<root>'}. This build implements "
+                    f"{CONTRACT!r} as mamori publishes it *now*; a schema shaped "
+                    f"differently is a different contract, not a missing key. "
+                    f"Check what the seam job pins."
+                )
+            node = node[key]
+            walked.append(key)
+        return node
+
     def test_required_is_exactly_the_schemas_required(self) -> None:
         assert set(self._schema()["required"]) == REQUIRED
 
@@ -150,24 +177,24 @@ class TestTheHandWrittenConstantsMatchTheRealSchema:
         assert REQUIRED <= PERMITTED
 
     def test_the_placeholder_shape_is_the_schemas(self) -> None:
-        items = self._schema()["properties"]["placeholders"]["items"]
+        items = self._at("properties", "placeholders", "items")
         assert PLACEHOLDER_KEYS == set(items["properties"]) == set(items["required"])
         assert items["additionalProperties"] is False
 
     def test_the_contract_this_build_reads_is_one_the_schema_names(self) -> None:
-        assert CONTRACT in self._schema()["properties"]["contract"]["enum"]
+        assert CONTRACT in self._at("properties", "contract", "enum")
 
     def test_the_surrogate_contract_is_the_one_being_refused(self) -> None:
         """If mamori renamed it, the refusal above would be testing a string
         nothing produces -- passing while protecting nothing."""
-        enum = set(self._schema()["properties"]["contract"]["enum"])
+        enum = set(self._at("properties", "contract", "enum"))
         assert enum - {CONTRACT} == {f"{CONTRACT}+surrogate"}
 
     def test_the_plain_contract_still_forbids_surrogates(self) -> None:
         """The `if`/`then` iriguchi restates by hand. If mamori relaxed it, the
         hand-written version would be stricter than the contract and would
         refuse documents mamori considers valid."""
-        rules = self._schema()["allOf"]
+        rules = self._at("allOf")
         plain = [r for r in rules if r["if"]["properties"]["contract"]["const"] == CONTRACT]
         assert len(plain) == 1
         assert plain[0]["then"]["properties"]["protected"]["maxItems"] == 0
