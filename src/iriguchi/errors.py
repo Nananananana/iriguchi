@@ -97,7 +97,34 @@ class ContractError(IriguchiError):
 
     Refusing an unrecognised contract is the same decision as refusing an
     unrecognised setting. See ``docs/adr/0009-tsumugi-is-read-as-json.md``.
+
+    **Nothing raises this yet** -- see `NOT_YET_RAISED`. Do not write
+    ``except ContractError:`` expecting it to catch the escalation channel's
+    contract check; that one refuses an escalation and says so with
+    `EscalationRefusedError`, because the response there is to leave the prompt
+    where it is rather than to report a bad document.
     """
+
+
+#: Exceptions that exist, are exported, and are raised by nothing in `src/`.
+#:
+#: An exported exception with a docstring is an invitation to write
+#: ``except ThatError:``, and if nothing raises it the caller gets a branch
+#: that looks like handling and never runs -- the same shape as a check that
+#: cannot fail. So the state is declared here rather than left to be noticed.
+#:
+#: `tests/test_error_tree.py` enforces both directions: an undeclared one is a
+#: failure, and a declared one that *is* raised is a stale declaration and also
+#: a failure. A base class is exempt when something subclasses it, decided by
+#: looking at the tree rather than at whether the name reads like a base.
+NOT_YET_RAISED = {
+    "ContractError": (
+        "The reader it was written for does not exist. ADR-0009 settles that a "
+        "tsumugi context package is read as JSON and an unrecognised `contract` "
+        "is refused; the dashboard that would do the reading is v0.3. Until it "
+        "lands this names an event nothing produces."
+    ),
+}
 
 
 __all__ = [

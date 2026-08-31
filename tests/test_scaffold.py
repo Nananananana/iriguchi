@@ -70,7 +70,14 @@ def test_a_failed_proposal_is_a_routing_failure(failure: type[Exception]) -> Non
 @pytest.mark.parametrize(
     "error", [RoutingError, ScanError, EstimationError, ConfigurationError, ContractError]
 )
-def test_everything_raised_is_catchable_as_one_thing(error: type[Exception]) -> None:
+def test_everything_exported_is_catchable_as_one_thing(error: type[Exception]) -> None:
+    """Named for what it checks.
+
+    It used to say *everything raised*, and `ContractError` is in the list and
+    is raised by nothing -- so the name asserted a fact the body cannot see,
+    and `issubclass` passed regardless. Whether each of these is ever raised is
+    `test_error_tree.py`'s question, and it is a different one.
+    """
     assert issubclass(error, IriguchiError)
 
 
