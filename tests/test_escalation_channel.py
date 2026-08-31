@@ -287,7 +287,7 @@ class TestTheMappingHasALifetime:
             def restore(self, text: str) -> Any:  # pragma: no cover -- not reached
                 raise AssertionError
 
-        escalation._session = Watched()  # type: ignore[assignment]
+        escalation._session = Watched()
         escalation.close()
         assert closed == [True]
 
@@ -295,7 +295,7 @@ class TestTheMappingHasALifetime:
         escalation = MamoriEscalation(_Recording(), "text", ())
         with escalation:
             pass
-        assert escalation._session.closed  # type: ignore[attr-defined]
+        assert escalation._session.closed
 
 
 class _Recording:

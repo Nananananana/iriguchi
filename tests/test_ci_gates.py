@@ -87,3 +87,41 @@ def test_the_other_gates_are_present(tool: str) -> None:
         f"no CI step runs {tool}. A gate that has left the workflow fails the "
         f"same way as one that never worked: silently, and green."
     )
+
+
+def test_mypy_looks_at_every_directory_that_holds_python() -> None:
+    """A narrower spelling of a check fails silently by construction.
+
+    `files = ["src/iriguchi"]` passed for the whole of v0.1 and v0.2 while
+    `tests/` and `tools/` were never type-checked at all, and two real errors
+    sat in the two worst places for it: the generator that writes the corpus,
+    and the tool that produces a number for `docs/measurements.md`. Neither was
+    hidden. Nothing was looking.
+
+    Read from the parsed value rather than the file's text, because the comment
+    above the setting explains this and a text match would find its own
+    explanation. That mistake was made five times here in one day.
+    """
+    import tomllib
+
+    root = Path(__file__).resolve().parent.parent
+    with (root / "pyproject.toml").open("rb") as handle:
+        scope = set(tomllib.load(handle)["tool"]["mypy"]["files"])
+
+    holding_python = {
+        entry.name
+        for entry in root.iterdir()
+        if entry.is_dir() and not entry.name.startswith(".") and any(entry.rglob("*.py"))
+    }
+    uncovered = {
+        directory
+        for directory in holding_python
+        if not any(
+            spelling == directory or spelling.startswith(f"{directory}/") for spelling in scope
+        )
+    }
+    assert not uncovered, (
+        f"{sorted(uncovered)} contain Python and are outside mypy's `files`. "
+        f"A check whose scope is narrower than what it protects reports success "
+        f"about the part it read."
+    )

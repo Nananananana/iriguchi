@@ -330,7 +330,7 @@ def check(cases: list[dict[str, object]]) -> list[str]:
 
 
 def main() -> int:
-    cases = [
+    cases: list[dict[str, object]] = [
         {
             "id": f"gen-{draft.trap.replace('_', '-')}-{draft.slug}",
             "prompt": draft.prompt,

@@ -99,7 +99,14 @@ ignore = [
 
 [tool.mypy]
 python_version = "3.12"
-files = ["src/iriguchi"]
+# `src` alone left `tests/` and `tools/` unchecked, and the two worst places for
+# that are exactly the two this project's rules lean hardest on: the generator
+# that writes the corpus, and the tool that produces a published number. Both
+# had a real error sitting in them, found by running mypy wider than CI does.
+# A narrower spelling of a check fails silently by construction -- mamori learned
+# the same thing when `ruff format --check src tests` passed while three READMEs
+# drifted and main was red for three commits.
+files = ["src/iriguchi", "tests", "tools"]
 strict = true
 warn_unreachable = true
 
