@@ -52,12 +52,17 @@ is a consumer that has not read the contract:
 
 - **An unrecognised `contract`** is refused rather than parsed for the fields it
   happens to recognise.
-- **`mode` of `surrogate` or `mixed`** is refused. iriguchi understands
-  placeholders only, and the schema says so explicitly: *a consumer that
-  understands only `placeholder` must refuse `surrogate` and `mixed` rather than
-  read `placeholders` and conclude the document is fully enumerated.* Reading
-  half a record as a whole one is the quiet failure that contract exists to
-  prevent.
+- **A record carrying surrogates** is refused, and the field that says so is
+  `contract`, not `mode`. A record holding any surrogate declares
+  `mamori.protection-scope/1+surrogate`, so a token-only consumer refuses it
+  through the check it already has rather than through a rule it must remember
+  every time. Reading half a record as a whole one is the quiet failure that
+  contract exists to prevent.
+- **Everything else the schema requires**: the eight required keys, the closed
+  key set (`additionalProperties: false`), the exact shape of a `placeholders`
+  entry, and the `if`/`then` forbidding surrogates under the plain contract.
+  Meeting some obligations is what a consumer does when it has not read the
+  contract.
 - **`reversible` false, or absent** — absent reads as false — is refused.
   iriguchi promised a restored answer; a masked value has no mapping behind it
   and cannot come back. Sending something that cannot be restored would be
@@ -94,3 +99,35 @@ surrogates in mamori — a supported configuration, and the more readable one �
 cannot escalate through iriguchi at all until iriguchi learns to read those
 records. That is a real feature refusing to work rather than working partially,
 which is the correct direction and is not free.
+
+## Amendment, 2026-08-31: which field carries the state
+
+**As written, this ADR quoted the wrong field, and the code did what the ADR
+said.** The original text refused `mode` of `surrogate` or `mixed`, citing the
+schema. mamori has since moved that invariant: it split the contract identifier,
+so the rule became a pair of discrete cases an `if`/`then` can state, and the
+schema now says outright that `mode` is **"a summary of how values were
+substituted, not a switch selecting which array to read"**, and that **"the
+contract identifier, not this field, is what stops a token-only consumer from
+reading half a record and believing it whole."**
+
+iriguchi read `contract` first and so was never unsafe against a well-formed
+record. It was unsafe against a malformed one, and that is the case the check
+exists for: **a document declaring the plain contract while listing
+surrogate-protected values was accepted**, reporting one placeholder finding and
+silently dropping three surrogates. The exact failure the paragraph above
+quotes.
+
+akashi found the same shape on the same day from the other side — a draft marker
+sitting on the second field a consumer reads, so a consumer selecting on `/v1`
+believed it held a frozen contract and held a provisional one. **The question
+that finds it is: which field do you read first, and does it carry the state?**
+
+Measured before it was fixed: the reader accepted **eight of nine** documents
+mamori's published schema rejects. Only the contract identifier fired.
+
+`tests/test_contract_conformance.py` now holds both halves — the refusals, and a
+comparison of iriguchi's hand-written key sets against the schema shipped in
+mamori's wheel, in both directions. The second half is there because tsumugi
+hand-wrote the same kind of constant today and it was wrong in both directions
+the moment anything checked it.

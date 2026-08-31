@@ -65,6 +65,10 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   amended once — the prohibitions were borrowed from mamori's ADR-0032 and were
   incomplete here, because a rule id names a topic and mamori's records never
   describe what a document is for.
+- The protection-record reader now enforces every obligation mamori's
+  published schema states, not the four it had implemented. It accepted eight
+  of nine documents the schema rejects, including a plain-contract record
+  carrying surrogates -- the half-read the contract exists to prevent.
 - mypy now reads `tests/` and `tools/` as well as `src/`. It had read only
   `src/` since v0.1, and two real type errors were sitting in the generator
   that writes the corpus and the tool that produces a published number.
