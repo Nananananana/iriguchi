@@ -116,6 +116,13 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
 - Any test that invokes the CLI isolates itself: chdir to `tmp_path` and strip
   `IRIGUCHI_*`. A CLI test that writes into a developer's real configuration is
   a bug waiting in every future test file.
+- **Two questions about a check, not one.** *How many files did the type checker
+  see* is the first, and widening `files` answered it. *How many of those can a
+  user see* is the second, and `py.typed` is what answers that: without the
+  marker a consumer's type checker skips the package and every annotation here
+  reaches nobody. It is asserted in the wheel job, on the artefact a consumer
+  installs, because a marker present in the repository and absent from the wheel
+  looks identical from inside.
 - Checks before every green commit: `uv run pytest -q`, `uv run mypy`,
   `uv run lint-imports`, `uv run ruff check --fix .`, `uv run ruff format .`,
   `uv run pre-commit run --all-files`. If pre-commit rewrites anything,
