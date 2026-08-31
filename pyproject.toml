@@ -59,6 +59,10 @@ Changelog = "https://github.com/Nananananana/iriguchi/blob/main/CHANGELOG.md"
 iriguchi = "iriguchi.interfaces.cli.main:main"
 
 [tool.hatch.build.targets.wheel]
+# `src/iriguchi/py.typed` needs no entry of its own: hatchling ships everything
+# under a listed package directory. That it *arrives* is asserted in the wheel
+# job, not here -- a marker present in the repository and absent from the wheel
+# looks identical from inside and is worth nothing from outside.
 packages = ["src/iriguchi"]
 
 [tool.pytest.ini_options]

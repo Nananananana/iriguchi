@@ -71,6 +71,48 @@ jobs:
       - name: Import it
         run: python -c "import iriguchi; print(iriguchi.__version__)"
 
+      # `pip install iriguchi` pulls nothing, and this job proves it. What the
+      # consumer receives is the same axis, and until today they received zero
+      # dependencies AND zero type information -- only the first deliberate.
+      #
+      # Checked here rather than in the test suite because this is the only job
+      # holding the artefact a consumer actually installs. A `py.typed` sitting
+      # in `src/` that the wheel omits looks identical from inside the
+      # repository and is worth nothing from outside it -- which is the state
+      # three sibling projects were measured in today.
+      #
+      # mypy is installed *after* the dependency assertion above, which would
+      # otherwise count it. The order is load-bearing.
+      - name: A consumer can see the types
+        run: |
+          python - <<'PY'
+          import importlib.resources as r
+          assert r.files("iriguchi").joinpath("py.typed").is_file(), (
+              "py.typed did not reach the installed package. Without it PEP 561 "
+              "says a consumer's type checker skips iriguchi entirely."
+          )
+          print("py.typed is in the installed package")
+          PY
+          python -m pip install mypy
+          cat > consumer.py <<'PYFILE'
+          from iriguchi.domain.destination import Destination
+
+          wrong: int = Destination.LOCAL
+          gone: int = Destination.NO_SUCH_MEMBER
+          PYFILE
+          python -m mypy --strict consumer.py > out.txt 2>&1 || true
+          cat out.txt
+          # An exit code is evidence only once something has been shown to make
+          # it move, and both codes can arrive without the check running. So the
+          # specific diagnostics are required by name. Before the marker existed
+          # this file produced "Success: no issues found".
+          grep -q 'has no attribute "NO_SUCH_MEMBER"' out.txt
+          grep -q 'expression has type "Destination", variable has type "int"' out.txt
+          if grep -q 'missing library stubs or py.typed marker' out.txt; then
+            echo "the marker is not reaching the consumer"
+            exit 1
+          fi
+
       # The other half of the mamori-is-optional promise. There is genuinely no
       # mamori in this environment, so this is stronger than the import-blocking
       # fixture in tests/test_mamori_absent.py -- and weaker in one way, since it
