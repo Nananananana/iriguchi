@@ -14,6 +14,11 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Ten architecture decision records, `docs/adr/0001` through `0010`.
 - `docs/measurements.md` and the two probes in `tools/`, which measured the
   original specification's performance invariants and found neither reachable.
+- `ports/model.py` and `infrastructure/models/`: the fourth port, and the one
+  adapter behind it. The same shape for a model on this machine and a model on
+  somebody else's, because that difference is a hostname.
+- The `no-network` contract now exempts exactly one named import rather than a
+  package. Adding a second outbound adapter is a deliberate edit.
 - `py.typed`. Without it PEP 561 says a consumer's type checker skips the
   package entirely, so every annotation in `src/` reached nobody outside it.
 - Project scaffold: Python 3.12, Apache-2.0, zero runtime dependencies, `ruff`,

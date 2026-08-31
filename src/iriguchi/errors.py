@@ -92,6 +92,23 @@ class ConfigurationError(IriguchiError):
     """
 
 
+class ModelError(IriguchiError):
+    """A model could not answer.
+
+    Deliberately **not** a `RoutingError`. By the time a model is called the
+    route is decided and, on the outbound path, the protection is done -- a
+    caller that retried the routing would get the same decision and the same
+    failure. What failed is the answering, which is the last step and the only
+    one nothing else substitutes for.
+
+    Raised rather than returning an empty answer. mamori measured what the other
+    choice costs: a pass that degraded to nothing turned a model too slow for
+    its timeout into silence, and three thirty-second attempts looked exactly
+    like a model too large for the hardware. The same model answered in 345
+    seconds once the timeout was honoured.
+    """
+
+
 class ContractError(IriguchiError):
     """A document did not match a contract version this build understands.
 
@@ -133,6 +150,7 @@ __all__ = [
     "EscalationRefusedError",
     "EstimationError",
     "IriguchiError",
+    "ModelError",
     "RestorationError",
     "RoutingError",
     "ScanError",
