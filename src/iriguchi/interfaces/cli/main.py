@@ -165,7 +165,10 @@ def cmd_route(args: argparse.Namespace, config: IriguchiConfig, out: TextIO) -> 
     prompt = _read(args.prompt)
     decision = router.route(prompt, config.available)
 
-    print(render_decision(decision, verbose=args.explain), file=out)
+    print(
+        render_decision(decision, sent="nothing", verbose=args.explain),
+        file=out,
+    )
     if args.explain and decision.route is Route.EXTERNAL:
         print(_what_would_leave(config, prompt), file=out)
     return EXIT_REFUSED if decision.route is Route.REFUSED else EXIT_OK
@@ -198,7 +201,14 @@ def cmd_ask(args: argparse.Namespace, config: IriguchiConfig, out: TextIO) -> in
         channel=config.channel() if config.external else None,
     )
     answer = asker.ask(prompt, config.available)
-    print(render_decision(answer.decision, verbose=args.explain), file=out)
+    print(
+        render_decision(
+            answer.decision,
+            sent=("nothing" if not answer.answered else f"the prompt, to {answer.model}"),
+            verbose=args.explain,
+        ),
+        file=out,
+    )
     if not answer.answered:
         return EXIT_REFUSED
 
@@ -223,7 +233,7 @@ def _decide_only(args: argparse.Namespace, config: IriguchiConfig, prompt: str, 
     when the protection is unavailable rather than failing the command.
     """
     decision = config.router().route(prompt, config.available)
-    print(render_decision(decision, verbose=args.explain), file=out)
+    print(render_decision(decision, sent="nothing", verbose=args.explain), file=out)
     if decision.route is Route.EXTERNAL:
         print(_what_would_leave(config, prompt), file=out)
     print("\nNothing was asked. Drop --dry-run to send it.", file=out)
@@ -321,7 +331,7 @@ def cmd_demo(config: IriguchiConfig, out: TextIO) -> int:
     for prompt in DEMO_PROMPTS:
         print(f"\n$ iriguchi route {prompt!r}\n", file=out)
         decision = router.route(prompt, config.available)
-        print(render_decision(decision), file=out)
+        print(render_decision(decision, sent="nothing"), file=out)
     return EXIT_OK
 
 

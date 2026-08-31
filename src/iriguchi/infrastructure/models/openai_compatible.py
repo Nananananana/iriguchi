@@ -13,19 +13,13 @@ from a mistake mamori made and then measured.
 
 **The timeout is honoured, not minimised.** mamori had a request default of
 thirty seconds and took the smaller of the request's and the endpoint's, so a
-configured timeout above thirty was silently discarded. On hardware where a
-local model needs minutes for a document, that is the difference between a model
-tier working and one that never answers. `DEFAULT_TIMEOUT` is 600 seconds here
-because **mamori measured 345** for a 14B model on this machine, and a figure
-with headroom over a measurement is a different thing from a figure somebody
-liked the look of.
+configured timeout above thirty was silently discarded -- and **the symptom was
+silence**, because the pass degraded to nothing. That is the bug worth carrying
+forward. See `DEFAULT_TIMEOUT` for where the number came from and for what it
+is not.
 
-**Nothing is retried.** A retry multiplies a timeout, and mamori's three
-attempts of thirty seconds plus backoff came to ninety-seven -- which looked
-exactly like a model too slow for the hardware, and was not. Until iriguchi can
-tell "the server is loading weights" from "this model cannot answer in the time
-allowed", one attempt reported honestly is worth more than three averaged into a
-shrug. Named as a v0.3 item rather than left as an omission.
+**Nothing is retried**, and the reason depends on a setting this module does not
+send. See `TEMPERATURE_IS_THE_SERVERS`.
 
 **A failure raises.** Never an empty string, never a partial answer. At the call
 site "the model said nothing" and "the model could not be reached" are
@@ -42,7 +36,13 @@ from urllib.parse import urljoin, urlsplit
 
 from ...errors import ModelError
 
-__all__ = ["DEFAULT_TIMEOUT", "MAX_RESPONSE_BYTES", "PERMITTED_SCHEMES", "OpenAICompatibleModel"]
+__all__ = [
+    "DEFAULT_TIMEOUT",
+    "MAX_RESPONSE_BYTES",
+    "PERMITTED_SCHEMES",
+    "TEMPERATURE_IS_THE_SERVERS",
+    "OpenAICompatibleModel",
+]
 
 #: `urlopen` is a URL opener, not an HTTP client: given `file:///etc/passwd`
 #: it reads the file, and `ftp:` and `data:` are handlers too. A base URL is
@@ -52,13 +52,51 @@ __all__ = ["DEFAULT_TIMEOUT", "MAX_RESPONSE_BYTES", "PERMITTED_SCHEMES", "OpenAI
 #: about a body.
 PERMITTED_SCHEMES = frozenset({"http", "https"})
 
-#: Seconds. Not thirty, and not a round number picked for looking reasonable.
-#: mamori measured a 14B local model answering in 345 seconds on this hardware
-#: once its timeout stopped being silently capped; this is that with room.
+#: Seconds. **A ceiling, not a representative figure**, and the difference is
+#: the whole of what this comment is for.
 #:
-#: A person waiting ten minutes for an answer has a problem. It is a different
-#: problem from the one where the answer never arrives and nothing says why.
+#: It was derived from 345 seconds, which mamori saw for a 14B model here. That
+#: number is one observation and it is the product of two faults: CPU inference,
+#: because the CUDA runner was broken, and three models fighting over a 16 GB
+#: card under ollama's five-minute keep-alive. It is not a property of a 14B
+#: model. bench measured the same class of model properly afterwards:
+#:
+#:     14B q4  GPU   4.8 s/document (en)   5.4 s/document (ja)
+#:     14B q4  CPU   49.0 s/document (en)  63.9 s/document (ja)
+#:
+#: So 345 is five to seven times the honest CPU figure and seventy times the GPU
+#: one, and 600 has far more headroom than it looked like it had.
+#:
+#: **Kept anyway.** A ceiling that is too high costs a person who is already
+#: stuck some waiting; a ceiling that is too low turns "this hardware is slow"
+#: into "this model is broken", silently, which is the failure mamori actually
+#: hit. Being wrong in the generous direction is the cheap side of this trade.
+#:
+#: What would change it is a measurement of the *longest* honest answer rather
+#: than the typical one, on the slowest supported path. That does not exist.
 DEFAULT_TIMEOUT = 600.0
+
+#: **This module sends no `temperature`**, so the server's default decides, and
+#: that is why the no-retry decision below rests on the weaker of two arguments.
+#:
+#: The weaker one is iriguchi's and holds regardless: a retry multiplies a
+#: timeout, and mamori's three thirty-second attempts plus backoff came to
+#: ninety-seven, which looked exactly like a model too slow for the hardware and
+#: was not. One attempt reported honestly beats three averaged into a shrug.
+#:
+#: The stronger one is bench's and is conditional: **at temperature 0 a failure
+#: is not transient.** They measured llama3.1:8b returning a repetition loop in
+#: seven of eight documents under greedy decoding, and a retry there is an
+#: operation that reliably obtains the same failure again. The remaining moves
+#: are change the prompt, change the model, or accept the loss -- and retry is
+#: not among them.
+#:
+#: That argument does not apply here yet, because nothing sets the temperature.
+#: **Whether it should is a real decision and not this commit's**: `ask` is
+#: somebody asking a question, where the server's default is defensible, and the
+#: ADR-0004 measurement is a comparison, where it is not. Named so that the
+#: measurement does not inherit an unstated setting.
+TEMPERATURE_IS_THE_SERVERS = True
 
 #: Bodies larger than this are refused rather than buffered. mamori dropped
 #: their proxy's cap to 8 MB after finding that protecting a 534 KB document
@@ -138,8 +176,10 @@ class OpenAICompatibleModel:
         except TimeoutError as failure:
             raise ModelError(
                 f"{self.name} did not answer within {self._timeout:g}s. That is a "
-                "timeout and not an answer -- a local model on this hardware has "
-                "been measured at 345s, so a low limit reads as a broken model."
+                "timeout and not an answer. A 14B model here has been measured at "
+                "about 5s per document on the GPU and 50-64s on the CPU, so a wait "
+                "this long usually means the request never reached a model rather "
+                "than that the model was slow."
             ) from failure
         except (urllib.error.URLError, OSError) as failure:
             raise ModelError(f"{self.name} could not be reached: {failure}") from failure

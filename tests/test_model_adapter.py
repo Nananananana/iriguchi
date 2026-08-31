@@ -106,10 +106,25 @@ class TestTheUrlItActuallyRequests:
 class TestTheTimeout:
     def test_the_default_is_not_thirty_seconds(self) -> None:
         """mamori's was, and took the smaller of two, so a configured value
-        above it was silently discarded. On this hardware a 14B model answered
-        in 345 seconds once that stopped happening -- the difference between a
-        model tier working and one that never answers."""
-        assert DEFAULT_TIMEOUT >= 345.0
+        above it was silently discarded -- **and the symptom was silence**,
+        because the pass degraded to nothing rather than reporting.
+
+        This pins the chosen value rather than a multiple of a measurement,
+        because **the value is a judgement and the multiple would be invented.**
+        The measurements that bound it are real -- bench, 14B q4 on this
+        machine, 4.8-5.4 s/document on the GPU and 49.0-63.9 on the CPU -- and
+        600 has roughly ten times the slowest of those. Ten is not measured. An
+        earlier draft of this test asserted `>= 10 * 63.9`, which is 639, and it
+        failed against the very constant it was written to defend: writing a
+        margin as though it were a finding gets it wrong in both directions at
+        once.
+
+        So the test's job is to make lowering it deliberate. A change here has
+        to change this line, and changing this line means reading why 30 was
+        wrong: mamori's default was 30, took the smaller of two, discarded
+        anything larger, **and the symptom was silence.**
+        """
+        assert DEFAULT_TIMEOUT == 600.0
 
     def test_it_is_the_one_passed_to_urlopen(self, sent: list[Any]) -> None:
         """Not a minimum of this and something else. That is the whole bug."""
