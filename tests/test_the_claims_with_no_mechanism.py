@@ -43,7 +43,10 @@ from typing import ClassVar
 import pytest
 
 import iriguchi
+from iriguchi.infrastructure.scanners.mamori_scanner import SiblingState, mamori_state
 from iriguchi.interfaces.cli import main as cli
+
+_STATE, _DETAIL = mamori_state()
 
 PACKAGE_ROOT = Path(iriguchi.__file__).parent
 SOURCES = sorted(PACKAGE_ROOT.rglob("*.py"))
@@ -278,12 +281,23 @@ class TestTheGroundsForTheExemption:
         cli.main(["route", "--explain", "Compare these and prove the lemma, step by step."], out)
         assert "would leave" in out.getvalue()
 
+    @pytest.mark.skipif(
+        _STATE is not SiblingState.AVAILABLE,
+        reason=f"showing the protected text needs mamori ({_DETAIL or 'absent'})",
+    )
     def test_would_leave_does_show_the_text(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """The half that stops the other half being satisfied by deletion.
 
         `--dry-run` exists to show what would be sent. A version that printed
         nothing there would pass every absence assertion in this class and would
         have removed the only reason the command exists.
+
+        **Gated, because CI found it asserting something only true here.**
+        Without mamori the line reads *cannot say: mamori is not installed* --
+        correctly, and with no text in it. That is the same defect this file was
+        written about: a claim that holds on the machine it was written on. The
+        difference is that this one was caught in twenty minutes by a runner
+        that is poorer than this machine, which is the arrangement working.
         """
         monkeypatch.setenv("IRIGUCHI_LOCAL", "1")
         monkeypatch.setenv("IRIGUCHI_EXTERNAL", "1")
