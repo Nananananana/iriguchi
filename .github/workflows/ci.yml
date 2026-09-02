@@ -83,6 +83,36 @@ jobs:
       #
       # mypy is installed *after* the dependency assertion above, which would
       # otherwise count it. The order is load-bearing.
+      # v0.3 puts a tray icon and a popup behind `tkinter`, which ships with
+      # CPython on Windows and macOS and is a **separate OS package** on many
+      # Linux distributions. `pip install iriguchi` pulls nothing either way --
+      # the promise above is about the Python dependency graph and says nothing
+      # about the OS package graph.
+      #
+      # This step reports rather than asserts, on purpose. What the runner has
+      # is a fact worth having before v0.3 is designed, and turning it into a
+      # pass/fail now would either fail the build for something no shipped code
+      # uses, or pin an expectation nobody has argued for. ADR-0015.
+      - name: What a GUI would find here (reported, not asserted)
+        run: |
+          python - <<'PY'
+          import importlib.util
+          spec = importlib.util.find_spec("tkinter")
+          print(f"tkinter importable: {spec is not None}")
+          if spec is None:
+              print("  -> a tray build would not start on this image, and the")
+              print("     install that produced it succeeded. See docs/adr/0015.")
+              raise SystemExit(0)
+          import tkinter
+          print(f"  Tcl/Tk {tkinter.TkVersion}")
+          try:
+              tkinter.Tk().destroy()
+              print("  a display exists")
+          except Exception as failure:
+              print(f"  importable and no display: {type(failure).__name__}: {failure}")
+              print("  -> the third state: installed, imports, cannot open a window")
+          PY
+
       - name: A consumer can see the types
         run: |
           python - <<'PY'

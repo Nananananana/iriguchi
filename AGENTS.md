@@ -116,6 +116,12 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
 - Any test that invokes the CLI isolates itself: chdir to `tmp_path` and strip
   `IRIGUCHI_*`. A CLI test that writes into a developer's real configuration is
   a bug waiting in every future test file.
+- **Anchor an edit on text this branch has.** Twice in one session a script
+  keyed on a `CHANGELOG.md` line that lived on a different unmerged branch, and
+  the assertion fired *after* the earlier edits in the same script had already
+  been written. The assert did its job; the script was not atomic and I read the
+  hook output instead of the traceback above it. Check the anchor with `grep`
+  first, or put every edit behind one assertion pass.
 - **Two questions about a check, not one.** *How many files did the type checker
   see* is the first, and widening `files` answered it. *How many of those can a
   user see* is the second, and `py.typed` is what answers that: without the

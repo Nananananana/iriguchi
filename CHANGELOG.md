@@ -9,6 +9,9 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- ADR-0015: what "zero runtime dependencies" promises. It is about the Python
+  dependency graph and says nothing about the OS package graph, and `tkinter`
+  is where those differ. The wheel job now **reports** what a GUI would find.
 - The design: `docs/proposals/0001-the-design.md`, written before any code
   exists and kept that way.
 - Ten architecture decision records, `docs/adr/0001` through `0010`.
