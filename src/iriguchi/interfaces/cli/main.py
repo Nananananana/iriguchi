@@ -32,6 +32,7 @@ from ...infrastructure.scanners.mamori_scanner import (
     mamori_is_available,
     mamori_state,
 )
+from .console import print_content
 from .render import render_decision
 
 __all__ = ["main"]
@@ -170,7 +171,7 @@ def cmd_route(args: argparse.Namespace, config: IriguchiConfig, out: TextIO) -> 
         file=out,
     )
     if args.explain and decision.route is Route.EXTERNAL:
-        print(_what_would_leave(config, prompt), file=out)
+        _what_would_leave(config, prompt, out)
     return EXIT_REFUSED if decision.route is Route.REFUSED else EXIT_OK
 
 
@@ -221,7 +222,11 @@ def cmd_ask(args: argparse.Namespace, config: IriguchiConfig, out: TextIO) -> in
         print(f"\n  missed by the scanner  {missed.detail}", file=out)
 
     print(f"\n{answer.model} answered:\n", file=out)
-    print(answer.text, file=out)
+    # `answered` is checked above, so `text` is a string here. Asserted rather
+    # than cast: `None` means a refusal and printing the word "None" under
+    # "answered:" would be a model appearing to say something.
+    assert answer.text is not None
+    print_content(answer.text, out)
     return EXIT_OK
 
 
@@ -235,12 +240,12 @@ def _decide_only(args: argparse.Namespace, config: IriguchiConfig, prompt: str, 
     decision = config.router().route(prompt, config.available)
     print(render_decision(decision, sent="nothing", verbose=args.explain), file=out)
     if decision.route is Route.EXTERNAL:
-        print(_what_would_leave(config, prompt), file=out)
+        _what_would_leave(config, prompt, out)
     print("\nNothing was asked. Drop --dry-run to send it.", file=out)
     return EXIT_REFUSED if decision.route is Route.REFUSED else EXIT_OK
 
 
-def _what_would_leave(config: IriguchiConfig, prompt: str) -> str:
+def _what_would_leave(config: IriguchiConfig, prompt: str, out: TextIO) -> None:
     """The protected text, for an outbound route. Sends nothing.
 
     The first thing `--dry-run` has ever had that is worth looking at: not
@@ -256,24 +261,31 @@ def _what_would_leave(config: IriguchiConfig, prompt: str) -> str:
     try:
         channel = config.channel()
     except EscalationRefusedError as refused:
-        return f"\n  would leave    (cannot say: {refused})"
+        print(f"\n  would leave    (cannot say: {refused})", file=out)
+        return
 
     try:
         escalation = channel.prepare(prompt)
     except EscalationRefusedError as refused:
         # Not a crash and not a downgrade. The route stands; the protection
         # that route depends on refused, and the person needs to know which.
-        return f"\n  would leave    nothing -- the escalation was refused:\n      {refused}"
+        print(
+            f"\n  would leave    nothing -- the escalation was refused:\n      {refused}",
+            file=out,
+        )
+        return
 
     try:
-        lines = ["", "  would leave", f"    {escalation.protected_text}"]
+        # Through `print_content`, because this is the one line here carrying
+        # characters the person typed. A console that cannot draw them would
+        # otherwise kill the command -- the command whose whole purpose is
+        # letting somebody look before anything leaves.
+        print("\n  would leave", file=out)
+        print_content(escalation.protected_text, out, indent="    ")
         if escalation.findings:
-            lines.append("")
-            lines.append("  and the scanner had missed")
-            lines.extend(
-                f"    {finding.rule:<40}{finding.detail}" for finding in escalation.findings
-            )
-        return "\n".join(lines)
+            print("\n  and the scanner had missed", file=out)
+            for finding in escalation.findings:
+                print(f"    {finding.rule:<40}{finding.detail}", file=out)
     finally:
         escalation.close()
 
