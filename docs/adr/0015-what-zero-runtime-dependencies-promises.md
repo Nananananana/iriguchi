@@ -103,8 +103,21 @@ is the one least tested. The reporting step narrows that — it will say what th
 GitHub Ubuntu image has — but a runner image is not a stock Debian, and one
 observation of one image is not a portability claim.
 
-**And the third state stays untested on this machine.** `Tk()` succeeds here
-because there is a display. Whether the headless failure is a `TclError` with a
-readable message or something worse is unmeasured, and this ADR does not pretend
-otherwise: it is written down so that v0.3 measures it rather than discovering
-it.
+**The third state was untested on this machine, and the reporting step measured
+it within minutes of being added.** `Tk()` succeeds here because there is a
+display; the Ubuntu runner has none. From the first run of the job:
+
+    tkinter importable: True
+      Tcl/Tk 8.6
+      importable and no display: TclError: no display name and no $DISPLAY
+      -> the third state: installed, imports, cannot open a window
+
+So the GitHub Ubuntu image has `tkinter` -- which means **the `ABSENT` case is
+still the untested one**, and the runner cannot produce it. That is the same
+shape as the `cp932` finding one file over: more runners of the same kind do not
+make a machine capable of a failure.
+
+What it does settle is the shape of `BROKEN`: a `TclError` carrying a readable
+sentence, catchable, and distinguishable from an import failure by its type. A
+tray build can name the state rather than guessing at it, and this paragraph was
+written to say that was unknown.
