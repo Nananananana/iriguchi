@@ -54,6 +54,26 @@ and passed in. Anything that wants the current time has to be handed a clock.
 Some duplication with mamori's and tsumugi's own domain vocabulary is accepted
 rather than shared, because sharing it would mean depending on them.
 
-It also means iriguchi's built-in detection is worse than mamori's, permanently.
-That is addressed in [ADR-0005](0005-detection-is-a-port.md) rather than solved
-here.
+It also means iriguchi's built-in detection is worse than mamori's. That is
+addressed in [ADR-0005](0005-detection-is-a-port.md) rather than solved here.
+
+**How much worse is measured**, and this sentence used to end with "permanently"
+instead of pointing at the figure. `docs/measurements.md`, both scanners over
+the same 155 cases:
+
+    must-stay-local missed    built-in fallback  63.5% (66/104)
+                              mamori              1.0% (1/104)
+
+So the magnitude is real and large. Two things about it belong here and not only
+there. **The 1.0% is measured on mamori's home ground** -- 134 of the 155 cases
+are borrowed from mamori's own corpus, so that half scores mamori against the
+data it was developed with. And the 21 cases mamori has never seen contain
+**six** must-stay-local prompts, on which both scanners score 0%, which is a
+statement about the sample size rather than about either scanner.
+
+**"Permanently" is dropped rather than measured, because it is not a measurable
+claim.** No experiment settles whether a gap persists; it was an assertion
+wearing the clothes of a finding. The neighbouring claim in
+[ADR-0004](0004-decide-before-the-request.md) had the same shape, was measured,
+and turned out to be **overstated** -- which is the outcome nobody goes looking
+for, and the reason this one is now a citation instead of an adverb.

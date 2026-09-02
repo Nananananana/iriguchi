@@ -53,8 +53,45 @@ that is the feature.
 
 ## What it costs
 
-Accuracy. The learned routers are better at the cost-quality trade and will stay
-better, and no amount of rule-writing closes that gap.
+Accuracy, and **less of it than this ADR claimed.**
+
+The sentence here used to read: *the learned routers are better at the
+cost-quality trade and will stay better, and no amount of rule-writing closes
+that gap.* That was a claim about a magnitude, with no magnitude, and about
+permanence — and it did rhetorical work, because it made the decision look like
+a sacrifice.
+
+It has now been measured, and the measurement does not support it.
+`docs/measurements.md` has the table. Over the 21 generated cases, at
+temperature 0, against four locally available models in two framings:
+
+    always answering `low`        66.7%
+    **the rules, today**          **81.0%**
+    eight model configurations    28.6% to 90.5%
+
+**No configuration is decidably better than the rules. Four are decidably
+worse. Six sit inside the floor**, where one case is 4.76 points and a
+difference under three cases cannot be read at all. The two that look like wins,
++9.5 and +4.8, are both inside it.
+
+**And both tie the rules on the cases a router exists for.** Two thirds of the
+corpus is `low`, which the trivial baseline takes for free; on the seven `moderate`
+and `high` cases the rules get 5, and so do each of the two apparent winners.
+Their entire margin is in the majority class.
+
+**The wording of the question moved a model by up to nine cases; model size did
+not move it monotonically at all** -- briefed, the 7B beats the 8B beats the 14B.
+
+So the honest cost is: **the rules are not measurably behind on this corpus, and
+this ADR previously said they were, permanently.** The correction matters more
+than the number, because the number cannot decide anything here — the reason
+below is auditability, and a large gap would not have moved it either. What the
+measurement stops is this ADR borrowing the *form* of evidence for a decision
+that does not rest on evidence.
+
+What the measurement does not settle: 21 cases, labels and rules written by the
+same hand, one machine, and three of the four models from one lineage. The
+caveats are in `docs/measurements.md` and belong with any figure taken from it.
 
 The judgement is that this router's errors are not symmetric — a wrongly-cheap
 route costs answer quality, a wrongly-outbound route costs a leak — and a router
