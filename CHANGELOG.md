@@ -21,6 +21,14 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   `EXTERNAL_KEY`. No defaults: `ask` will not guess an address. `route` needs
   none of them, and `iriguchi config` now names a destination that can be
   routed to and not asked.
+- `tools/measure_router.py` and the band table in `docs/measurements.md`: what
+  ADR-0004 asserted without a number. **The assertion was overstated** -- the
+  rules are not measurably behind, and two of eight model configurations beat
+  them while five do not.
+- ADR-0001 stops saying "permanently" and points at the measurement that
+  already existed. ADR-0004's cost section is corrected rather than annotated.
+- The first `llm`-marked and `network`-marked tests. Both markers were written
+  in v0.1 for this moment and neither had ever been used.
 - `ports/model.py` and `infrastructure/models/`: the fourth port, and the one
   adapter behind it. The same shape for a model on this machine and a model on
   somebody else's, because that difference is a hostname.

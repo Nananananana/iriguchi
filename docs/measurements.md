@@ -167,6 +167,100 @@ be.
 upper bound catches a collapse; the lower bound catches somebody quietly making
 the fallback clever.
 
+## The band, against a model
+
+`tools/measure_router.py`, 2026-09-01, ollama on this machine, **temperature 0**,
+the 21 generated cases only. The 134 borrowed cases all carry `band: low`
+assigned by these same rules and say nothing about this axis; including them
+would have added 134 free agreements with the thing being tested.
+
+[ADR-0004](adr/0004-decide-before-the-request.md) refused a model in the deciding
+path and stated the cost as *"the learned routers are better at the cost-quality
+trade and will stay better, and no amount of rule-writing closes that gap."*
+**That is a claim about a magnitude, with no magnitude.** This is the magnitude.
+
+| | overall | low (14) | moderate (3) | high (4) |
+|---|---|---|---|---|
+| always answering `low` | 66.7% | 14/14 | 0/3 | 0/4 |
+| **the rules, today** | **81.0%** | 12/14 | 3/3 | 2/4 |
+| qwen2.5:14b-q4, cold | 76.2% | 13/14 | 0/3 | 3/4 |
+| qwen2.5:14b-q4, briefed | 71.4% | 14/14 | 0/3 | 1/4 |
+| qwen2.5:7b-q8, cold | 66.7% | 11/14 | 3/3 | 0/4 |
+| **qwen2.5:7b-q8, briefed** | **90.5%** | 14/14 | 3/3 | 2/4 |
+| qwen3:8b, cold | 57.1% | 8/14 | 2/3 | 2/4 |
+| qwen3:8b, briefed | 85.7% | 13/14 | 1/3 | **4/4** |
+| llama3.1:8b, cold | **28.6%** | 2/14 | 2/3 | 2/4 |
+| llama3.1:8b, briefed | 71.4% | 12/14 | 1/3 | 2/4 |
+
+*cold* asks the routing question in its own terms — would a small local model
+answer this adequately. *briefed* hands the model iriguchi's own band
+definitions. Every run is deterministic: the 14B cold run repeated gave 21/21
+identical answers.
+
+### What it says
+
+**Nothing about the ADR's gap, and that is the finding.**
+
+Two configurations beat the rules and five do not. The best is **two cases**
+above the rules and the worst is **eleven below**. One case is 4.76 points here,
+so the entire rules-versus-model question lives inside a band narrower than the
+spread between configurations of the same idea.
+
+**The wording of the question moves a model more than the choice of model does,
+and more than the thing being measured:**
+
+| | cold → briefed |
+|---|---|
+| llama3.1:8b | **+42.9** (9 cases) |
+| qwen3:8b | +28.6 (6 cases) |
+| qwen2.5:7b-q8 | +23.8 (5 cases) |
+| qwen2.5:14b-q4 | **−4.8** (1 case) |
+
+**Model size is not monotonic either.** Briefed, the 7B scores 90.5%, the 8B
+85.7%, and the 14B 71.4% — the largest model is the worst, and it is the only
+one the briefing made worse. Whatever "a learned router" names, it is not one
+object with an accuracy.
+
+**One sub-result points the ADR's way** and is too small to lean on: `high` is
+the class the cost-quality trade is actually about, and qwen3:8b briefed got
+**4/4** there against the rules' 2/4. Four cases.
+
+**And one points the other way**: the rules are the only entry that gets
+`moderate` consistently right, 3/3, matched only by qwen2.5:7b.
+
+### What it does not say
+
+**It cannot move ADR-0004.** That decision rests on auditability — *a router a
+person cannot read is a router they cannot trust with the second kind of error*
+— and a large gap would not have moved it either. What the number does is stop
+the ADR borrowing the *form* of evidence for a decision that does not rest on
+evidence. Its cost section is corrected accordingly: iriguchi is not measurably
+behind here, and the previous wording said it was, permanently.
+
+Carry these with any figure above.
+
+1. **n = 21. One case is 4.76 points.** A difference under about 14 points is
+   three cases and is not a result. Nothing in the table clears that against the
+   rules in either direction.
+2. **The floor is 66.7%, not 0%.** Always answering `low` scores that, and two
+   of the eight model runs are at or below it.
+3. **The labels and the rules come from the same hand.** Both were written here,
+   so the comparison is biased toward the rules by construction. A model beating
+   them despite that is the stronger finding; the rules beating a model is
+   nearly free.
+4. **One lineage and one machine.** qwen2.5, qwen3 and llama3.1 are what exists
+   locally; three of the four are qwen. bench found no second family available.
+5. **Selection by format-following does not apply here, and was expected to.**
+   bench measured llama3.1 at 0/8 usable on long Japanese generation at
+   temperature 0, and the concern was that testing only models which can follow
+   a format selects for capability. On this task **every model answered with
+   exactly one word, 168 of 168 replies**, llama3.1 included. Its format failure
+   is a property of that task, not of the model.
+6. **`iriguchi ask` leaves the temperature to the server.** These figures were
+   taken at 0, chosen because at n=21 characterising sampling variance would
+   take N runs of 21 and there is no budget for that in a corpus this size. They
+   do not describe the setting the product runs under.
+
 ## What installing mamori buys
 
 Both scanners over the same 155 cases. mamori under a permissive policy, as its
