@@ -118,6 +118,15 @@ def imported_roots(path: Path) -> set[str]:
 
 
 ALL_FILES = list(source_files())
+#: Not a style assertion -- a floor. Every `parametrize` in this file draws on
+#: `ALL_FILES`, and a glob that finds nothing retires all of them at once while
+#: the run stays green. `empty_parameter_set_mark = "fail_at_collect"` catches
+#: that now too; this fires earlier and says why.
+assert len(ALL_FILES) >= 20, (
+    f"the package glob found {len(ALL_FILES)} files. Every architecture guard "
+    f"here is parametrized over this list, so an empty one would report success "
+    f"about nothing."
+)
 FILE_IDS = [str(p.relative_to(PACKAGE_ROOT)) for p in ALL_FILES]
 PACKAGE_INIT_LAYERS = {"__init__", "py"}
 
