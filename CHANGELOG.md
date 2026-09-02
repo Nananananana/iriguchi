@@ -14,6 +14,10 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Ten architecture decision records, `docs/adr/0001` through `0010`.
 - `docs/measurements.md` and the two probes in `tools/`, which measured the
   original specification's performance invariants and found neither reachable.
+- `ask` and `ask --dry-run` no longer die on a `cp932` console when the prompt
+  or the answer holds a character it cannot draw. The text is replaced for the
+  display, counted, and announced as a display change -- **the payload is
+  untouched**, and saying so is the point in a command built for checking it.
 - `iriguchi ask`: route a prompt, then answer it. The only command that sends.
   `--dry-run` shows what would leave and sends nothing, which is a different
   flag from `route --dry-run` because routing cannot send at all.

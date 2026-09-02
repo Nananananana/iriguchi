@@ -116,6 +116,14 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
 - Any test that invokes the CLI isolates itself: chdir to `tmp_path` and strip
   `IRIGUCHI_*`. A CLI test that writes into a developer's real configuration is
   a bug waiting in every future test file.
+- **`cp932` is the console the reader has, and `PYTHONUTF8=1` is the one you
+  have.** Every command here runs with that prefix, so an encoding failure is
+  invisible during construction, and CI cannot see it either -- a runner's
+  locale is UTF-8, and more runners of the same kind do not make a machine
+  capable of the failure. `tests/test_console_encoding.py` *builds* the console
+  instead of looking for characters, which is why it runs anywhere. A scan of
+  this repository's string literals finds nothing and never could: the
+  characters come from the prompt.
 - **Two questions about a check, not one.** *How many files did the type checker
   see* is the first, and widening `files` answered it. *How many of those can a
   user see* is the second, and `py.typed` is what answers that: without the
