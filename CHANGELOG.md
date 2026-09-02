@@ -9,10 +9,6 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- An empty `parametrize` is a collection error rather than a silent skip, and
-  the two derived collections that are not parametrized got explicit floors. A
-  check that looked at nothing reported the same success as one that looked at
-  everything and approved.
 - The design: `docs/proposals/0001-the-design.md`, written before any code
   exists and kept that way.
 - Ten architecture decision records, `docs/adr/0001` through `0010`.
@@ -32,6 +28,10 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   package. Adding a second outbound adapter is a deliberate edit.
 - `py.typed`. Without it PEP 561 says a consumer's type checker skips the
   package entirely, so every annotation in `src/` reached nobody outside it.
+- An empty `parametrize` is a collection error rather than a silent skip, and
+  the two derived collections that are not parametrized got explicit floors. A
+  check that looked at nothing reported the same success as one that looked at
+  everything and approved.
 - Project scaffold: Python 3.12, Apache-2.0, zero runtime dependencies, `ruff`,
   `mypy --strict`, six `import-linter` contracts, `pre-commit`, and a CI matrix
   over Linux and Windows that additionally asserts the wheel installs with

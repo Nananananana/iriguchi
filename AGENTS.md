@@ -109,13 +109,6 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   queue: past it, the author is right and the queue is slow. It rests on one
   measurement (#33, 289 seconds end to end) and is a chosen number, not a
   derived one.
-- **All tests must pass before any commit.** One failure means stop and
-  investigate, not proceed.
-- Test file names are unique across the repository — tests are not a package and
-  duplicate basenames break collection.
-- Any test that invokes the CLI isolates itself: chdir to `tmp_path` and strip
-  `IRIGUCHI_*`. A CLI test that writes into a developer's real configuration is
-  a bug waiting in every future test file.
 - **A `parametrize` over an empty list is green.** pytest's default marks an
   empty parameter set `skip`, so an architecture guard whose files come from a
   glob retires silently when the glob finds nothing — a renamed package, a typo
@@ -130,6 +123,13 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   written an hour earlier to prevent exactly that. An assertion mid-script is
   not enough: it fires after earlier edits have been written, so half the
   documentation lands. Check every anchor first, then apply.
+- **All tests must pass before any commit.** One failure means stop and
+  investigate, not proceed.
+- Test file names are unique across the repository — tests are not a package and
+  duplicate basenames break collection.
+- Any test that invokes the CLI isolates itself: chdir to `tmp_path` and strip
+  `IRIGUCHI_*`. A CLI test that writes into a developer's real configuration is
+  a bug waiting in every future test file.
 - **Two questions about a check, not one.** *How many files did the type checker
   see* is the first, and widening `files` answered it. *How many of those can a
   user see* is the second, and `py.typed` is what answers that: without the
