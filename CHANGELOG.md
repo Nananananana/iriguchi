@@ -9,6 +9,10 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- An empty `parametrize` is a collection error rather than a silent skip, and
+  the two derived collections that are not parametrized got explicit floors. A
+  check that looked at nothing reported the same success as one that looked at
+  everything and approved.
 - The design: `docs/proposals/0001-the-design.md`, written before any code
   exists and kept that way.
 - Ten architecture decision records, `docs/adr/0001` through `0010`.

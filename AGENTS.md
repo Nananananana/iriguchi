@@ -116,6 +116,20 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
 - Any test that invokes the CLI isolates itself: chdir to `tmp_path` and strip
   `IRIGUCHI_*`. A CLI test that writes into a developer's real configuration is
   a bug waiting in every future test file.
+- **A `parametrize` over an empty list is green.** pytest's default marks an
+  empty parameter set `skip`, so an architecture guard whose files come from a
+  glob retires silently when the glob finds nothing — a renamed package, a typo
+  in a root. `empty_parameter_set_mark = "fail_at_collect"` closes that for
+  every parametrized case; a plain `assert not <derived set>` is not covered by
+  it and needs its own floor. Measured before it was fixed: pointing
+  `PACKAGE_ROOT` at a directory that does not exist left the layering, purity
+  and sibling checks collecting **zero tests each**, and the run stayed green.
+- **Anchor an edit on text this branch has, and `grep` for it before writing
+  the script.** Three times in one session an edit keyed on a line that lived
+  on a different unmerged branch. The third time, the anchor was *this rule*,
+  written an hour earlier to prevent exactly that. An assertion mid-script is
+  not enough: it fires after earlier edits have been written, so half the
+  documentation lands. Check every anchor first, then apply.
 - **Two questions about a check, not one.** *How many files did the type checker
   see* is the first, and widening `files` answered it. *How many of those can a
   user see* is the second, and `py.typed` is what answers that: without the
