@@ -66,7 +66,12 @@ reasons. Never the matched values themselves
 **Zero runtime dependencies.** A tool that sees every prompt you type is a tool
 whose dependency list is a threat model. There isn't one, and CI checks that by
 installing the wheel with no extras and asserting nothing came along
-([ADR-0001](docs/adr/0001-the-domain-depends-on-nothing.md)).
+([ADR-0001](docs/adr/0001-the-domain-depends-on-nothing.md)). That is a promise
+about the **Python** dependency graph: nothing arrives alongside iriguchi, on
+any platform. It is not a claim that your platform already has every part of the
+standard library — `tkinter` is a separate OS package on most Linux
+distributions, and v0.3's tray will say so rather than fail as a broken install
+([ADR-0015](docs/adr/0015-what-zero-runtime-dependencies-promises.md)).
 
 ## What it does
 
