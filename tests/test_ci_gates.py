@@ -113,6 +113,16 @@ def test_mypy_looks_at_every_directory_that_holds_python() -> None:
         for entry in root.iterdir()
         if entry.is_dir() and not entry.name.startswith(".") and any(entry.rglob("*.py"))
     }
+    # A floor, because `assert not uncovered` is true of an empty scan and this
+    # test is not a `parametrize` that `empty_parameter_set_mark` can catch.
+    # Measured: with `root` pointed at a directory holding no Python, this
+    # passed -- zero found, zero uncovered, green.
+    assert holding_python >= {"src", "tests", "tools"}, (
+        f"the scan found {sorted(holding_python)}, which does not include the "
+        f"directories this repository is known to keep Python in. A check that "
+        f"looked at nothing reports the same success as one that looked at "
+        f"everything and approved."
+    )
     uncovered = {
         directory
         for directory in holding_python

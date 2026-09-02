@@ -68,6 +68,19 @@ packages = ["src/iriguchi"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q -m 'not llm'"
+
+# **An empty `parametrize` is a collection error, not a silent skip.**
+#
+# pytest's default is to mark an empty parameter set `skip`, so a
+# `@pytest.mark.parametrize("path", ALL_FILES)` whose list came back empty
+# collects nothing and the run stays green. Every architecture guard here is
+# built that way -- the files come from a glob -- so a renamed package or a
+# typo in a root would retire the whole layer check without a word.
+#
+# Demonstrated before this line existed: pointing `PACKAGE_ROOT` at a directory
+# that does not exist left the layering, the domain purity and the
+# sibling-optionality checks collecting zero tests each.
+empty_parameter_set_mark = "fail_at_collect"
 markers = [
     # Tests that call a real local model. Excluded from CI, because a build
     # that depends on a model having been pulled is a build that fails for
