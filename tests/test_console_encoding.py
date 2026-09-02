@@ -149,13 +149,49 @@ class TestEveryCommandSurvivesTheConsole:
     def test_a_prompt_the_console_cannot_draw_does_not_kill_route(
         self, character: str, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """`route` survives this for a reason worth knowing: it never prints
-        the prompt. The security rule that keeps values out of messages keeps
-        the encoding hazard out too."""
+        """`route` on a **local** route survives this because it never prints
+        the prompt -- the rule keeping values out of messages keeps the encoding
+        hazard out too.
+
+        **Local is the whole scope of that.** The first version of this test set
+        `IRIGUCHI_LOCAL=1` and was read as clearing `route --explain` in
+        general; on an outbound route it prints `would leave`, which is content,
+        and the next test is the one that walks that branch. An assertion about
+        a path the test does not take.
+        """
         monkeypatch.setenv("IRIGUCHI_LOCAL", "1")
+        monkeypatch.delenv("IRIGUCHI_EXTERNAL", raising=False)
         raw, stream = console()
         cli.main(["route", "--explain", f"Fix this {character} thing"], stream)
-        assert "route" in read(raw, stream)
+        printed = read(raw, stream)
+        assert "route" in printed
+        assert "would leave" not in printed, "this is the local case; the branch was not taken"
+
+    @pytest.mark.parametrize("character", ABSENT.values(), ids=list(ABSENT))
+    def test_route_explain_on_an_outbound_route_is_content_too(
+        self, character: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The branch the test above does not take.
+
+        `route --explain` calls `_what_would_leave` when the route is outbound,
+        which prints the protected text -- so it is a content path and the
+        exemption above does not reach it. Without mamori it says so in prose
+        and prints no content, which is why this asserts on whichever of the two
+        actually happened rather than assuming one.
+        """
+        monkeypatch.setenv("IRIGUCHI_LOCAL", "1")
+        monkeypatch.setenv("IRIGUCHI_EXTERNAL", "1")
+        raw, stream = console()
+        cli.main(
+            [
+                "route",
+                "--explain",
+                f"Refactor this {character} and explain why, step by step, with alternatives",
+            ],
+            stream,
+        )
+        printed = read(raw, stream)
+        assert "would leave" in printed, "the outbound branch was not reached"
 
 
 @pytest.mark.skipif(

@@ -1,16 +1,21 @@
 """Printing content to a console that cannot represent it.
 
-Every other line iriguchi prints is its own: rule ids, band names, spans. Those
-are ASCII by construction and the security rule that keeps them that way was
-written for a different reason — *messages carry rule ids, spans and types, never
-a matched value*. **That rule is why `route --explain` cannot hit this bug at
-all**: it never prints a character it did not choose.
+**A decision's explanation cannot hit this**, and the reason is a rule written
+for something else: *messages carry rule ids, spans and types, never a matched
+value*. Reasons, findings and signals are ASCII by construction, so the privacy
+rule keeps the encoding hazard out of them as a side effect.
 
-Two places do print content. `ask` prints the model's answer, and `--dry-run`
-prints the protected text under `would leave`. Both carry characters the person
-typed, and on a Japanese console — `cp932`, which is what a default Windows
-terminal here uses — an `é`, an em dash or a bullet raises `UnicodeEncodeError`
-and the command dies.
+**That exemption covers the explanation and not the command.** An earlier
+version of this docstring said `route --explain` could not hit the bug at all,
+which is false: on an outbound route it prints `would leave`, and that is the
+protected text — verbatim when nothing needed protecting. The test written to
+support the claim set `IRIGUCHI_LOCAL=1` and never took that branch.
+
+So there are three lines that carry characters the person typed, not two: `ask`
+prints the model's answer, `ask --dry-run` prints the protected text, and
+`route --explain` prints it too on an outbound route. On a Japanese console —
+`cp932`, which is what a default Windows terminal here uses — an `é`, an em dash
+or a bullet raises `UnicodeEncodeError` and the command dies.
 
 akashi found the same class in themselves and named the reason it survived
 construction: *every command run while building was prefixed with
