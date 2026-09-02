@@ -169,7 +169,7 @@ the fallback clever.
 
 ## The band, against a model
 
-`tools/measure_router.py`, 2026-09-01, ollama on this machine, **temperature 0**,
+`tools/measure_router.py`, 2026-09-02, ollama on this machine, **temperature 0**,
 the 21 generated cases only. The 134 borrowed cases all carry `band: low`
 assigned by these same rules and say nothing about this axis; including them
 would have added 134 free agreements with the thing being tested.
@@ -179,35 +179,56 @@ path and stated the cost as *"the learned routers are better at the cost-quality
 trade and will stay better, and no amount of rule-writing closes that gap."*
 **That is a claim about a magnitude, with no magnitude.** This is the magnitude.
 
-| | overall | low (14) | moderate (3) | high (4) |
-|---|---|---|---|---|
-| always answering `low` | 66.7% | 14/14 | 0/3 | 0/4 |
-| **the rules, today** | **81.0%** | 12/14 | 3/3 | 2/4 |
-| qwen2.5:14b-q4, cold | 76.2% | 13/14 | 0/3 | 3/4 |
-| qwen2.5:14b-q4, briefed | 71.4% | 14/14 | 0/3 | 1/4 |
-| qwen2.5:7b-q8, cold | 66.7% | 11/14 | 3/3 | 0/4 |
-| **qwen2.5:7b-q8, briefed** | **90.5%** | 14/14 | 3/3 | 2/4 |
-| qwen3:8b, cold | 57.1% | 8/14 | 2/3 | 2/4 |
-| qwen3:8b, briefed | 85.7% | 13/14 | 1/3 | **4/4** |
-| llama3.1:8b, cold | **28.6%** | 2/14 | 2/3 | 2/4 |
-| llama3.1:8b, briefed | 71.4% | 12/14 | 1/3 | 2/4 |
+**One case is 4.76 points**, so a difference under three cases — 14.3 points —
+cannot be read from a run of this size. That floor is applied to every row rather
+than left as a sentence, because a note above a table is a note a reader skips.
+
+| | overall | vs the rules | low (14) | mod (3) | high (4) | **non-low** |
+|---|---|---|---|---|---|---|
+| always answering `low` | 66.7% | −14.3 **decidably worse** | 14/14 | 0/3 | 0/4 | **0/7** |
+| **the rules, today** | **81.0%** | — | 12/14 | 3/3 | 2/4 | **5/7** |
+| qwen2.5:14b-q4, cold | 76.2% | −4.8 undecidable | 13/14 | 0/3 | 3/4 | 3/7 |
+| qwen2.5:14b-q4, briefed | 71.4% | −9.5 undecidable | 14/14 | 0/3 | 1/4 | 1/7 |
+| qwen2.5:7b-q8, cold | 66.7% | −14.3 **decidably worse** | 11/14 | 3/3 | 0/4 | 3/7 |
+| qwen2.5:7b-q8, briefed | **90.5%** | +9.5 undecidable | 14/14 | 3/3 | 2/4 | **5/7** |
+| qwen3:8b, cold | 57.1% | −23.8 **decidably worse** | 8/14 | 2/3 | 2/4 | 4/7 |
+| qwen3:8b, briefed | 85.7% | +4.8 undecidable | 13/14 | 1/3 | **4/4** | **5/7** |
+| llama3.1:8b, cold | 28.6% | −52.4 **decidably worse** | 2/14 | 2/3 | 2/4 | 4/7 |
+| llama3.1:8b, briefed | 71.4% | −9.5 undecidable | 12/14 | 1/3 | 2/4 | 3/7 |
 
 *cold* asks the routing question in its own terms — would a small local model
 answer this adequately. *briefed* hands the model iriguchi's own band
 definitions. Every run is deterministic: the 14B cold run repeated gave 21/21
-identical answers.
+identical answers, so there is no run-to-run term in any of these figures.
 
 ### What it says
 
-**Nothing about the ADR's gap, and that is the finding.**
+**No model configuration is decidably better than the rules. Four are decidably
+worse. Six sit inside the floor, where nothing can be read either way.**
 
-Two configurations beat the rules and five do not. The best is **two cases**
-above the rules and the worst is **eleven below**. One case is 4.76 points here,
-so the entire rules-versus-model question lives inside a band narrower than the
-spread between configurations of the same idea.
+The two that appear to win — 90.5% and 85.7% — are **+9.5 and +4.8 points, both
+inside three cases.** An earlier version of this page reported them as beating
+the rules. They do not; the run cannot say.
 
-**The wording of the question moves a model more than the choice of model does,
-and more than the thing being measured:**
+**And the last column is where the headline was hiding something.** Two thirds of
+the corpus is `low`, so an accuracy figure is mostly a report on the majority
+class — while a router exists for the cases where a bigger model is worth
+reaching for. On those seven:
+
+    always answering `low`   **0 of 7**
+    the rules                **5 of 7**
+    qwen2.5:7b-q8, briefed   **5 of 7**   -- the same, at 90.5% overall
+    qwen3:8b, briefed        **5 of 7**   -- the same, at 85.7% overall
+
+**Both apparent wins are ties on the cases that matter.** Their whole margin is
+in the `low` class, which the trivial baseline already takes for free.
+
+The one genuine difference in the table is qwen3:8b briefed taking **4/4 on
+`high`** against the rules' 2/4 — and it gives the two back on `moderate`, which
+is why the column ends level. Four cases and three cases; neither is a finding.
+
+**The wording of the question moves a model far more than the choice of model
+does**, and more than the thing being argued about:
 
 | | cold → briefed |
 |---|---|
@@ -216,17 +237,12 @@ and more than the thing being measured:**
 | qwen2.5:7b-q8 | +23.8 (5 cases) |
 | qwen2.5:14b-q4 | **−4.8** (1 case) |
 
-**Model size is not monotonic either.** Briefed, the 7B scores 90.5%, the 8B
-85.7%, and the 14B 71.4% — the largest model is the worst, and it is the only
-one the briefing made worse. Whatever "a learned router" names, it is not one
-object with an accuracy.
+**Size is not monotonic either.** Briefed: 7B 90.5%, 8B 85.7%, 14B 71.4% — the
+largest model is the worst, and the only one the briefing made worse. Whatever
+"a learned router" names, it is not one object with an accuracy.
 
-**One sub-result points the ADR's way** and is too small to lean on: `high` is
-the class the cost-quality trade is actually about, and qwen3:8b briefed got
-**4/4** there against the rules' 2/4. Four cases.
-
-**And one points the other way**: the rules are the only entry that gets
-`moderate` consistently right, 3/3, matched only by qwen2.5:7b.
+**The one thing the table decides** is that the rules beat the trivial baseline
+by 14.3 points, which clears the floor by a hair — three cases exactly.
 
 ### What it does not say
 
@@ -239,27 +255,30 @@ behind here, and the previous wording said it was, permanently.
 
 Carry these with any figure above.
 
-1. **n = 21. One case is 4.76 points.** A difference under about 14 points is
-   three cases and is not a result. Nothing in the table clears that against the
-   rules in either direction.
-2. **The floor is 66.7%, not 0%.** Always answering `low` scores that, and two
-   of the eight model runs are at or below it.
+1. **n = 21. One case is 4.76 points.** The floor is applied per row rather than
+   described; `decidable()` returns three values and the middle one is
+   *undecidable*, not *no difference*. bench wrote that shape and tsumugi
+   carried it, on the grounds that a note in prose leaves the reader room and a
+   type does not.
+2. **This floor is arithmetic, not empirical.** It is what one case is worth, not
+   what this machine's variability is. There is no run-to-run term to fold in
+   here because the runs are deterministic, but on a machine where there is, this
+   would be the wrong floor.
 3. **The labels and the rules come from the same hand.** Both were written here,
    so the comparison is biased toward the rules by construction. A model beating
-   them despite that is the stronger finding; the rules beating a model is
-   nearly free.
-4. **One lineage and one machine.** qwen2.5, qwen3 and llama3.1 are what exists
-   locally; three of the four are qwen. bench found no second family available.
+   them despite that would be the stronger finding; none does.
+4. **One lineage and one machine.** Three of the four models are qwen. bench
+   found no second family available locally.
 5. **Selection by format-following does not apply here, and was expected to.**
    bench measured llama3.1 at 0/8 usable on long Japanese generation at
-   temperature 0, and the concern was that testing only models which can follow
-   a format selects for capability. On this task **every model answered with
+   temperature 0, and the concern was that testing only models which can follow a
+   format selects for capability. On this task **every model answered with
    exactly one word, 168 of 168 replies**, llama3.1 included. Its format failure
    is a property of that task, not of the model.
 6. **`iriguchi ask` leaves the temperature to the server.** These figures were
-   taken at 0, chosen because at n=21 characterising sampling variance would
-   take N runs of 21 and there is no budget for that in a corpus this size. They
-   do not describe the setting the product runs under.
+   taken at 0, chosen because at n=21 characterising sampling variance would take
+   N runs of 21 and there is no budget for that in a corpus this size. They do
+   not describe the setting the product runs under.
 
 ## What installing mamori buys
 

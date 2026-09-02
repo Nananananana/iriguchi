@@ -201,15 +201,71 @@ def score(judgements: list[Judgement]) -> dict[str, Any]:
     }
 
 
-def report(name: str, result: dict[str, Any], out: Any) -> None:
+#: How many cases a difference must clear before it is worth reading. Three,
+#: because two is a coin and one is a typo — an argument rather than a
+#: measurement, and labelled as one.
+READABLE_AT_CASES = 3
+
+#: What `decidable` reads as, for a person rather than a caller. The middle one
+#: is spelled out because it is the one a plain `bool` hides.
+VERDICT = {
+    None: "no floor exists at this size",
+    False: "inside the floor -- **not decidable from this run**",
+    True: "larger than the floor",
+}
+
+
+def decidable(difference_points: float, n: int, cases: int = READABLE_AT_CASES) -> bool | None:
+    """Whether a difference can be read at this corpus size.
+
+    Three values, and the middle one is the reason this is not a `bool`:
+
+        None    n < 2. No floor exists, so there is nothing to compare against
+        False   inside the floor. **Not "no difference" -- "not decidable from
+                this run"**, and a reader handed a `bool` will read the first
+        True    larger than the floor
+
+    bench wrote it as `bool | None`, tsumugi carried it, and the argument is
+    that a note in prose leaves the reader room while a type does not. What this
+    replaces was exactly such a note: a sentence in the caveats saying a
+    difference under fourteen points is not a result, sitting where a reader can
+    skip it and above numbers they will not.
+
+    **This floor is arithmetic, not empirical**, and the difference is worth
+    stating. tsumugi's is built from repeated samples and measures how quiet
+    their machine was in the minute it ran; this one is `cases / n` and measures
+    what a single case is worth. Cheaper and weaker: it says nothing about
+    whether the same table would come back twice. Here there is no run-to-run
+    term to fold in -- the 14B cold run repeated gave 21/21 identical answers --
+    but on a machine where there is, this would be the wrong floor.
+    """
+    if n < 2:
+        return None
+    return abs(difference_points) > 100.0 * cases / n
+
+
+def report(name: str, result: dict[str, Any], out: Any, *, against: float | None = None) -> None:
     accuracy = 100 * result["accuracy"]
     print(f"\n{name}", file=out)
     print(f"  band accuracy      {result['correct']}/{result['n']} = {accuracy:.1f}%", file=out)
+    if against is not None:
+        difference = accuracy - against
+        print(
+            f"  vs the rules       {difference:+.1f} points -- "
+            f"{VERDICT[decidable(difference, result['n'])]}",
+            file=out,
+        )
     unusable = {k: v for k, v in result["outcomes"].items() if k != "answered" and v}
     if unusable:
         print(f"  produced no band   {unusable}", file=out)
     parts = " ".join(f"{b} {c}/{t}" for b, (c, t) in result["per_class"].items())
     print(f"  per class          {parts}", file=out)
+    # The question the headline hides. Two thirds of the corpus is `low`, so an
+    # accuracy figure is mostly a report on the majority class -- and the whole
+    # point of a router is the cases where a bigger model is worth reaching for.
+    hard_right = sum(c for band, (c, _) in result["per_class"].items() if band != "low")
+    hard_total = sum(t for band, (_, t) in result["per_class"].items() if band != "low")
+    print(f"  of the {hard_total} non-low     {hard_right} right", file=out)
     if result["seconds"]:
         print(f"  wall               {result['seconds']:.1f}s total", file=out)
 
@@ -271,7 +327,9 @@ def main(argv: list[str] | None = None) -> int:
     rules = [
         Judgement(c["id"], c["band"], rules_band(c["prompt"]), Outcome.ANSWERED) for c in cases
     ]
-    report("the rules (what iriguchi decides today)", score(rules), sys.stdout)
+    rules_result = score(rules)
+    report("the rules (what iriguchi decides today)", rules_result, sys.stdout)
+    rules_accuracy = 100 * rules_result["accuracy"]
 
     # `asdict`, not `__dict__`: `slots=True` means there is no instance dict,
     # and the traceback for that arrives after the model has been asked
@@ -281,7 +339,7 @@ def main(argv: list[str] | None = None) -> int:
     }
     for framing in PROMPTS if args.framing == "both" else [args.framing]:
         judgements = judge(model, PROMPTS[framing], cases)
-        report(f"{args.model}, {framing}", score(judgements), sys.stdout)
+        report(f"{args.model}, {framing}", score(judgements), sys.stdout, against=rules_accuracy)
         everything[framing] = [{**asdict(j), "outcome": j.outcome.value} for j in judgements]
 
     if args.json:

@@ -25,9 +25,11 @@ sys.path.insert(0, str(ROOT / "tools"))
 from measure_router import (  # noqa: E402
     BANDS,
     CORPUS,
+    READABLE_AT_CASES,
     Judgement,
     Outcome,
     caveats,
+    decidable,
     parse,
     rules_band,
     score,
@@ -116,6 +118,53 @@ class TestScoring:
 
     def test_an_empty_run_does_not_divide_by_zero(self) -> None:
         assert score([])["accuracy"] == 0.0
+
+
+class TestWhetherADifferenceCanBeRead:
+    """Three values, and the middle one is the reason it is not a `bool`.
+
+    The version this replaced was a sentence in the caveats — *a difference
+    under fourteen points is not a result* — sitting above a table, where a
+    reader skips it and then reads the numbers. bench wrote the three-valued
+    form and tsumugi carried it: **a note in prose leaves the reader room and a
+    type does not.**
+
+    It changed a published claim within minutes of existing. The table said two
+    configurations beat the rules; both were inside the floor.
+    """
+
+    def test_a_difference_inside_the_floor_is_undecidable_not_absent(self) -> None:
+        """`False` means *this run cannot say*, and the whole point of the
+        three values is that nobody can read it as *no difference*."""
+        assert decidable(9.5, 21) is False
+        assert decidable(-9.5, 21) is False
+
+    def test_a_difference_larger_than_the_floor_is_readable(self) -> None:
+        assert decidable(14.4, 21) is True
+        assert decidable(-52.4, 21) is True
+
+    def test_the_floor_is_three_cases_at_this_size(self) -> None:
+        """4.76 a case, so the boundary is 14.29 — derived, not typed."""
+        floor = 100.0 * READABLE_AT_CASES / 21
+        assert decidable(floor - 0.01, 21) is False
+        assert decidable(floor + 0.01, 21) is True
+
+    def test_it_is_symmetric(self) -> None:
+        """A model eleven cases behind and one eleven ahead are equally
+        readable. A one-sided test would have called the losses undecidable."""
+        assert decidable(20.0, 21) == decidable(-20.0, 21)
+
+    @pytest.mark.parametrize("n", [0, 1])
+    def test_no_floor_exists_below_two_cases(self, n: int) -> None:
+        """`None`, not `False`. With one sample there is no spread to be inside
+        of, and saying "undecidable" would imply a floor was consulted."""
+        assert decidable(50.0, n) is None
+
+    def test_the_floor_moves_with_the_corpus(self) -> None:
+        """If the corpus grows, the same difference becomes readable. A figure
+        typed into prose would not have moved with it."""
+        assert decidable(5.0, 21) is False
+        assert decidable(5.0, 200) is True
 
 
 class TestTheCaveatsTravelWithTheNumbers:

@@ -69,11 +69,18 @@ temperature 0, against four locally available models in two framings:
     **the rules, today**          **81.0%**
     eight model configurations    28.6% to 90.5%
 
-**Two configurations beat the rules and five do not**, and the best is two cases
-above while the worst is eleven below. One case is 4.76 points at this size, so
-the whole question lives inside a band narrower than the spread between
-configurations of the same idea. **The wording of the question moved a model by
-up to nine cases; model size did not move it monotonically at all.**
+**No configuration is decidably better than the rules. Four are decidably
+worse. Six sit inside the floor**, where one case is 4.76 points and a
+difference under three cases cannot be read at all. The two that look like wins,
++9.5 and +4.8, are both inside it.
+
+**And both tie the rules on the cases a router exists for.** Two thirds of the
+corpus is `low`, which the trivial baseline takes for free; on the seven `moderate`
+and `high` cases the rules get 5, and so do each of the two apparent winners.
+Their entire margin is in the majority class.
+
+**The wording of the question moved a model by up to nine cases; model size did
+not move it monotonically at all** -- briefed, the 7B beats the 8B beats the 14B.
 
 So the honest cost is: **the rules are not measurably behind on this corpus, and
 this ADR previously said they were, permanently.** The correction matters more
