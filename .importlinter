@@ -109,10 +109,15 @@ forbidden_modules =
 # drives the whole CLI, and the `zero runtime dependencies` CI job installs the
 # wheel with no extras and runs it. The per-file ban on *naming* mamori outside
 # an adapter is still enforced, by tests/test_architecture.py.
+# One fewer than before. `config` used to import `mamori_scanner` to answer
+# "is it available", and now asks the registry -- which is the single module
+# permitted to name the sibling. The line for it was reported stale by
+# import-linter itself the moment the import went away, which is the same
+# guard shape this repository keeps building by hand.
 ignore_imports =
     iriguchi.interfaces.cli.main -> iriguchi.infrastructure.scanners.mamori_scanner
-    iriguchi.config -> iriguchi.infrastructure.scanners.mamori_scanner
     iriguchi.config -> iriguchi.infrastructure.channels.mamori_channel
+    iriguchi.infrastructure.registry -> iriguchi.infrastructure.scanners.mamori_scanner
 
 # ADR-0009. tsumugi is never imported anywhere, infrastructure included: that
 # seam is a published JSON contract, and reading JSON is reading JSON. kiseki's

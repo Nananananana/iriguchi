@@ -26,7 +26,13 @@ from typing import Any
 import pytest
 
 from iriguchi.domain import complexity as complexity_module
-from iriguchi.domain.complexity import Complexity, ComplexityBand, Signal, SignalKind
+from iriguchi.domain.complexity import (
+    Complexity,
+    ComplexityBand,
+    Signal,
+    SignalKind,
+    Thresholds,
+)
 from iriguchi.domain.decision import RoutingDecision
 from iriguchi.domain.destination import Destination, Route
 from iriguchi.domain.policy import RoutingPolicy
@@ -57,6 +63,7 @@ VALUES: dict[str, Any] = {
     ),
     "Removal": Removal(destination=Destination.EXTERNAL, reason=_A_REASON),
     "RoutingPolicy": RoutingPolicy(),
+    "Thresholds": Thresholds(),
 }
 
 
@@ -85,10 +92,16 @@ class TestTheValuesAreValues:
         for info in pkgutil.iter_modules(iriguchi.domain.__path__):
             module = importlib.import_module(f"iriguchi.domain.{info.name}")
             for name, value in vars(module).items():
+                # `isinstance(value, type)` because `is_dataclass` is true of
+                # instances as well as classes, and the module holds
+                # `DEFAULT_THRESHOLDS`. Without it the sweep demanded an entry
+                # for a value rather than for its class.
                 if (
-                    dataclasses.is_dataclass(value)
+                    isinstance(value, type)
+                    and dataclasses.is_dataclass(value)
                     and getattr(value, "__module__", "").startswith("iriguchi.domain")
-                    and value.__dataclass_params__.frozen  # type: ignore[union-attr]
+                    # `__dataclass_params__` is real and unannotated in typeshed.
+                    and value.__dataclass_params__.frozen  # type: ignore[attr-defined]
                 ):
                     frozen.add(name)
         missing = sorted(frozen - set(VALUES))

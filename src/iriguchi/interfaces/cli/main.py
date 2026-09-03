@@ -1,6 +1,11 @@
 """The command line. The composition root, and the only place adapters are named.
 
-Six commands, and `route` is the one the project is named after.
+`route` is the one the project is named after, and `iriguchi algorithms` is the
+one that says what could sit behind each port and what each choice costs.
+
+The command count used to be written here as a number. It went stale the first
+time a command was added, which is what a count in prose does -- and this
+repository spent a week building checks for exactly that shape.
 
 **`--dry-run` is not a flag on a command that would otherwise send.** Through
 v0.1 there is no outbound path anywhere in this package, so `route` never sends
@@ -27,6 +32,7 @@ from ...domain.destination import Destination, Route
 from ...errors import EscalationRefusedError, IriguchiError
 from ...evaluation.dataset import load_corpus
 from ...evaluation.scoring import run as run_evaluation
+from ...infrastructure.registry import ESTIMATORS, SCANNERS
 from ...infrastructure.scanners.mamori_scanner import (
     SiblingState,
     mamori_is_available,
@@ -77,13 +83,26 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--scanner",
-        choices=("fallback", "mamori"),
+        # From the registry rather than typed here. A `choices=` list copied
+        # into the parser is a second place to add an algorithm, and the one
+        # that gets forgotten.
+        choices=SCANNERS.names,
         default=None,
         help=(
             "which sensitivity scanner to use. Defaults to the built-in fallback even "
             "when mamori is installed: changing the scanner changes what leaves this "
             "machine, and that is not a thing to inherit from what happens to be on "
             "the system."
+        ),
+    )
+
+    parser.add_argument(
+        "--estimator",
+        choices=ESTIMATORS.names,
+        default=None,
+        help=(
+            "which complexity estimator to use. Defaults to "
+            f"{ESTIMATORS.default!r}, or IRIGUCHI_ESTIMATOR."
         ),
     )
 
@@ -124,6 +143,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     commands.add_parser("config", help="what this configuration does with your prompts")
+    commands.add_parser("algorithms", help="what can sit behind each port, and what each one costs")
     commands.add_parser("doctor", help="what is available, and what a missing piece costs")
     commands.add_parser("demo", help="a few prompts through the router")
 
@@ -154,6 +174,7 @@ def _config(args: argparse.Namespace) -> IriguchiConfig:
             if value is not None
         },
         use_mamori=args.scanner == "mamori",
+        **({"estimator": args.estimator} if getattr(args, "estimator", None) else {}),
     )
 
 
@@ -290,6 +311,41 @@ def _what_would_leave(config: IriguchiConfig, prompt: str, out: TextIO) -> None:
         escalation.close()
 
 
+def cmd_algorithms(config: IriguchiConfig, out: TextIO) -> int:
+    """The menu, with prices.
+
+    Every registry entry carries the trade it makes, because a list of names is
+    a menu with no prices and this project's whole argument is that the price is
+    the interesting part. Availability is reported per entry: "there is no such
+    algorithm" and "you do not have that one" send a reader to fix different
+    things.
+    """
+    for title, registry, chosen in (
+        ("scanners", SCANNERS, "mamori" if config.use_mamori else (config.scanner or "")),
+        ("estimators", ESTIMATORS, config.estimator),
+    ):
+        print(f"\n  {title}", file=out)
+        for choice in registry:
+            usable, detail = choice.available()
+            mark = "*" if choice.name == (chosen or registry.default) else " "
+            state = "" if usable else f"  -- unavailable: {detail}"
+            print(f"    {mark} {choice.name:<10} {choice.summary}{state}", file=out)
+            print(f"      {choice.trade}", file=out)
+    cut = config.thresholds()
+    print(
+        f"\n  bands            moderate at {cut.moderate_at}, high at {cut.high_at}, "
+        f"or {cut.short_circuit_at} escalating signals",
+        file=out,
+    )
+    print(
+        "  `* ` is what this configuration would use. "
+        "`python tools/calibrate.py --escalate 0.3` derives the band numbers "
+        "from a target rate instead of inventing one.",
+        file=out,
+    )
+    return EXIT_OK
+
+
 def cmd_config(config: IriguchiConfig, out: TextIO) -> int:
     print(config.describe(), file=out)
     return EXIT_OK
@@ -373,6 +429,8 @@ def main(argv: Sequence[str] | None = None, out: TextIO | None = None) -> int:
             return cmd_ask(args, config, stream)
         if args.command == "config":
             return cmd_config(config, stream)
+        if args.command == "algorithms":
+            return cmd_algorithms(config, stream)
         if args.command == "doctor":
             return cmd_doctor(config, stream)
         if args.command == "demo":

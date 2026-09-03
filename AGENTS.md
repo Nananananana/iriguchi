@@ -143,6 +143,9 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   not a bug — it is a sentence the suite cannot tell from the truth — and the
   first run turned 22 of them into two real gaps and twenty pieces of noise
   worth naming.
+- **A menu entry carries its price.** Every registry choice stores the trade it
+  makes, and a test refuses one shorter than ten words. A list of algorithm
+  names with no costs beside them is the thing this project exists not to be.
 - **Two questions about a check, not one.** *How many files did the type checker
   see* is the first, and widening `files` answered it. *How many of those can a
   user see* is the second, and `py.typed` is what answers that: without the

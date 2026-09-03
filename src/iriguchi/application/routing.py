@@ -26,7 +26,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ..domain.complexity import Complexity
+from ..domain.complexity import Complexity, Thresholds
 from ..domain.decision import RoutingDecision
 from ..domain.destination import Destination
 from ..domain.policy import RoutingPolicy
@@ -49,6 +49,11 @@ class PromptRouter:
     scanner: SensitivityScanner
     estimator: ComplexityEstimator
     policy: RoutingPolicy = field(default_factory=RoutingPolicy)
+    #: Where the bands begin. A value rather than three module constants, so an
+    #: operator can name a target escalation rate and have the numbers derived
+    #: (`tools/calibrate.py`) instead of inventing a 0.7. The default is exactly
+    #: what shipped before this field existed.
+    thresholds: Thresholds = field(default_factory=Thresholds)
 
     def route(self, text: str, available: frozenset[Destination]) -> RoutingDecision:
         """Where `text` is allowed to go, and the whole account of why.
@@ -128,12 +133,12 @@ class PromptRouter:
         the same and only one of them means the router is working.
         """
         try:
-            return Complexity.from_signals(self.estimator.estimate(text)), ()
+            return Complexity.from_signals(self.estimator.estimate(text), self.thresholds), ()
         except EstimationError as failure:
             detail = str(failure)
         except Exception as failure:
             detail = f"{type(failure).__name__}: {failure}"
-        return Complexity.from_signals(()), (
+        return Complexity.from_signals((), self.thresholds), (
             Reason(
                 rule="routing.estimator-failed",
                 source=_SOURCE,
