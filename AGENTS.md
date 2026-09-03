@@ -152,6 +152,12 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   now — a tree walk rather than a grep, so this bullet does not satisfy the rule
   it describes. The README sentences are checked too: a check that outlives its
   claim leaves two documents disagreeing about what was promised.
+- **A published schema that nothing validates against is a promise with no
+  check.** `jsonschema` is a dev dependency for exactly that and nothing else;
+  every document `route --json` can emit is validated against the shipped
+  schema. `cosmic-ray` was refused for 726 lines of `uv.lock` and this was
+  accepted for 154 — the difference is a convenience versus an obligation to
+  somebody downstream, not the size.
 - **Two questions about a check, not one.** *How many files did the type checker
   see* is the first, and widening `files` answered it. *How many of those can a
   user see* is the second, and `py.typed` is what answers that: without the

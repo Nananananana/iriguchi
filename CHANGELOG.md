@@ -27,6 +27,13 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Two structural claims got mechanisms: nothing in `src/` imports a way to keep
   a record, and nothing writes. Both were prose. Writing nothing down is the
   strongest thing iriguchi says about itself and was the less defended of the two.
+- **`iriguchi.routing-decision/1`**, the first contract iriguchi produces rather
+  than consumes. `route --json` writes it, `iriguchi schema` prints it, and it
+  carries no part of the prompt — ADR-0016 says why that does not contradict
+  ADR-0012, and a JSON Schema validator checks every document the code can emit.
+- **`from iriguchi import route`.** One call instead of three objects and a
+  domain vocabulary. The package docstring stopped claiming there was no
+  scanner, no estimator and no CLI.
 - The design: `docs/proposals/0001-the-design.md`, written before any code
   exists and kept that way.
 - Ten architecture decision records, `docs/adr/0001` through `0010`.

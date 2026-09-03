@@ -38,6 +38,15 @@ class NetworkAccessError(AssertionError):
     """
 
 
+def _network_error(name: str) -> NetworkAccessError:
+    return NetworkAccessError(
+        f"{name} was called during a test. Nothing in iriguchi may reach the "
+        "network: the routing decision is made before anything is sent, and the "
+        "deciding path has no way to send (ADR-0004). If this is a v0.2 adapter "
+        "test that genuinely needs a socket, mark it @pytest.mark.network."
+    )
+
+
 def _refuse(name: str) -> Any:
     def refuser(*args: object, **kwargs: object) -> NoReturn:
         raise NetworkAccessError(
@@ -48,6 +57,43 @@ def _refuse(name: str) -> Any:
         )
 
     return refuser
+
+
+def _refusing_socket(original: type[socket.socket]) -> type[socket.socket]:
+    """A socket class that refuses to connect, rather than a function.
+
+    **`socket.socket` is a class and `ssl` subclasses it.** Replacing it with a
+    function made `import ssl` raise `TypeError: function() argument 'code' must
+    be code, not str` -- so any code importing the network stack *during* a test
+    died at import, whatever it was going to do with it. The fence was blocking
+    the module rather than the connection.
+
+    Found when the public `route()` began importing its config lazily: the
+    import happened inside a fenced test instead of at collection, and nine
+    tests failed somewhere none of them mentions.
+
+    Subclassing keeps the block exactly as strong. Nothing here can open a
+    connection; a socket that is never connected reaches nothing, and the
+    refusal now fires at the moment somebody tries rather than at the moment
+    they allocate.
+    """
+
+    class Refusing(original):  # type: ignore[valid-type, misc]
+        def __init__(self, *args: object, **kwargs: object) -> NoReturn:
+            """Constructing one still raises, as it did before.
+
+            **Subclassing does not call `__init__`**, so `class SSLSocket(socket)`
+            at import time is fine while `socket.socket()` is not. That is the
+            whole difference between blocking a module and blocking a use, and
+            it keeps `test_opening_a_socket_raises` true rather than relaxing it
+            to make an import work.
+            """
+            raise _network_error("socket.socket")
+
+    # `type: ignore` because mypy reads a class whose `__init__` is `NoReturn`
+    # as uninstantiable and therefore not a `type[socket]`. That is exactly what
+    # it is for, and the annotation is the honest one for the caller.
+    return Refusing  # type: ignore[return-value]
 
 
 @pytest.fixture(autouse=True)
@@ -65,7 +111,8 @@ def no_network(request: pytest.FixtureRequest) -> Iterator[None]:
         return
 
     saved = {name: getattr(socket, name) for name in ("socket", "create_connection", "getaddrinfo")}
-    for name in saved:
+    socket.socket = _refusing_socket(saved["socket"])
+    for name in ("create_connection", "getaddrinfo"):
         setattr(socket, name, _refuse(f"socket.{name}"))
     try:
         yield

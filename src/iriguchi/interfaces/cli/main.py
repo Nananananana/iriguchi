@@ -21,6 +21,7 @@ that treats a refusal as a crash will retry it forever.
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from collections.abc import Sequence
 from dataclasses import replace
@@ -38,6 +39,7 @@ from ...infrastructure.scanners.mamori_scanner import (
     mamori_is_available,
     mamori_state,
 )
+from ..contract import as_document, schema
 from .console import print_content
 from .render import render_decision
 
@@ -123,6 +125,15 @@ def build_parser() -> argparse.ArgumentParser:
             "and the flag is here so the promise survives v0.2."
         ),
     )
+    route.add_argument(
+        "--json",
+        action="store_true",
+        help=(
+            "write the decision as `iriguchi.routing-decision/1` instead of prose. "
+            "Carries rule ids, spans and bands and no part of your prompt; "
+            "`iriguchi schema` prints the shape."
+        ),
+    )
 
     ask = commands.add_parser("ask", help="route this prompt, then answer it")
     ask.add_argument("prompt", help="the prompt. Use - to read standard input.")
@@ -143,6 +154,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     commands.add_parser("config", help="what this configuration does with your prompts")
+    commands.add_parser("schema", help="the JSON contract `route --json` writes")
     commands.add_parser("algorithms", help="what can sit behind each port, and what each one costs")
     commands.add_parser("doctor", help="what is available, and what a missing piece costs")
     commands.add_parser("demo", help="a few prompts through the router")
@@ -182,10 +194,36 @@ def _read(prompt: str) -> str:
     return sys.stdin.read() if prompt == "-" else prompt
 
 
+def cmd_schema(out: TextIO) -> int:
+    """The contract, from the installed package.
+
+    Printed rather than linked, because a consumer generating code from it
+    should be reading the one in the wheel they have and not the one on a branch
+    somebody is editing.
+    """
+    print(json.dumps(schema(), ensure_ascii=False, indent=2), file=out)
+    return EXIT_OK
+
+
 def cmd_route(args: argparse.Namespace, config: IriguchiConfig, out: TextIO) -> int:
     router: PromptRouter = config.router()
     prompt = _read(args.prompt)
     decision = router.route(prompt, config.available)
+
+    if args.json:
+        # `ensure_ascii=False` so a Japanese rule id stays readable in a
+        # terminal and in `jq`; the document holds no prompt text either way.
+        #
+        # **Insertion order, not sorted.** `as_document` builds the keys in a
+        # fixed order, so diffs are already stable -- and sorting put `by`
+        # ahead of `contract`, which contradicts the one thing a consumer is
+        # supposed to read first. JSON objects are unordered by spec and a
+        # human scanning a terminal is not.
+        print(
+            json.dumps(as_document(decision, config.thresholds()), ensure_ascii=False, indent=2),
+            file=out,
+        )
+        return EXIT_REFUSED if decision.route is Route.REFUSED else EXIT_OK
 
     print(
         render_decision(decision, sent="nothing", verbose=args.explain),
@@ -429,6 +467,8 @@ def main(argv: Sequence[str] | None = None, out: TextIO | None = None) -> int:
             return cmd_ask(args, config, stream)
         if args.command == "config":
             return cmd_config(config, stream)
+        if args.command == "schema":
+            return cmd_schema(stream)
         if args.command == "algorithms":
             return cmd_algorithms(config, stream)
         if args.command == "doctor":

@@ -73,6 +73,32 @@ standard library — `tkinter` is a separate OS package on most Linux
 distributions, and v0.3's tray will say so rather than fail as a broken install
 ([ADR-0015](docs/adr/0015-what-zero-runtime-dependencies-promises.md)).
 
+## Using it
+
+One call, and both destinations default to off because that is the fail-safe
+value:
+
+```python
+from iriguchi import route
+
+decision = route("Summarise this article.", local=True, external=True)
+decision.leaves_the_machine  # False
+[r.detail for r in decision.reasons]
+```
+
+Or from a script, as `iriguchi.routing-decision/1` — rule ids, spans and bands,
+and **no part of your prompt**:
+
+```console
+$ iriguchi route --json "..." | jq -r '.route, .reasons[].detail'
+$ iriguchi schema        # the contract, from the wheel you installed
+$ iriguchi algorithms    # what can sit behind each port, and what each costs
+```
+
+The exit code is the same either way: `0` decided, `2` refused, `1` broken. A
+refusal is not a failure, and a script that cannot tell them apart will retry a
+refusal forever.
+
 ## What it does
 
 Three prompts, and the same two axes deciding all of them.
