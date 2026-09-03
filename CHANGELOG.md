@@ -12,6 +12,10 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - ADR-0015: what "zero runtime dependencies" promises. It is about the Python
   dependency graph and says nothing about the OS package graph, and `tkinter`
   is where those differ. The wheel job now **reports** what a GUI would find.
+- `tools/mutate.py`: mutation testing on the standard library. The first run
+  scored **62.1%** on the domain and the survivors named two real gaps — nothing
+  asserted the values were immutable, and neither band threshold was tested at
+  the threshold. **75.9%** after.
 - The design: `docs/proposals/0001-the-design.md`, written before any code
   exists and kept that way.
 - Ten architecture decision records, `docs/adr/0001` through `0010`.

@@ -138,6 +138,11 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   instead of looking for characters, which is why it runs anywhere. A scan of
   this repository's string literals finds nothing and never could: the
   characters come from the prompt.
+- **`python tools/mutate.py` before believing the suite.** Every guard here has
+  been broken by hand once; mutation testing does it exhaustively. A survivor is
+  not a bug — it is a sentence the suite cannot tell from the truth — and the
+  first run turned 22 of them into two real gaps and twenty pieces of noise
+  worth naming.
 - **Two questions about a check, not one.** *How many files did the type checker
   see* is the first, and widening `files` answered it. *How many of those can a
   user see* is the second, and `py.typed` is what answers that: without the
