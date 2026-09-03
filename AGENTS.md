@@ -158,6 +158,12 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   schema. `cosmic-ray` was refused for 726 lines of `uv.lock` and this was
   accepted for 154 — the difference is a convenience versus an obligation to
   somebody downstream, not the size.
+- **`uv add --dev` writes to the wrong list.** It appends to
+  `[dependency-groups]`, which is PEP 735; CI installs `.[dev]`, which is a PEP
+  621 extra and does not read it. A package added that way is present locally
+  and missing in CI, and the failure is an `ImportError` in a job nobody was
+  changing. Add development dependencies to `[project.optional-dependencies]`
+  by hand, and there is deliberately no second list to choose between.
 - **Two questions about a check, not one.** *How many files did the type checker
   see* is the first, and widening `files` answered it. *How many of those can a
   user see* is the second, and `py.typed` is what answers that: without the
