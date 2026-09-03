@@ -111,7 +111,12 @@ def no_network(request: pytest.FixtureRequest) -> Iterator[None]:
         return
 
     saved = {name: getattr(socket, name) for name in ("socket", "create_connection", "getaddrinfo")}
-    socket.socket = _refusing_socket(saved["socket"])
+    # `type: ignore` because `socket.socket` is a class and mypy is right
+    # that assigning to one is unusual. Replacing it for the length of a
+    # test is the whole mechanism, and `ruff` rewrote the `setattr` form
+    # that used to hide this -- the rewrite is an improvement and the
+    # silenced complaint is the honest cost of it.
+    socket.socket = _refusing_socket(saved["socket"])  # type: ignore[misc]
     for name in ("create_connection", "getaddrinfo"):
         setattr(socket, name, _refuse(f"socket.{name}"))
     try:
