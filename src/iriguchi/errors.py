@@ -60,6 +60,22 @@ class EstimationError(RoutingError):
     """
 
 
+class JudgementError(RoutingError):
+    """An answer judge failed.
+
+    The least serious of the three, and the reason is structural rather than a
+    matter of degree. A judge that returns nothing has said the answer looked
+    fine, which means no escalation, which means the prompt stays where it
+    already was. **A broken judge cannot cause a prompt to leave** -- escalation
+    is gated on the original decision having permitted it, and that decision was
+    made before any of this ran.
+
+    So the cost of this failing is a local answer somebody would have wanted
+    escalated, which is quality. Reported anyway, because a cascade that quietly
+    stopped cascading looks exactly like one whose answers were all adequate.
+    """
+
+
 class EscalationRefusedError(IriguchiError):
     """A prompt that was allowed to leave will not be sent after all.
 

@@ -376,6 +376,33 @@ and it is what a build can honestly gate on
 Every number in this repository is measured, ships with the script that produced
 it, and states what it does not say.
 
+## When the local model is not enough
+
+```console
+$ python examples/cascade.py
+  the model declined
+      answer        weak  (score 0.95)   because  judge.refusal
+      escalate      YES
+
+  weak, and it stays anyway
+      answer        weak  (score 0.95)   because  judge.refusal
+      escalate      no
+      the external destination was removed for this prompt and a weak answer
+      is not evidence about sensitivity
+```
+
+Predicting how hard a prompt is, before anybody has tried, scores **42.9%** —
+difficulty is only detected when the request announces it. So iriguchi can also
+**stop predicting**: answer locally, look at what came back, and escalate only if
+it was visibly poor.
+
+The two cases above carry the *same* refusal and reach opposite verdicts, because
+the second prompt's external destination had already been removed by the veto.
+That is the rule: a weak answer is evidence about a model, never about
+sensitivity. The first hop is always local, which is why
+[ADR-0004](docs/adr/0004-decide-before-the-request.md) — *decide before the
+request* — stays true: nothing left the machine to inform the second decision.
+
 ## Tuning it
 
 Every number the rules use is reachable, validated, and defaults to what it was

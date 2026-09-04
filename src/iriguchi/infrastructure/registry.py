@@ -36,14 +36,17 @@ from dataclasses import dataclass
 
 from ..errors import ConfigurationError
 from ..ports.estimator import ComplexityEstimator
+from ..ports.judge import AnswerJudge
 from ..ports.scanner import SensitivityScanner
 from .estimators.rules import RulesEstimator
 from .scanners.fallback import FallbackScanner
 
 __all__ = [
     "DEFAULT_ESTIMATOR",
+    "DEFAULT_JUDGE",
     "DEFAULT_SCANNER",
     "ESTIMATORS",
+    "JUDGES",
     "SCANNERS",
     "Choice",
     "Registry",
@@ -243,9 +246,12 @@ ESTIMATORS: Registry[ComplexityEstimator] = Registry(
             name="rules",
             summary="structural and lexical markers, weighted",
             trade=(
-                "81.0% band accuracy on 21 generated cases against a 66.7% "
-                "always-low baseline. No model configuration measured is decidably "
-                "better, and four are decidably worse (docs/measurements.md)."
+                "81.0% band accuracy on 21 generated cases and **42.9% on the 42 "
+                "written to test it**, against a 35.7% always-low baseline there. "
+                "It detects difficulty when a request announces it and misses "
+                "eleven of thirteen hard prompts that do not -- the residual "
+                "ADR-0004 predicted. The cascade (ADR-0018) exists because of "
+                "this number, not in spite of it."
             ),
             build=RulesEstimator,
         ),
@@ -253,5 +259,35 @@ ESTIMATORS: Registry[ComplexityEstimator] = Registry(
     default="rules",
 )
 
+
+def _rules_judge() -> AnswerJudge:
+    from .judges.rules import RulesJudge
+
+    return RulesJudge()
+
+
+#: The cascade axis. Unlike the other two it inspects an **answer**, so its
+#: failure mode is a wasted second call rather than a leak -- escalation is
+#: gated on a decision made before any judge ran (ADR-0018).
+JUDGES: Registry[AnswerJudge] = Registry(
+    "judge",
+    {
+        "rules": Choice(
+            name="rules",
+            summary="refusal phrases and answer shape, no model",
+            trade=(
+                "Catches a model that says it cannot help, that repeats itself, "
+                "that stops mid-sentence or that hands the prompt back. It cannot "
+                "tell a confident wrong answer from a confident right one, which "
+                "is the failure a small model makes most often and the one no "
+                "rule over the text will ever see."
+            ),
+            build=_rules_judge,
+        ),
+    },
+    default="rules",
+)
+
 DEFAULT_SCANNER = SCANNERS.default
 DEFAULT_ESTIMATOR = ESTIMATORS.default
+DEFAULT_JUDGE = JUDGES.default
