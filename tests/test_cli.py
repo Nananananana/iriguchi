@@ -189,9 +189,19 @@ class TestDoctor:
         assert "every prompt containing anything sensitive is refused" in output
 
     def test_it_says_what_the_built_in_scanner_misses(self) -> None:
-        """Somebody has to be told, and the tool is the only thing they run."""
+        """Somebody has to be told, and the tool is the only thing they run.
+
+        Keyed on the measured rate rather than on a phrase. The phrase version
+        of this assertion passed on a machine with mamori installed -- where
+        `doctor` takes a different branch entirely -- and failed in CI, which is
+        where mamori is absent and where the sentence actually renders.
+
+        `doctor` has three branches here and this exercise reaches whichever one
+        the environment produces, so the assertion has to be about what every
+        branch owes the reader: the cost, and a scanner that would fix it.
+        """
         _, output = run("--local", "--external", "doctor")
-        assert "misses names without an honorific" in output
+        assert "63.5%" in output or "installed but not selected" in output, output
         assert "mamori" in output
 
 
