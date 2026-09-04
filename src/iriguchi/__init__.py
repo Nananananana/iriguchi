@@ -34,8 +34,8 @@ def route(
     *,
     local: bool = False,
     external: bool = False,
-    scanner: str | None = None,
-    estimator: str | None = None,
+    scanner: str | SensitivityScanner | None = None,
+    estimator: str | ComplexityEstimator | None = None,
     findings: Iterable[Finding] | None = None,
     moderate_at: float | None = None,
     high_at: float | None = None,
@@ -53,10 +53,16 @@ def route(
         local: Whether a local model is available. **Passed in, never probed**
             (ADR-0011), which is what lets this run with no network at all.
         external: Whether an external service is reachable.
-        scanner: Which sensitivity scanner, by name. `None` takes the registry's
-            default, which is the built-in one **even when mamori is installed**
-            -- changing the scanner changes what leaves this machine, and that
-            is not a thing to inherit from what happens to be on the system.
+        scanner: Which sensitivity scanner. A **name** from the registry, or a
+            **scanner object** of your own -- anything satisfying
+            `ports.SensitivityScanner`. `None` takes the registry's default,
+            which is the built-in one **even when mamori is installed**:
+            changing the scanner changes what leaves this machine, and that is
+            not a thing to inherit from what happens to be on the system.
+
+            Passing an object is how a tuned or third-party detector gets in
+            without a registry entry. Names stay the CLI's vocabulary; objects
+            are the library's.
         findings: Findings from somewhere else -- your own Presidio analyzer,
             your own detector -- used **instead of** running a scanner here.
             `iriguchi.interop.findings_from_presidio` converts a
@@ -64,7 +70,18 @@ def route(
             with `scanner=` is refused rather than silently preferring one:
             somebody who named a scanner and also handed over findings has two
             intentions and iriguchi cannot tell which.
-        estimator: Which complexity estimator, by name.
+        estimator: Which complexity estimator, by name or as an object. An
+            object is the way to reach `RulesSettings` -- every weight and
+            threshold the rules use, which were module-private constants until
+            somebody would have had to fork the library to move one::
+
+                from iriguchi.infrastructure.estimators.rules import (
+                    RulesEstimator, RulesSettings,
+                )
+                route(text, estimator=RulesEstimator(RulesSettings(
+                    long_input_at=300,
+                    marker_weights={"complexity.multi-step": 0.6},
+                )), local=True)
         moderate_at: Where the middle band begins. `None` keeps the default;
             `python tools/calibrate.py --escalate 0.3` derives one from a target
             escalation rate rather than inventing a number.
@@ -96,18 +113,29 @@ def route(
             "machine on a coin toss."
         )
 
+    # A name goes to the registry; an object goes straight onto the router
+    # below. Split here rather than at the call site so `IriguchiConfig` keeps
+    # taking strings only -- it is the settings object, and a settings object
+    # holding a live scanner is a settings object that cannot be written down.
+    scanner_name = scanner if isinstance(scanner, str) else None
+    estimator_name = estimator if isinstance(estimator, str) else None
+
     config = IriguchiConfig(
         local=local,
         external=external,
-        scanner=scanner or "",
-        estimator=estimator or "",
+        scanner=scanner_name or "",
+        estimator=estimator_name or "",
         moderate_at="" if moderate_at is None else repr(moderate_at),
         high_at="" if high_at is None else repr(high_at),
     )
     router = config.router()
-    if findings is not None:
-        from dataclasses import replace as _replace
+    from dataclasses import replace as _replace
 
+    if not isinstance(scanner, str) and scanner is not None:
+        router = _replace(router, scanner=scanner)
+    if not isinstance(estimator, str) and estimator is not None:
+        router = _replace(router, estimator=estimator)
+    if findings is not None:
         from .infrastructure.scanners.supplied import SuppliedScanner
 
         router = _replace(router, scanner=SuppliedScanner(tuple(findings)))
@@ -177,6 +205,8 @@ if __debug__:  # pragma: no cover - typing only
         from .errors import ConfigurationError, IriguchiError
         from .interfaces.contract import CONTRACT, as_document, schema
         from .interop import findings_from_presidio, to_presidio
+        from .ports.estimator import ComplexityEstimator
+        from .ports.scanner import SensitivityScanner
 
 __all__ = [
     "CONTRACT",

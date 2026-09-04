@@ -171,6 +171,85 @@ still F2's to answer.
 
 ---
 
+## F6. Every tuned number was unreachable, and one of them meant two different things
+
+Asked directly: *are there thresholds that will not survive contact with a
+release?* Yes, and two kinds.
+
+### Unreachable
+
+`RulesEstimator` had **no `__init__` at all**. Not a narrow interface — no
+interface. Every number that decides anything was a module-private constant:
+
+    _LONG_INPUT = 600            _DENSE_WORD_LENGTH = 7.0
+    _ESCALATING_WEIGHT = 0.45    _DENSE_MIN_WORDS = 20
+    _MIXED_SCRIPT_MIN_SHARE = 0.1
+    and 0.3, 0.25, 0.2, 0.35 written inline at the call sites
+
+A deployment whose traffic did not look like this corpus had exactly one option:
+fork the library. That is not a tuning story, and every one of these was chosen
+against 155 cases, 134 of which are borrowed PII samples (F1).
+
+**Fixed.** `RulesSettings` carries all of them with the same defaults, validated
+at construction, plus `marker_weights` for per-rule overrides — which is the knob
+that matters after release, because it lets one rule be retuned without touching
+the other twenty. `route(text, estimator=RulesEstimator(RulesSettings(...)))`
+reaches it, and a name still works for the CLI.
+
+Refused at construction rather than at use: a weight above 1 makes
+`1 - prod(1 - w)` produce a negative factor and a score outside [0,1], which the
+published schema then rejects — three layers from the line that caused it.
+
+### Meaning two different things
+
+`_LONG_INPUT = 600` counted **code points**, and the same request is about half
+as many code points in Japanese:
+
+| the same request | code points | east-asian width |
+|---|---:|---:|
+| `Please refactor this authentication module.` ×15 | 660 | 660 |
+| `この認証モジュールをリファクタリングしてください。` ×15 | **375** | **750** |
+
+The English one crossed 600. The Japanese one did not. **A Japanese user had to
+write roughly twice as much to reach the same band** — in a project written in
+Japanese, about Japanese prompts. Nobody chose that; it fell out of counting
+characters.
+
+**Fixed** with `unicodedata.east_asian_width`: Wide and Fullwidth count two, the
+convention every terminal uses to align a CJK column. Stdlib, no dependency, and
+a proxy for information content rather than a measurement of it. Ambiguous-width
+characters count one, because their width depends on the reader's locale and
+guessing East Asian for Greek would break this in the other direction.
+
+The corpus is unchanged by this — its prompts have a median of 34 characters and
+come nowhere near 600 in either unit — which is itself F1 restated: the corpus
+could not have caught this.
+
+### The one that is recorded rather than fixed
+
+`complexity.dense-vocabulary` matches on an **ASCII-only** word pattern, so it
+cannot fire on Japanese or Chinese at all. Its comment admitted the rule was
+wrong about German and did not mention that it is silent on the language this
+project is written in.
+
+The obvious counterpart was measured and **rejected**. Kanji ratio is a language
+detector wearing a density costume: over this corpus its 90th percentile is 0.71
+and every case up there is ordinary Chinese prose, because Chinese is ~90% hanzi
+whatever it is about. A signal that fires on an entire language is worse than a
+missing one.
+
+So the gap stands, documented in the code, and is part of why the complexity axis
+is the weaker one.
+
+### What was checked and found sound
+
+| number | verdict |
+|---|---|
+| band boundaries 0.3 / 0.7 | already `Thresholds`, already calibratable by `tools/calibrate.py` |
+| entropy 3.0 / 4.5 bits | derived and published in `measurements.md`, with the reasoning |
+| Presidio `score_threshold` 0.5 | Presidio's own knob, calibrated by its authors, passed through |
+| `openai_compatible` 8 / 600 / 1024 | transport limits, not detection |
+
 ## F5. `tsumugi` is taken on PyPI
 
 Not an iriguchi defect — recorded here because the family shares a naming
