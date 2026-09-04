@@ -28,7 +28,7 @@ from dataclasses import replace
 from typing import TextIO
 
 from ...application.routing import PromptRouter
-from ...config import IriguchiConfig
+from ...config import ENV_PREFIX, IriguchiConfig
 from ...domain.destination import Destination, Route
 from ...errors import EscalationRefusedError, IriguchiError
 from ...evaluation.dataset import load_corpus
@@ -237,7 +237,44 @@ def cmd_route(args: argparse.Namespace, config: IriguchiConfig, out: TextIO) -> 
     )
     if args.explain and decision.route is Route.EXTERNAL:
         _what_would_leave(config, prompt, out)
+    if decision.route is Route.REFUSED:
+        _what_would_change_this(config, out)
     return EXIT_REFUSED if decision.route is Route.REFUSED else EXIT_OK
+
+
+def _what_would_change_this(config: IriguchiConfig, out: TextIO) -> None:
+    """After a refusal: the settings that would have produced an answer.
+
+    A refusal that names the obstacle and not the remedy is a dead end wearing
+    an explanation. `doctor` has said all of this since v0.1 -- to somebody who
+    already knew to run it, which is not the person who just got told no.
+
+    Only settings, never a suggestion to relax the veto. There is no advice here
+    of the form *scan less*: the destinations are what is missing, and a
+    sensitive prompt with a local model reaches one.
+    """
+    missing = []
+    if Destination.LOCAL not in config.available:
+        missing.append(
+            f"  {ENV_PREFIX}LOCAL=1                 a local model exists. A prompt that "
+            f"must stay local is refused without one -- that is ADR-0002 working, "
+            f"and it is also most of what you would want to ask."
+        )
+    if Destination.EXTERNAL not in config.available:
+        missing.append(
+            f"  {ENV_PREFIX}EXTERNAL=1              an external service is reachable. "
+            f"Only prompts with no findings can use it, whatever their difficulty."
+        )
+    if not missing:
+        return
+    print("\n  what would change this", file=out)
+    for line in missing:
+        print(line, file=out)
+    print(
+        "\n  Nothing above weakens the scan. `iriguchi doctor` says what is "
+        "configured and what each absence costs.",
+        file=out,
+    )
 
 
 def cmd_ask(args: argparse.Namespace, config: IriguchiConfig, out: TextIO) -> int:
