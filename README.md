@@ -407,6 +407,21 @@ asked a Japanese user for twice the content — 660 against 375 for one measured
 pair. `unicodedata.east_asian_width` fixes it with no dependency, and
 [`docs/feasibility.md`](docs/feasibility.md) F6 has the table.
 
+## Simulating a change before you make it
+
+```console
+$ python tools/simulate.py --marker-weight complexity.multi-step=0.8
+  4 of 155 prompts change route (2.6%)
+
+    local    -> external        4   began leaving the machine
+```
+
+**The direction is the point.** Two policy changes can move the same number of
+prompts and be opposites — one sends work outward, the other keeps it home — and
+a single accuracy figure reports both as an improvement. Nothing is sent, no
+model is called, and the corpus it runs against is the one shipped in the wheel
+unless you point `--corpus` at your own.
+
 ## Configuring it
 
 Both destinations default to **off**, which is the fail-safe value: somebody who

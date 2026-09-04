@@ -346,6 +346,64 @@ ranks them.
 **Exit criterion:** the two axes are described in the README with the evidence
 each of them has, and no command prints advice a user cannot act on.
 
+### v0.1.2 — What the external review asked for
+
+An outside technical review (2026-09-05) read iriguchi and made ten sets of
+recommendations. Several were already built, several are adopted here, and three
+are **declined on balance** -- which is the part worth writing down, because a
+review item silently dropped looks the same as one nobody read.
+
+#### Adopted
+
+- **Policy simulation** (asked for twice). `python tools/simulate.py` routes the
+  corpus under a proposed policy and reports which prompts move **and in which
+  direction**. That direction is the whole point: two changes can move the same
+  number of prompts and be opposites, and an accuracy figure reports both as an
+  improvement. A prompt that began leaving the machine gets its own line.
+- **Scanner coverage as a separate concern from route accuracy.** Done in
+  [ADR-0017](../adr/0017-an-optional-dependency-is-a-scanner-you-can-actually-get.md):
+  63.5% missed findings against a followable 27.9%, published beside the
+  over-caution it costs.
+- **iriguchi is not a detector.** Already the design, and now also the
+  implementation: `interop/` takes Presidio results without importing Presidio,
+  and `route(findings=…)` accepts somebody else's analyzer output instead of
+  running a scan.
+
+#### Already built, and where to look
+
+| the review asked for | where it is |
+|---|---|
+| Explainable routing | every decision carries `reasons` ([ADR-0006](../adr/0006-every-decision-carries-its-reasons.md)) |
+| Decision contract versioning | `iriguchi.routing-decision/1`, frozen, schema in the wheel |
+| No-model deciding path | [ADR-0004](../adr/0004-decide-before-the-request.md) |
+| Fail-closed, no external fallback | [ADR-0002](../adr/0002-fail-closed.md) |
+| Policy Decision Record without raw values | the contract's `$comment`, enforced by a test |
+| Policy kernel as a pure function | `domain/policy.py`, which imports nothing |
+
+#### Declined, and why
+
+**A policy DSL.** The review asks for `sensitivity × complexity × destination ×
+source` as configuration. iriguchi has one settings object and
+[no configuration file format](../../src/iriguchi/config.py), deliberately: a
+DSL is a parser, an evaluator and a versioning story, all of it in the deciding
+path, all of it new surface on the component whose argument is that a security
+reviewer can read it in an afternoon. `RulesSettings` now reaches every weight
+from Python, which covers the operator need without the language.
+
+**Multi-destination routing** (provider / model / region tiers). Right
+direction, wrong version. `route` is an enum of three in a contract frozen at v1
+with `additionalProperties: false`, and widening it is a v2 with a migration
+story -- not a field quietly added. Recorded for v0.4 rather than slipped in.
+
+**A warm-path SLO measured in CI.** The intent is right and the instrument is
+not: this project already measured GitHub's runners producing 32 ms once and a
+796 ms median an hour later ([measurements.md](../measurements.md)), so a
+wall-clock gate there would fail for reasons that have nothing to do with the
+code. **The mechanism is asserted instead** -- that already-normal text does no
+per-character work, and that a long prompt clears the width threshold without
+counting -- which is deterministic, and is what actually made the warm path
+fast.
+
 ### v0.2 — The seams
 
 - The mamori adapter: `SensitivityScanner` backed by a real `PrivacySession`,
