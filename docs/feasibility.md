@@ -130,15 +130,20 @@ this defect for a *missing endpoint* — its own docstring names it, *a true
 sentence that sends the reader to fix the wrong thing* — and did not check the
 other thing `ask` requires.
 
-**Fixed.** Four states rather than three, protection reported before the
-endpoint, because an endpoint is two environment variables away and mamori is
-not on PyPI. `doctor` now prints:
+**Fixed.** Four states rather than three. `doctor` now prints:
 
-    external service  cannot be used  nothing here can protect an outbound prompt
+    external service  available for routing, nothing can protect an outbound prompt
 
 with a paragraph saying that `route` will still say a prompt may leave while
 `ask --external` refuses, which is the disagreement somebody would otherwise
 meet at the moment of sending.
+
+The two blockers share one framing — *available for routing*, then what stops
+the asking — because that half is true of both: routing needs no endpoint and no
+protection, and it works. The first version said `cannot be used` and took
+precedence over the endpoint message, which **hid a gap a test was already
+checking for**. CI caught it; the lesson is that a new state added at the front
+of a chain silences every state behind it.
 
 ---
 

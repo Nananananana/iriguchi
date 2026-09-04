@@ -342,13 +342,28 @@ class TestAvailableHasToMeanYouCanUseIt:
             external_model="some-model",
         ).describe()
 
-    def test_it_is_not_called_available_when_nothing_can_protect_it(
-        self, without_mamori: None
-    ) -> None:
-        external = next(
-            line for line in self._describe().splitlines() if line.startswith("external service")
-        )
-        assert "available" not in external, external
+    @staticmethod
+    def _external_line(report: str) -> str:
+        return next(line for line in report.splitlines() if line.startswith("external service"))
+
+    def test_it_does_not_read_as_a_destination_you_can_ask(self, without_mamori: None) -> None:
+        """Not *the word `available` is absent* -- that was the first version of
+        this test and it was about a word rather than about a claim. `available
+        for routing` is true with no mamori, because routing does work.
+
+        What must not appear is the rendering that means **you can send to
+        this**: the model and the URL sitting after `available` with nothing
+        qualifying them."""
+        external = self._external_line(self._describe())
+        assert "some-model at" not in external, external
+        assert "for routing" in external, external
+
+    def test_the_line_says_which_thing_is_missing(self, without_mamori: None) -> None:
+        """Two different blockers render two different lines. One `unavailable`
+        covering both would send half the readers to the wrong fix."""
+        external = self._external_line(self._describe())
+        assert "protect" in external, external
+        assert "endpoint" not in external, external
 
     def test_it_says_what_is_missing(self, without_mamori: None) -> None:
         """About the external service specifically. The scanner line has
@@ -385,10 +400,8 @@ class TestAvailableHasToMeanYouCanUseIt:
 
         if mamori_state()[0] is not SiblingState.AVAILABLE:
             pytest.skip("mamori is not importable here; the positive case cannot be shown")
-        external = next(
-            line for line in self._describe().splitlines() if line.startswith("external service")
-        )
-        assert "available" in external, external
+        external = self._external_line(self._describe())
+        assert "some-model at" in external, external
 
     def test_the_command_itself_shows_it(self, without_mamori: None) -> None:
         """Through `doctor`, because the command is what somebody ran."""
@@ -399,8 +412,9 @@ class TestAvailableHasToMeanYouCanUseIt:
         os.environ["IRIGUCHI_EXTERNAL_MODEL"] = "some-model"
         code, report = run("doctor")
         assert code == EXIT_OK
-        external = next(line for line in report.splitlines() if line.startswith("external service"))
-        assert "available" not in external, external
+        external = self._external_line(report)
+        assert "some-model at" not in external, external
+        assert "protect" in external, external
 
 
 class TestAdviceSomebodyCanFollow:

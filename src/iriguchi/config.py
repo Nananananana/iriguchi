@@ -296,18 +296,20 @@ class IriguchiConfig:
         because protecting an outbound prompt needs mamori and there is no
         unprotected fallback by construction.
 
-        It is reported before the endpoint rather than after, because the two
-        gaps are not the same size: an endpoint is two environment variables
-        away, and mamori is not on PyPI. Naming the fixable one first would send
-        somebody to set a variable that changes nothing.
+        The two blockers share one framing -- **available for routing**, then
+        what stops the asking -- because that half is true in both: `route`
+        needs no endpoint and no protection, and it works. The first version of
+        this said `cannot be used` and took precedence over the endpoint
+        message, which hid a gap a test was already checking for. Both are
+        real, and the one with an endpoint set is the one that was lying.
         """
         if not on:
             return "not configured"
+        if not (url.strip() and model.strip()):
+            return "available for routing, no endpoint for asking"
         if not protected:
-            return "cannot be used  nothing here can protect an outbound prompt"
-        if url.strip() and model.strip():
-            return f"available    {model.strip()} at {url.strip()}"
-        return "available for routing, no endpoint for asking"
+            return "available for routing, nothing can protect an outbound prompt"
+        return f"available    {model.strip()} at {url.strip()}"
 
     def describe(self) -> str:
         """What this configuration does with your prompts, in prose.
