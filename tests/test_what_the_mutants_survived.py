@@ -26,6 +26,8 @@ from typing import Any
 import pytest
 
 from iriguchi.domain import complexity as complexity_module
+from iriguchi.domain.answer import AnswerQuality, AnswerSignal, Weakness
+from iriguchi.domain.cascade import EscalationVerdict
 from iriguchi.domain.complexity import (
     Complexity,
     ComplexityBand,
@@ -64,6 +66,12 @@ VALUES: dict[str, Any] = {
     "Removal": Removal(destination=Destination.EXTERNAL, reason=_A_REASON),
     "RoutingPolicy": RoutingPolicy(),
     "Thresholds": Thresholds(),
+    # The cascade's three. `AnswerSignal` is the one that matters most here: it
+    # is the only value a judge constructs, and a judge is the newest thing
+    # allowed to influence where a prompt goes.
+    "AnswerSignal": AnswerSignal(rule="judge.refusal", kind=Weakness.STATED, weight=0.9),
+    "AnswerQuality": AnswerQuality.from_signals(()),
+    "EscalationVerdict": EscalationVerdict(escalate=False, reason=_A_REASON),
 }
 
 

@@ -95,3 +95,50 @@ def test_examples_are_importable_from_an_installed_package(monkeypatch: pytest.M
         assert "sys.path" not in source, f"{path.name} manipulates sys.path"
         assert "from iriguchi" in source or "import iriguchi" in source
     assert sys.modules  # keeps the fixture honest about having run
+
+
+class TestCascadeShowsTheInvariant:
+    """`examples/cascade.py` exists to show one thing, twice.
+
+    Its second and third cases carry the **same refusal** from the model and
+    reach opposite verdicts, because the third prompt's external destination had
+    already been removed by the veto. That contrast is the whole of ADR-0018: a
+    weak answer is evidence about a model, not about sensitivity.
+
+    An example that still runs, still prints and no longer shows that would look
+    entirely correct.
+    """
+
+    @staticmethod
+    def _lines(capsys: pytest.CaptureFixture[str]) -> list[str]:
+        runpy.run_path(
+            str(Path(__file__).resolve().parent.parent / "examples" / "cascade.py"),
+            run_name="__main__",
+        )
+        return capsys.readouterr().out.splitlines()
+
+    def test_the_same_refusal_reaches_opposite_verdicts(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        lines = self._lines(capsys)
+        declined = lines.index("  the model declined")
+        stays = lines.index("  weak, and it stays anyway")
+        after_declined = "\n".join(lines[declined : declined + 6])
+        after_stays = "\n".join(lines[stays : stays + 6])
+
+        assert "judge.refusal" in after_declined and "judge.refusal" in after_stays, (
+            "the two cases no longer carry the same weakness, so the contrast is gone"
+        )
+        assert "escalate      YES" in after_declined
+        assert "escalate      no" in after_stays
+
+    def test_the_veto_is_named_as_the_reason(self, capsys: pytest.CaptureFixture[str]) -> None:
+        out = "\n".join(self._lines(capsys))
+        assert "not evidence about sensitivity" in out
+
+    def test_it_prints_no_part_of_any_prompt(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """The example plants an address to make the veto fire. ADR-0006 says
+        rule ids and spans, never a value -- and an example is the most-copied
+        code in a repository."""
+        out = "\n".join(self._lines(capsys))
+        assert "sample.contact@example.com" not in out

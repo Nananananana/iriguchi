@@ -431,8 +431,13 @@ fast.
   latency, decision latency, idle resident memory. Numbers chosen from a
   measurement of the real resident process, with headroom, ratcheted down as
   they are earned.
-- The cascade: escalate a weak local answer, but only where the domain says the
-  prompt was permitted to leave in the first place.
+- ~~The cascade~~ — **the deciding half is built** ([ADR-0018](../adr/0018-a-cascade-whose-first-hop-is-local.md)).
+  `domain/answer.py`, `domain/cascade.py`, `ports/judge.py` and a rules judge:
+  answer locally, judge what came back, escalate only where the original decision
+  left the external destination on the table. Built now rather than at v0.3
+  because F1 measured the estimator at 42.9% and a cascade is the answer to that
+  number rather than a convenience. What remains for v0.3 is wiring it into
+  `ask`, which needs a running local model to be worth anything.
 
 ### v0.4 — The Anchor Dashboard
 
