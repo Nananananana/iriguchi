@@ -377,3 +377,64 @@ class TestTheOneCallReachesThem:
 
         with pytest.raises(ConfigurationError, match="Pick the one you meant"):
             route("hello", scanner=Quiet(), findings=[], local=True)
+
+
+class TestTheShortCircuitAgreesWithCounting:
+    """`wider_than` answers without counting, and must answer the same.
+
+    Every character is one column or two, so `n <= width <= 2n`. Both bounds
+    settle the question outright most of the time -- a 6135-character prompt
+    clears a 600 threshold on the lower bound, a twelve-character one fails on
+    the upper -- and only the band between is counted.
+
+    An optimisation that changes an answer is a bug with a benchmark attached,
+    so this checks the two agree everywhere rather than only where it is fast.
+    """
+
+    @pytest.mark.parametrize("threshold", [1, 5, 20, 600])
+    @pytest.mark.parametrize(
+        "text",
+        ["", "a", "abc", "認証", "a認b証", "認" * 400, "a" * 700, ENGLISH, JAPANESE],
+        ids=["empty", "one", "ascii", "wide", "mixed", "many wide", "many ascii", "en", "ja"],
+    )
+    def test_it_agrees_with_the_full_count(self, text: str, threshold: int) -> None:
+        from iriguchi.infrastructure.estimators.rules import display_width, wider_than
+
+        assert wider_than(text, threshold) is (display_width(text) >= threshold)
+
+    def test_the_lower_bound_really_avoids_the_loop(self) -> None:
+        """The floor for the optimisation itself: a long prompt must be decided
+        without `display_width` being called at all, or the short circuit is
+        decoration."""
+        from iriguchi.infrastructure.estimators import rules
+
+        calls = 0
+        original = rules.display_width
+
+        def counting(text: str) -> int:
+            nonlocal calls
+            calls += 1
+            return original(text)
+
+        rules.display_width = counting
+        try:
+            assert rules.wider_than("a" * 700, 600) is True
+            assert rules.wider_than("ab", 600) is False
+        finally:
+            rules.display_width = original
+        assert calls == 0, "both bounds should have settled it without counting"
+
+    def test_the_middle_band_still_counts(self) -> None:
+        """And the case that cannot be settled by bounds is still answered
+        correctly -- half wide characters, landing between n and 2n."""
+        from iriguchi.infrastructure.estimators.rules import display_width, wider_than
+
+        text = "認" * 5 + "a" * 5
+        assert len(text) < 15 <= display_width(text)
+        assert wider_than(text, 15) is True
+        assert wider_than(text, 16) is False
+
+    def test_ascii_never_enters_the_loop(self) -> None:
+        from iriguchi.infrastructure.estimators.rules import display_width
+
+        assert display_width("a" * 1000) == 1000

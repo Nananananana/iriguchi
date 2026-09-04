@@ -119,7 +119,39 @@ mamori's labelled detection corpus. Run with `FallbackScanner` and
 | over-caution rate | 15.7% | 20.0% | 13.9% |
 | route accuracy | 98.7% | 90.5% | 100% |
 | band accuracy | 96.1% | 81.0% | 98.5% |
-| decision latency | 0.10 ms median | | 0.18 ms slowest |
+| decision latency | 0.03 ms median | | 3.07 ms slowest |
+
+### Where the time went, and where it goes now
+
+The latency row moved because the router was profiled rather than assumed. Over
+a 6135-character prompt -- the longest in the corpus, and the shape that decides
+the tail:
+
+| | before | after | |
+|---|---:|---:|---:|
+| `scan` | 1.485 ms | **0.779 ms** | −48% |
+| `estimate` | 3.208 ms | **2.187 ms** | −32% |
+| whole decision | 4.711 ms | **2.989 ms** | −37% |
+
+Two changes, both found by profiling and neither a guess.
+
+**`normalize()` was 53% of an estimate.** It folds text per character on purpose
+(the module docstring argues why), and for a 6135-character prompt that was 6135
+`unicodedata.normalize` calls each returning their own argument, plus an offset
+map holding `0, 1, 2, …`. Text that is already NFKC-normal -- which is nearly
+all of it -- now returns immediately with an identity map represented as `None`.
+A property test asserts the two paths agree on generated text rather than
+trusting the argument for why they must.
+
+**The width check was answering the wrong question.** `display_width` returned a
+number and the caller only ever compared it to a threshold. Every character is
+one column or two, so `n <= width <= 2n`, and both bounds settle the comparison
+outright for anything but a narrow middle band. A long prompt now clears the
+threshold on `len()` alone.
+
+The slowest case is *higher* than the old published figure (3.07 ms against
+0.18 ms) because that figure was measured before the corpus gained its 6135-
+character case. The median halved. Both numbers come from `iriguchi eval`.
 
 ### The leak rate lied, and that is the finding
 
