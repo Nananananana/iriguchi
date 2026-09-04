@@ -144,7 +144,7 @@ python_version = "3.12"
 # A narrower spelling of a check fails silently by construction -- mamori learned
 # the same thing when `ruff format --check src tests` passed while three READMEs
 # drifted and main was red for three commits.
-files = ["src/iriguchi", "tests", "tools"]
+files = ["src/iriguchi", "tests", "tools", "examples"]
 strict = true
 warn_unreachable = true
 
