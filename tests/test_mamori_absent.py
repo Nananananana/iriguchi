@@ -401,3 +401,58 @@ class TestAvailableHasToMeanYouCanUseIt:
         assert code == EXIT_OK
         external = next(line for line in report.splitlines() if line.startswith("external service"))
         assert "available" not in external, external
+
+
+class TestAdviceSomebodyCanFollow:
+    """Every sentence that tells a reader to install mamori says it is not on PyPI.
+
+    `mamori` is a 404 on PyPI. iriguchi's remedy was `uv pip install -e
+    ../mamori` -- a relative path that resolves on a machine with both checkouts
+    side by side, which is one machine. A reader who has never seen this layout
+    reads that as a typo for a package name, tries `pip install mamori`, and
+    concludes the advice is stale rather than that the package is unpublished.
+
+    The comment above `_MISSING` had said *not on PyPI yet, so the instruction
+    is a checkout rather than a package name* since it was written. **The string
+    somebody actually reads did not.** A true fact in a comment is a fact the
+    user never gets.
+
+    Collected from the constants rather than grepped out of the files, so a
+    reflowed line does not fail this and a fourth message does not slip past it.
+    """
+
+    @staticmethod
+    def _remedies() -> dict[str, str]:
+        from iriguchi.infrastructure.registry import SCANNERS
+        from iriguchi.infrastructure.scanners.mamori_scanner import _MISSING
+
+        with ImportBlocker("absent"):
+            _, from_registry = SCANNERS.describe("mamori").available()
+            try:
+                from iriguchi.infrastructure.channels.mamori_channel import MamoriChannel
+
+                MamoriChannel()
+            except Exception as refusal:
+                from_channel = str(refusal)
+            else:  # pragma: no cover - reached only if the refusal stops working
+                from_channel = ""
+        return {"scanner": _MISSING, "registry": from_registry, "channel": from_channel}
+
+    def test_there_are_three_of_them(self) -> None:
+        """A floor. The parametrized assertions below all pass over an empty
+        set, and the point of collecting them is to catch a fourth."""
+        remedies = self._remedies()
+        assert len(remedies) == 3
+        assert all(remedies.values()), remedies
+
+    @pytest.mark.parametrize("where", ["scanner", "registry", "channel"])
+    def test_it_says_the_package_is_not_published(self, where: str) -> None:
+        message = self._remedies()[where]
+        assert "not on PyPI" in message, message
+
+    @pytest.mark.parametrize("where", ["scanner", "registry", "channel"])
+    def test_it_still_says_what_to_do_instead(self, where: str) -> None:
+        """Naming the problem without naming the fix would be the opposite
+        failure: a reader who now knows they are stuck and not how to proceed."""
+        message = self._remedies()[where]
+        assert "checkout" in message and "../mamori" in message, message

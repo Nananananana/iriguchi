@@ -149,7 +149,8 @@ class MamoriChannel:
             raise EscalationRefusedError(
                 "mamori is not installed, so there is nothing to protect an outbound "
                 "prompt with. iriguchi will not send one unprotected: install mamori "
-                "from a checkout (`uv pip install -e ../mamori`), or use the local "
+                "from a checkout beside this one -- it is not on PyPI -- with "
+                "`uv pip install -e ../mamori`, or use the local "
                 "route only."
             )
         if state is SiblingState.BROKEN:

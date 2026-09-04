@@ -315,6 +315,37 @@ to a routing path.
   measured and written down. A test proves no socket opens on any local route.
   Zero runtime dependencies, checked in CI by installing without extras.
 
+### v0.1.1 — What the audit found
+
+Added after [`docs/feasibility.md`](../feasibility.md), which re-read this design
+against what it can be shown doing rather than against what it says. The three
+items below are the ones that change what a user gets, in the order the audit
+ranks them.
+
+- **A corpus of requests.** The complexity axis decides **2 outcomes in 155**,
+  and **0 of the 134 borrowed cases**, whose median length is 34 characters.
+  They are a PII detector's samples and they were never requests for work, so
+  the preference axis has nothing to read. Until prompts exist that can exercise
+  it, iriguchi has one measured axis and one designed one, and the README says
+  so. **The fix is prompts, not thresholds** -- `tools/calibrate.py --sweep`
+  will produce any outward rate anybody wants and none of them is evidence.
+  Measured by `tools/which_axis.py`; the published counts are recomputed on
+  every test run.
+- **A decision about the external half.** `ask --external` needs mamori to
+  protect the outbound prompt, there is no unprotected fallback by construction,
+  and **mamori is not on PyPI** -- so the destination is reachable by nobody who
+  is not on the author's machine, and the remedy iriguchi prints names a
+  relative path that only resolves there. Either mamori ships, or v0.1 states
+  that the external route requires a sibling checkout and stops describing a
+  door nobody can open. The second costs nothing and does not foreclose the
+  first.
+- **The scanner's advice has to become followable.** `missed findings` is 63.5%
+  and the printed remedy is *install mamori*, which is the same unreachable
+  package. The number is honest; the sentence after it is not actionable.
+
+**Exit criterion:** the two axes are described in the README with the evidence
+each of them has, and no command prints advice a user cannot act on.
+
 ### v0.2 — The seams
 
 - The mamori adapter: `SensitivityScanner` backed by a real `PrivacySession`,

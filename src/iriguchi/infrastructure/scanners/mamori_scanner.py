@@ -71,13 +71,19 @@ class SiblingState(Enum):
     AVAILABLE = "available"
 
 
-#: What to tell somebody who has not installed it. Not on PyPI yet, so the
-#: instruction is a checkout rather than a package name.
+#: What to tell somebody who has not installed it.
+#:
+#: **The sentence has to say it is not published.** This comment already said
+#: "not on PyPI yet, so the instruction is a checkout rather than a package
+#: name" and the string somebody actually reads did not, which left a reader to
+#: try `pip install mamori`, get a 404, and conclude the advice was stale.
+#: A remedy that names a relative path without saying why is a remedy that looks
+#: like a typo.
 _MISSING = (
     "mamori is not installed. iriguchi works without it -- the built-in fallback "
     "scanner is the default -- but the fallback misses names without an honorific, "
-    "English names, company names and addresses. Install it from a checkout: "
-    "`uv pip install -e ../mamori`."
+    "English names, company names and addresses. mamori is not on PyPI, so it "
+    "needs a checkout beside this one: `uv pip install -e ../mamori`."
 )
 
 
