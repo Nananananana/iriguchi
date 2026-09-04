@@ -47,10 +47,22 @@ def render_decision(decision: RoutingDecision, *, sent: str, verbose: bool = Fal
 
     Args:
         decision: What the router concluded.
-        verbose: Print every reason. Without it, reasons are still all printed --
-            there are rarely more than six -- but the findings and signals behind
-            them are summarised rather than listed.
+        verbose: List every finding and signal rather than counting them.
+            **A refusal turns this on regardless**, and that is the interesting
+            part -- see below.
     """
+    # `(2 findings)` and `(3 signals)` is a reasonable summary when the router
+    # did the thing that was asked: the answer is the point and the working is
+    # available behind `--explain`.
+    #
+    # **On a refusal there is no answer, so the working is the whole of what
+    # the reader gets** -- and it was being summarised to two integers and a
+    # flag nobody had heard of. "It found two things and will not tell you
+    # which, and there is nothing else" is the shape of a tool people stop
+    # running. The analysis is already computed, costs nothing more to print,
+    # and carries no part of the prompt (ADR-0006), so there is no reason to
+    # hold it back at the one moment it is all there is.
+    verbose = verbose or decision.route is Route.REFUSED
     lines = [
         f"  route        {_HEADLINE[decision.route]}",
         f"  sensitivity  {decision.sensitivity.level.value}"

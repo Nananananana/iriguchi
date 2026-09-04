@@ -38,7 +38,13 @@ from ...domain.complexity import Signal, SignalKind
 from ...errors import ConfigurationError
 from ..normalization import normalize
 
-__all__ = ["DEFAULT_SETTINGS", "RulesEstimator", "RulesSettings", "display_width"]
+__all__ = [
+    "DEFAULT_SETTINGS",
+    "RulesEstimator",
+    "RulesSettings",
+    "display_width",
+    "wider_than",
+]
 
 #: What an escalating marker is worth on its own. Chosen so that one reaches the
 #: middle band (0.45) and two do *not* reach the top by score alone:
@@ -72,7 +78,32 @@ def display_width(text: str) -> int:
     might be Greek would break the case this exists to fix in the other
     direction.
     """
+    if text.isascii():
+        # No character in ASCII is Wide or Fullwidth, and `isascii` answers in C
+        # over the whole string. The common prompt never enters the loop.
+        return len(text)
     return sum(2 if unicodedata.east_asian_width(c) in "WF" else 1 for c in text)
+
+
+def wider_than(text: str, threshold: int) -> bool:
+    """Whether `text` reaches `threshold` columns, usually without counting.
+
+    Every character is one column or two, so the width of an `n`-character
+    string is bounded: `n <= width <= 2n`. Both ends of that answer the question
+    outright most of the time -- a 6135-character prompt clears a threshold of
+    600 on the lower bound alone, and a twelve-character one fails on the upper.
+
+    Only text in the band between the bounds is actually counted. The signal
+    asks a yes-or-no question and `display_width` was answering a numeric one,
+    which cost a Python-level loop over every character of every long prompt to
+    produce a number nothing looked at.
+    """
+    length = len(text)
+    if length >= threshold:
+        return True
+    if 2 * length < threshold:
+        return False
+    return display_width(text) >= threshold
 
 
 @dataclass(frozen=True, slots=True)
@@ -332,7 +363,7 @@ class RulesEstimator:
         # Display width, not `len`. The same request in Japanese is roughly
         # half the code points, so a code-point threshold quietly asked a
         # Japanese user for twice the content. See `display_width`.
-        if display_width(folded) >= self.settings.long_input_at:
+        if wider_than(folded, self.settings.long_input_at):
             # **The long-and-easy trap lives here.** A pasted log is long and
             # trivial, so this weight has to stay well under the top band on its
             # own. It is evidence, not a verdict.

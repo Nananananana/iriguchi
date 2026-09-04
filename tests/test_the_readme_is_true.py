@@ -48,6 +48,26 @@ def _console_block(readme: str, command: str) -> list[str]:
     return [line.rstrip() for line in block.splitlines()[1:] if line.strip()]
 
 
+def _simulate_flags() -> set[str]:
+    """Every flag `tools/simulate.py` defines, asked of its own parser.
+
+    The first version of this intercepted `argparse.parse_args` to catch the
+    parser on its way past, which worked and was unreadable and would not
+    typecheck. The tool exposes `build_parser()` now, the way the CLI does --
+    the fix for *this is hard to inspect* was to make it inspectable.
+    """
+    import sys
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+    import simulate
+
+    return {
+        action.option_strings[0]
+        for action in simulate.build_parser()._actions
+        if action.option_strings
+    }
+
+
 class TestTheConsoleExample:
     ROUTE = 'iriguchi route "Email the Q3 figures to tanaka@example.com"'
 
@@ -124,9 +144,13 @@ class TestTheSettingsTable:
         """`--moderate-at` and `--high-at` were listed as flags and are
         environment variables. A reader who tried them got an argparse error
         from a table that had never been run."""
+        # The README documents two programs now -- the CLI and
+        # `tools/simulate.py` -- so the set of real flags is the union of both
+        # parsers. Checking only the CLI's rejected `--corpus`, which exists and
+        # belongs to the other one: a true flag failing a truth test.
         options = {
             action.option_strings[0] for action in build_parser()._actions if action.option_strings
-        }
+        } | _simulate_flags()
         claimed = set(re.findall(r"`(--[a-z][a-z-]+)`", readme))
         assert claimed, "no flags are documented; this test is guarding nothing"
         assert claimed <= options, (
