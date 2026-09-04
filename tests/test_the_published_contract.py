@@ -101,6 +101,74 @@ class TestTheSchemaItself:
         assert not opened, f"{opened} accept unknown fields"
 
 
+class TestEveryPublishedNumberSaysWhatItIs:
+    """mamori's warning, turned on what iriguchi had just shipped.
+
+        The most dangerous thing in a compatibility layer is not the field you
+        cannot fill. It is the field you filled with something it does not mean.
+
+    They found it as `analysis_explanation` holding a dict Presidio would read
+    as an `AnalysisExplanation`. **Here it arrives as a number.** `score` and
+    `weight` are in [0,1], which is the shape of a probability, and neither is
+    one: the weights are assigned by hand and nothing has calibrated them
+    against an outcome.
+
+    A reader coming from Presidio -- where `RecognizerResult.score` genuinely
+    **is** a confidence -- will read `0.56` as *56% sure* unless the document
+    says otherwise. And this project refuses a confidence on findings for
+    exactly that reason: *a confidence would become a threshold, and a threshold
+    is a score.* Refusing it in the domain and publishing an uncaveated one in
+    the contract is the same mistake with a longer reach.
+    """
+
+    @staticmethod
+    def _numbers(node: object, path: str = "") -> list[tuple[str, dict[str, Any]]]:
+        found: list[tuple[str, dict[str, Any]]] = []
+        if isinstance(node, dict):
+            if node.get("type") in {"number", "integer"}:
+                found.append((path, node))
+            for key, value in node.items():
+                found.extend(TestEveryPublishedNumberSaysWhatItIs._numbers(value, f"{path}.{key}"))
+        elif isinstance(node, list):
+            for index, value in enumerate(node):
+                found.extend(
+                    TestEveryPublishedNumberSaysWhatItIs._numbers(value, f"{path}[{index}]")
+                )
+        return found
+
+    def test_there_are_numbers_to_check(self) -> None:
+        """A floor. An empty sweep passes every assertion below."""
+        assert len(self._numbers(schema())) >= 5
+
+    def test_every_number_is_described(self) -> None:
+        """An undescribed number in a published contract is an invitation to
+        guess, and the guess will be *confidence*."""
+        undescribed = [
+            path for path, node in self._numbers(schema()) if not node.get("description")
+        ]
+        assert not undescribed, f"{undescribed} are numbers a consumer has to guess the meaning of"
+
+    @pytest.mark.parametrize("field", ["score", "weight"])
+    def test_the_ones_shaped_like_a_probability_deny_being_one(self, field: str) -> None:
+        """Both live in [0,1] and neither is a confidence. Saying so is the
+        whole difference between a number and a number somebody can misuse."""
+        matching = [
+            node
+            for path, node in self._numbers(schema())
+            if path.endswith(f".{field}") and node.get("maximum") == 1
+        ]
+        assert matching, f"no [0,1] `{field}` found; this test is guarding nothing"
+        for node in matching:
+            assert "not a confidence" in node["description"].lower()
+
+    def test_a_finding_still_carries_no_score(self) -> None:
+        """The domain refuses one. The contract must not quietly add it back to
+        look more like a `RecognizerResult`."""
+        finding = schema()["$defs"]["finding"]
+        assert "score" not in finding["properties"]
+        assert "no score here" in finding["description"].lower()
+
+
 class TestEveryDocumentValidates:
     @pytest.mark.parametrize("prompt,available", REACHING.values(), ids=list(REACHING))
     def test_it_matches_the_published_schema(

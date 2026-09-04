@@ -36,6 +36,12 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   scanner, no estimator and no CLI.
 - Property tests are derandomized in CI and explore more, so a green run is
   reproducible rather than a sample of the input space.
+- `iriguchi.interop`: Presidio's shape, without Presidio. `findings_from_presidio`
+  takes results as dicts or objects and feeds them to the veto; `to_presidio`
+  goes back out. Nothing imports Presidio and nothing needs it installed.
+- `route(findings=...)` for findings that came from somewhere else.
+- Every number the published contract carries now says what it is **not**. A
+  `score` in [0,1] is the shape of a confidence and is not one.
 - The design: `docs/proposals/0001-the-design.md`, written before any code
   exists and kept that way.
 - Ten architecture decision records, `docs/adr/0001` through `0010`.

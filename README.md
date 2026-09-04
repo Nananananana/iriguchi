@@ -86,6 +86,21 @@ decision.leaves_the_machine  # False
 [r.detail for r in decision.reasons]
 ```
 
+**Already running Presidio?** Bring your results; keep your analyzer. iriguchi
+does not import it and does not need it installed:
+
+```python
+from iriguchi import route, findings_from_presidio
+
+results = analyzer.analyze(text, language="en")  # yours, unchanged
+route(text, findings=findings_from_presidio(results), local=True, external=True)
+```
+
+The incoming `score` is **discarded**: iriguchi's veto has no degrees, and a
+finding at 0.4 confidence removing the external destination *slightly* is not a
+thing this design has. Filter on confidence in your analyzer, where the number
+came from.
+
 Or from a script, as `iriguchi.routing-decision/1` — rule ids, spans and bands,
 and **no part of your prompt**:
 

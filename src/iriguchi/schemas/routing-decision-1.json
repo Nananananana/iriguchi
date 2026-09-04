@@ -46,7 +46,7 @@
           "enum": ["low", "moderate", "high"]
         },
         "score": {
-          "description": "Weights combined as independent evidence, 1 - prod(1 - w). Reported next to the band because a HIGH band beside a score of 0.02 is the short circuit, and an explanation that hides that looks broken.",
+          "description": "Weights combined as independent evidence, 1 - prod(1 - w). Reported next to the band because a HIGH band beside a score of 0.02 is the short circuit, and an explanation that hides that looks broken. **NOT a confidence.** It is in [0,1] and it is the same shape as a probability and it is neither: the weights are assigned by hand and nothing has calibrated them against an outcome. A consumer arriving from Presidio, where `RecognizerResult.score` IS a confidence, will read this as one unless told. Compare it to a threshold; do not report it as a certainty.",
           "type": "number",
           "minimum": 0,
           "maximum": 1
@@ -85,9 +85,23 @@
       "required": ["moderate_at", "high_at", "short_circuit_at"],
       "additionalProperties": false,
       "properties": {
-        "moderate_at": { "type": "number", "minimum": 0, "maximum": 1 },
-        "high_at": { "type": "number", "minimum": 0, "maximum": 1 },
-        "short_circuit_at": { "type": "integer", "minimum": 1 }
+        "moderate_at": {
+          "description": "The first score that is not `low`. Inclusive.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "high_at": {
+          "description": "The first score that is `high`. Inclusive.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "short_circuit_at": {
+          "description": "How many escalating signals reach the top band regardless of score.",
+          "type": "integer",
+          "minimum": 1
+        }
       }
     }
   },
@@ -98,12 +112,21 @@
       "required": ["start", "end"],
       "additionalProperties": false,
       "properties": {
-        "start": { "type": "integer", "minimum": 0 },
-        "end": { "type": "integer", "minimum": 0 }
+        "start": {
+          "description": "Inclusive, in code points.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "end": {
+          "description": "Exclusive, in code points.",
+          "type": "integer",
+          "minimum": 0
+        }
       }
     },
     "finding": {
       "type": "object",
+      "description": "**There is deliberately no score here.** A scanner that is unsure has two honest options -- report it or do not -- and a confidence would become a threshold, and a threshold is a score somebody tunes until the leak rate looks acceptable. A Presidio `RecognizerResult` carries a `score`; this does not, and the absence is the decision rather than a gap.",
       "required": ["rule", "source", "span"],
       "additionalProperties": false,
       "properties": {
@@ -119,7 +142,12 @@
       "properties": {
         "rule": { "type": "string", "minLength": 1 },
         "kind": { "enum": ["lexical", "structural"] },
-        "weight": { "type": "number", "minimum": 0, "maximum": 1 },
+        "weight": {
+          "description": "How much this marker moves the score, assigned by hand when the rule was written. **Not a confidence and not an importance measured from anything** -- it is the number the rule author chose, and it is published so a reader can see which markers did the work rather than guess.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
         "escalating": { "type": "boolean" },
         "span": { "$ref": "#/$defs/span" }
       }

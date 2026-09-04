@@ -15,6 +15,9 @@ layers =
     iriguchi.evaluation
     iriguchi.application
     iriguchi.infrastructure
+    # Translation only. Above `ports` because it reaches neither them nor
+    # anything that does -- somebody else's shape in, domain values out.
+    iriguchi.interop
     iriguchi.ports
     iriguchi.domain
 exhaustive = false

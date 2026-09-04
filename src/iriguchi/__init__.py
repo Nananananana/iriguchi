@@ -36,6 +36,7 @@ def route(
     external: bool = False,
     scanner: str | None = None,
     estimator: str | None = None,
+    findings: Iterable[Finding] | None = None,
     moderate_at: float | None = None,
     high_at: float | None = None,
 ) -> RoutingDecision:
@@ -56,6 +57,13 @@ def route(
             default, which is the built-in one **even when mamori is installed**
             -- changing the scanner changes what leaves this machine, and that
             is not a thing to inherit from what happens to be on the system.
+        findings: Findings from somewhere else -- your own Presidio analyzer,
+            your own detector -- used **instead of** running a scanner here.
+            `iriguchi.interop.findings_from_presidio` converts a
+            `RecognizerResult` list without importing Presidio. Passing this
+            with `scanner=` is refused rather than silently preferring one:
+            somebody who named a scanner and also handed over findings has two
+            intentions and iriguchi cannot tell which.
         estimator: Which complexity estimator, by name.
         moderate_at: Where the middle band begins. `None` keeps the default;
             `python tools/calibrate.py --escalate 0.3` derives one from a target
@@ -78,6 +86,16 @@ def route(
     """
     from .config import IriguchiConfig
 
+    if findings is not None and scanner is not None:
+        from .errors import ConfigurationError
+
+        raise ConfigurationError(
+            "both `findings=` and `scanner=` were given. Findings from elsewhere "
+            "replace the scan; naming a scanner as well says to run one. Pick "
+            "the one you meant -- guessing here would decide what leaves the "
+            "machine on a coin toss."
+        )
+
     config = IriguchiConfig(
         local=local,
         external=external,
@@ -86,7 +104,14 @@ def route(
         moderate_at="" if moderate_at is None else repr(moderate_at),
         high_at="" if high_at is None else repr(high_at),
     )
-    return config.router().route(text, config.available)
+    router = config.router()
+    if findings is not None:
+        from dataclasses import replace as _replace
+
+        from .infrastructure.scanners.supplied import SuppliedScanner
+
+        router = _replace(router, scanner=SuppliedScanner(tuple(findings)))
+    return router.route(text, config.available)
 
 
 def __getattr__(name: str) -> object:
@@ -105,6 +130,10 @@ def __getattr__(name: str) -> object:
         "Route": ("iriguchi.domain.destination", "Route"),
         "Destination": ("iriguchi.domain.destination", "Destination"),
         "Reason": ("iriguchi.domain.reason", "Reason"),
+        "Finding": ("iriguchi.domain.sensitivity", "Finding"),
+        "Span": ("iriguchi.domain.span", "Span"),
+        "findings_from_presidio": ("iriguchi.interop", "findings_from_presidio"),
+        "to_presidio": ("iriguchi.interop", "to_presidio"),
         "Thresholds": ("iriguchi.domain.complexity", "Thresholds"),
         "as_document": ("iriguchi.interfaces.contract", "as_document"),
         "schema": ("iriguchi.interfaces.contract", "schema"),
@@ -124,19 +153,26 @@ if __debug__:  # pragma: no cover - typing only
     from typing import TYPE_CHECKING
 
     if TYPE_CHECKING:
+        from collections.abc import Iterable
+
         from .domain.decision import RoutingDecision
+        from .domain.sensitivity import Finding
 
 __all__ = [
     "CONTRACT",
     "ConfigurationError",
     "Destination",
+    "Finding",
     "IriguchiError",
     "Reason",
     "Route",
     "RoutingDecision",
+    "Span",
     "Thresholds",
     "__version__",
     "as_document",
+    "findings_from_presidio",
     "route",
     "schema",
+    "to_presidio",
 ]

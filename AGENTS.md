@@ -66,6 +66,7 @@ interfaces --> application --> domain
 | `ports/` | `domain`, `errors` |
 | `application/` | `domain`, `ports`, `errors` |
 | `infrastructure/` | `domain`, `ports`, `errors` |
+| `interop/` | `domain`, `errors` — **narrower than an adapter**: it translates somebody else's vocabulary into domain values, implements no port and does no I/O |
 | `evaluation/` | `domain`, `ports`, `application`, `infrastructure` |
 | `config.py` | `domain`, `ports`, `application`, `infrastructure` |
 | `interfaces/` | everything above, `config` included |
@@ -174,6 +175,12 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   runs and a green CI is a *sample*. CI uses a derandomized profile with more
   examples; a developer's machine stays random and the example database carries
   anything it finds back as a regression.
+- **The most dangerous field is not the one you cannot fill — it is the one you
+  filled with something it does not mean.** mamori's, found as an
+  `analysis_explanation` holding a dict Presidio reads as a structured type.
+  Here it arrives as a number: `score` and `weight` are in [0,1], which is the
+  shape of a probability, and neither is one. Every published number says what
+  it is not, and a test holds that.
 - **Two questions about a check, not one.** *How many files did the type checker
   see* is the first, and widening `files` answered it. *How many of those can a
   user see* is the second, and `py.typed` is what answers that: without the

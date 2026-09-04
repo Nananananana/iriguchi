@@ -40,6 +40,12 @@ ALLOWED: dict[str, frozenset[str]] = {
     "application": frozenset({"domain", "ports"}),
     # Adapters. They implement ports, and they are the only place I/O lives.
     "infrastructure": frozenset({"domain", "ports"}),
+    # Translation, and nothing else: somebody else's vocabulary in, domain
+    # values out. **Narrower than `infrastructure` on purpose** -- it implements
+    # no port and performs no I/O, so it may not reach `ports`, and a day it
+    # needs to is a day something in here has become an adapter and belongs
+    # next to the others.
+    "interop": frozenset({"domain"}),
     # Measurement runs the real pipeline, so it reaches the application.
     "evaluation": frozenset({"domain", "ports", "application", "infrastructure"}),
     # Settings assemble everything, so they may name everything. This is the one
