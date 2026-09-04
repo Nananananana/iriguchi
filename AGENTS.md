@@ -146,6 +146,12 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
 - **A menu entry carries its price.** Every registry choice stores the trade it
   makes, and a test refuses one shorter than ten words. A list of algorithm
   names with no costs beside them is the thing this project exists not to be.
+- **A count with no check is the fact of the day it was written.** `import
+  logging` at zero and no write path in `src/` were both true and both defended
+  by nothing, which is how mamori's went silently false. Both are AST checks
+  now — a tree walk rather than a grep, so this bullet does not satisfy the rule
+  it describes. The README sentences are checked too: a check that outlives its
+  claim leaves two documents disagreeing about what was promised.
 - **Two questions about a check, not one.** *How many files did the type checker
   see* is the first, and widening `files` answered it. *How many of those can a
   user see* is the second, and `py.typed` is what answers that: without the

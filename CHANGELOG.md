@@ -24,6 +24,9 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   `IRIGUCHI_MODERATE_AT` and `IRIGUCHI_HIGH_AT`, and
   `python tools/calibrate.py --escalate 0.3` to derive them from a target rate
   rather than invent a 0.7 — RouteLLM's framing, without its learned score.
+- Two structural claims got mechanisms: nothing in `src/` imports a way to keep
+  a record, and nothing writes. Both were prose. Writing nothing down is the
+  strongest thing iriguchi says about itself and was the less defended of the two.
 - The design: `docs/proposals/0001-the-design.md`, written before any code
   exists and kept that way.
 - Ten architecture decision records, `docs/adr/0001` through `0010`.
