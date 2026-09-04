@@ -201,7 +201,7 @@ class TestDoctor:
         branch owes the reader: the cost, and a scanner that would fix it.
         """
         _, output = run("--local", "--external", "doctor")
-        assert "63.5%" in output or "installed but not selected" in output, output
+        assert "61.7%" in output or "installed but not selected" in output, output
         assert "mamori" in output
 
 

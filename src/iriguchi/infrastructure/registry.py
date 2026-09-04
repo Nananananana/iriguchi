@@ -182,7 +182,7 @@ SCANNERS: Registry[SensitivityScanner] = Registry(
             name="fallback",
             summary="built-in rules, no dependencies",
             trade=(
-                "Misses 63.5% of must-stay-local cases against mamori's 1.0% "
+                "Misses 61.7% of must-stay-local cases against mamori's 1.0% "
                 "(docs/measurements.md, and that 1.0% is measured on mamori's own "
                 "corpus). Over-detects on purpose: a false positive costs the "
                 "external route, a false negative costs a leak."

@@ -1,0 +1,354 @@
+{
+  "format_version": 1,
+  "name": "Requests a router would actually see",
+  "source": "requests",
+  "provenance": {
+    "text": {
+      "produced_by": "hand",
+      "authored_by": "iriguchi"
+    },
+    "labels": {
+      "produced_by": "hand",
+      "authored_by": "iriguchi"
+    }
+  },
+  "description": "The corpus F1 said was missing. The 134 borrowed cases are a PII detector's samples with a median length of 34 characters, and the complexity axis has nothing to read in them -- it changed 0 of those 134 outcomes. These are requests for work, which is what a router is pointed at. Bands are labelled against the definition `tools/measure_router.py` puts to a model, verbatim: low means a small local model will answer adequately, moderate means it will probably manage but a larger one would answer better, high means it needs the larger model. Labelled that way on purpose and NOT by what iriguchi's rules would say -- grading an estimator against its own output measures nothing. Every prompt is invented; every address, key and name in one is a placeholder.",
+  "samples": [
+    {
+      "id": "req-low-proofread-ja",
+      "prompt": "次の文章の誤字脱字を直してください。「本日はお忙しい中お集まり頂き有り難うございます。」",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Proofreading is the canonical small-model task. Invented."
+    },
+    {
+      "id": "req-low-proofread-en",
+      "prompt": "Fix the spelling and grammar in this sentence: 'Their going to send there report by friday.'",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "The English half of the same task, so the script asymmetry is measurable. Invented."
+    },
+    {
+      "id": "req-low-summarise-three-lines-ja",
+      "prompt": "この記事を三行で要約してください。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Summarising to a fixed length. Invented."
+    },
+    {
+      "id": "req-low-summarise-two-sentences-en",
+      "prompt": "Summarise the paragraph above in two sentences, plain language.",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Invented."
+    },
+    {
+      "id": "req-low-bullets-to-prose",
+      "prompt": "Turn these bullet points into a short paragraph without adding anything.",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Reformatting, no reasoning. Invented."
+    },
+    {
+      "id": "req-low-prose-to-bullets-ja",
+      "prompt": "以下の説明を箇条書きに直してください。順番は変えないでください。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Invented."
+    },
+    {
+      "id": "req-low-politeness-rewrite-ja",
+      "prompt": "この一文をもう少し丁寧な言い方に書き換えてください。「明日までに出してください。」",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Register change, a small model handles it. Invented."
+    },
+    {
+      "id": "req-low-translate-one-sentence",
+      "prompt": "Translate this sentence into Japanese: 'The meeting has been moved to Thursday.'",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Invented."
+    },
+    {
+      "id": "req-low-extract-dates",
+      "prompt": "List every date mentioned in the text above, one per line, in ISO format.",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Extraction with a fixed output shape. Invented."
+    },
+    {
+      "id": "req-low-csv-to-json",
+      "prompt": "Convert this two-column CSV into a JSON array of objects. Keys: name, quantity.",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Mechanical transformation. Invented."
+    },
+    {
+      "id": "req-low-title-suggestions-ja",
+      "prompt": "この記事のタイトル案を五つ出してください。",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Invented."
+    },
+    {
+      "id": "req-low-shorten-to-tweet",
+      "prompt": "Shorten this announcement to under 140 characters, keep the date.",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "plain",
+      "note": "Invented."
+    },
+    {
+      "id": "req-moderate-write-function-with-tests",
+      "prompt": "Write a Python function that merges two sorted lists into one sorted list, and write unit tests covering the empty and single-element cases.",
+      "sensitivity": "may_leave",
+      "band": "moderate",
+      "trap": "plain",
+      "note": "Two parts, both routine. A small model usually manages. Invented."
+    },
+    {
+      "id": "req-moderate-docstring-and-edges-ja",
+      "prompt": "この関数に docstring を付けて、境界値のテストも書いてください。",
+      "sensitivity": "may_leave",
+      "band": "moderate",
+      "trap": "plain",
+      "note": "Invented."
+    },
+    {
+      "id": "req-moderate-explain-difference",
+      "prompt": "Explain the difference between a process and a thread, with one example of when you would choose each.",
+      "sensitivity": "may_leave",
+      "band": "moderate",
+      "trap": "plain",
+      "note": "Common knowledge, but the example has to be apt. Invented."
+    },
+    {
+      "id": "req-moderate-decline-email",
+      "prompt": "Draft a short email declining a vendor's proposal, giving two reasons, without closing the door on future work.",
+      "sensitivity": "may_leave",
+      "band": "moderate",
+      "trap": "plain",
+      "note": "Constrained writing with a tone requirement. Invented."
+    },
+    {
+      "id": "req-moderate-sql-review",
+      "prompt": "Look at this SELECT and tell me whether the join will duplicate rows, and which column would be worth an index.",
+      "sensitivity": "may_leave",
+      "band": "moderate",
+      "trap": "plain",
+      "note": "Invented."
+    },
+    {
+      "id": "req-moderate-three-concerns-ja",
+      "prompt": "この設計案について、懸念点を三つ挙げてください。",
+      "sensitivity": "may_leave",
+      "band": "moderate",
+      "trap": "plain",
+      "note": "Invented."
+    },
+    {
+      "id": "req-moderate-recursive-to-iterative",
+      "prompt": "Rewrite this recursive function as an iterative one and say what the stack depth was before.",
+      "sensitivity": "may_leave",
+      "band": "moderate",
+      "trap": "plain",
+      "note": "Invented."
+    },
+    {
+      "id": "req-moderate-risks-implied",
+      "prompt": "Summarise the plan above and list the operational risks it implies but does not mention.",
+      "sensitivity": "may_leave",
+      "band": "moderate",
+      "trap": "plain",
+      "note": "Summary plus inference. Invented."
+    },
+    {
+      "id": "req-moderate-regex-explain",
+      "prompt": "この正規表現が何にマッチするか説明して、マッチしない例を二つ挙げてください。",
+      "sensitivity": "may_leave",
+      "band": "moderate",
+      "trap": "plain",
+      "note": "Invented."
+    },
+    {
+      "id": "req-moderate-error-message-rewrite",
+      "prompt": "Rewrite this error message so a non-engineer can act on it, and keep the error code.",
+      "sensitivity": "may_leave",
+      "band": "moderate",
+      "trap": "plain",
+      "note": "Invented."
+    },
+    {
+      "id": "req-high-prove-complexity-ja",
+      "prompt": "この整列アルゴリズムの計算量が O(n log n) であることを証明してください。",
+      "sensitivity": "may_leave",
+      "band": "high",
+      "trap": "short_and_hard",
+      "note": "Thirty-odd characters and it needs a proof. The short-and-hard trap in Japanese. Invented."
+    },
+    {
+      "id": "req-high-prove-lemma-en",
+      "prompt": "Prove that this loop invariant holds on entry, on each iteration, and at exit.",
+      "sensitivity": "may_leave",
+      "band": "high",
+      "trap": "short_and_hard",
+      "note": "Invented."
+    },
+    {
+      "id": "req-high-architecture-tradeoff",
+      "prompt": "Compare an event-sourced design against a CRUD one for this service, weigh the operational cost of each, and recommend one with your reasoning.",
+      "sensitivity": "may_leave",
+      "band": "high",
+      "trap": "plain",
+      "note": "Trade-off reasoning with a recommendation to justify. Invented."
+    },
+    {
+      "id": "req-high-consistency-model-ja",
+      "prompt": "この分散システムで結果整合性と強整合性のどちらを採るべきか、失敗モードを踏まえて論証してください。",
+      "sensitivity": "may_leave",
+      "band": "high",
+      "trap": "plain",
+      "note": "Invented."
+    },
+    {
+      "id": "req-high-root-cause-across-services",
+      "prompt": "Latency rose in the API, the queue depth stayed flat, and the database CPU fell. Give the three most likely root causes, ranked, and say what evidence would separate them.",
+      "sensitivity": "may_leave",
+      "band": "high",
+      "trap": "plain",
+      "note": "Diagnosis from indirect evidence. Invented."
+    },
+    {
+      "id": "req-high-migration-with-rollback",
+      "prompt": "Plan the migration of this table to a new schema with zero downtime, including the rollback path and what makes it irreversible.",
+      "sensitivity": "may_leave",
+      "band": "high",
+      "trap": "plain",
+      "note": "Invented."
+    },
+    {
+      "id": "req-high-refactor-with-alternatives",
+      "prompt": "Refactor this module and explain why, step by step, with the alternatives you considered and rejected.",
+      "sensitivity": "may_leave",
+      "band": "high",
+      "trap": "plain",
+      "note": "Invented."
+    },
+    {
+      "id": "req-high-contradictory-specs",
+      "prompt": "These two specifications contradict each other on retry behaviour. Work out which one the implementation follows, and propose a resolution that breaks neither caller.",
+      "sensitivity": "may_leave",
+      "band": "high",
+      "trap": "plain",
+      "note": "Invented."
+    },
+    {
+      "id": "req-high-concurrent-correctness",
+      "prompt": "Show that this lock-free queue is linearisable, or find the interleaving that breaks it.",
+      "sensitivity": "may_leave",
+      "band": "high",
+      "trap": "short_and_hard",
+      "note": "Invented."
+    },
+    {
+      "id": "req-high-why-not-obvious-ja",
+      "prompt": "なぜこの実装ではデッドロックが起きないのか、順序づけを踏まえて説明してください。",
+      "sensitivity": "may_leave",
+      "band": "high",
+      "trap": "short_and_hard",
+      "note": "Invented."
+    },
+    {
+      "id": "req-high-cost-model",
+      "prompt": "Derive the cost of running this pipeline at ten times the current volume, state every assumption, and say which one dominates.",
+      "sensitivity": "may_leave",
+      "band": "high",
+      "trap": "plain",
+      "note": "Invented."
+    },
+    {
+      "id": "req-low-long-log-summarise-en",
+      "prompt": "Summarise what went wrong here.\n2026-01-04T09:00:01Z INFO  worker started pool=4\n2026-01-04T09:00:02Z INFO  connected to queue\n2026-01-04T09:00:03Z INFO  job accepted id=1001\n2026-01-04T09:00:04Z INFO  job accepted id=1002\n2026-01-04T09:00:05Z INFO  job accepted id=1003\n2026-01-04T09:00:06Z WARN  retry backlog growing depth=41\n2026-01-04T09:00:07Z WARN  retry backlog growing depth=88\n2026-01-04T09:00:08Z WARN  retry backlog growing depth=140\n2026-01-04T09:00:09Z ERROR handler timed out id=1001 after=5000ms\n2026-01-04T09:00:10Z ERROR handler timed out id=1002 after=5000ms\n2026-01-04T09:00:11Z ERROR handler timed out id=1003 after=5000ms\n2026-01-04T09:00:12Z INFO  worker draining\n2026-01-04T09:00:13Z INFO  worker stopped",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "long_and_easy",
+      "note": "Long, and the answer is one sentence. Every router that scores on length gets this wrong. Invented."
+    },
+    {
+      "id": "req-low-long-list-sort-ja",
+      "prompt": "次の在庫リストを数量の多い順に並べ替えてください。\nねじ 12\nナット 340\nワッシャー 78\nボルト 205\nピン 6\n座金 91\nスペーサー 44\nリベット 17\nクリップ 260\nブッシュ 88\nカラー 33\nシム 150\nプラグ 29\nキャップ 71\nガスケット 118\nベアリング 24\nスリーブ 96\nナットプレート 8",
+      "sensitivity": "may_leave",
+      "band": "low",
+      "trap": "long_and_easy",
+      "note": "Long in Japanese and mechanically easy. Invented."
+    },
+    {
+      "id": "req-moderate-mixed-script-docs",
+      "prompt": "この API の rate limiting と retry-after の挙動について、公式ドキュメントの記述を踏まえて説明してください。",
+      "sensitivity": "may_leave",
+      "band": "moderate",
+      "trap": "mixed_script",
+      "note": "Japanese prose around English technical terms, which is the shape of a question about somebody else's documentation. Invented."
+    },
+    {
+      "id": "req-high-mixed-script-tradeoff",
+      "prompt": "gRPC と REST のどちらを採用すべきか、streaming の要件と backward compatibility の両面から論じてください。",
+      "sensitivity": "may_leave",
+      "band": "high",
+      "trap": "mixed_script",
+      "note": "Invented."
+    },
+    {
+      "id": "req-local-low-proofread-with-address",
+      "prompt": "この案内文の誤字を直してください。問い合わせ先は sample.contact@example.com です。",
+      "sensitivity": "must_stay_local",
+      "band": "low",
+      "trap": "hidden_secret",
+      "note": "An easy request carrying an address. Complexity says local, the veto says local, and they agree for different reasons. Invented placeholder address."
+    },
+    {
+      "id": "req-local-high-debug-with-key",
+      "prompt": "この認証エラーの原因を、トークンの有効期限と時刻ずれの両面から論証してください。api_key=ZZTESTKEYNOTREAL0000 を使っています。",
+      "sensitivity": "must_stay_local",
+      "band": "high",
+      "trap": "hidden_secret",
+      "note": "The case that separates the axes: complexity asks for the larger model and the veto refuses it. Invented placeholder key."
+    },
+    {
+      "id": "req-local-moderate-review-with-name",
+      "prompt": "山田花子さんが書いたこの提案書をレビューして、改善点を三つ挙げてください。",
+      "sensitivity": "must_stay_local",
+      "band": "moderate",
+      "trap": "looks_sensitive",
+      "note": "Invented name with an honorific."
+    },
+    {
+      "id": "req-may-leave-looks-sensitive-schema",
+      "prompt": "Explain what this table's `password_hash` and `email_verified_at` columns are for, and whether the index on them is useful.",
+      "sensitivity": "may_leave",
+      "band": "moderate",
+      "trap": "looks_sensitive",
+      "note": "Column names that read as secrets and are not. Invented."
+    },
+    {
+      "id": "req-may-leave-looks-sensitive-example-key",
+      "prompt": "Explain what the `Authorization: Bearer <token>` header does and where the token should be stored.",
+      "sensitivity": "may_leave",
+      "band": "moderate",
+      "trap": "looks_sensitive",
+      "note": "A placeholder in angle brackets, not a credential. Invented."
+    }
+  ]
+}

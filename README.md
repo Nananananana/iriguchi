@@ -60,7 +60,7 @@ installing the wheel with no extras and asserting nothing came along.
 
 ### Better detection, optional
 
-The built-in scanner has no model and **misses 63.5%** of the must-stay-local
+The built-in scanner has no model and **misses 61.7%** of the must-stay-local
 cases in the corpus — bare names, English names, company names, addresses. That
 is it working as specified, and it is not enough for most people.
 
@@ -72,9 +72,9 @@ iriguchi --scanner fallback+presidio route "..."
 
 | scanner | missed findings | over-caution | needs |
 |---|---:|---:|---|
-| `fallback` | 63.5% | 15.7% | nothing |
-| `presidio` | 45.2% | | `[presidio]` + a spaCy model |
-| **`fallback+presidio`** | **27.9%** | 60.8% | the same |
+| `fallback` | 61.7% | 8.9% | nothing |
+| `presidio` | 44.9% | 35.6% | `[presidio]` + a spaCy model |
+| **`fallback+presidio`** | **27.1%** | 41.1% | the same |
 | `mamori` | 1.0%\* | | a sibling checkout — [not on PyPI](docs/feasibility.md) |
 
 \*on mamori's own corpus. Measured: [`docs/measurements.md`](docs/measurements.md).

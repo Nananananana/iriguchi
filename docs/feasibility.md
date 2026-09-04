@@ -20,9 +20,9 @@ Over all 155 cases, with both destinations available:
 
 | what decided the route | cases | |
 |---|---:|---:|
-| the veto removed external | 46 | 29.7% |
-| complexity kept it local | 107 | 69.0% |
-| **complexity sent it out** | **2** | **1.3%** |
+| the veto removed external | 49 | 24.9% |
+| complexity kept it local | 144 | 73.1% |
+| **complexity sent it out** | **4** | **2.0%** |
 
 Split by where the case came from:
 
@@ -30,6 +30,7 @@ Split by where the case came from:
 |---|---:|---:|---:|---:|---:|
 | `borrowed:mamori` | 134 | 37 | 97 | **0** | 34 chars |
 | `generated` | 21 | 9 | 10 | 2 | 44 chars |
+| `requests` | 42 | 3 | 37 | 2 | 78 chars |
 
 **The borrowed 134 cannot exercise the axis at all**, and the reason is visible
 in one number: their median length is **34 characters** and their longest is 85.
@@ -40,6 +41,46 @@ personal data, which is what it was written to be.
 
 So 86% of the corpus is on loan from a project measuring a different thing, and
 it measures the veto well because the veto is what it was built for.
+
+### The corpus now exists, and the axis is measured for the first time
+
+`requests` is 42 invented prompts that are **requests for work** rather than PII
+strings: proofreading and reformatting at one end, proofs and architecture
+trade-offs at the other, in both scripts, with the long-and-easy and
+short-and-hard traps preserved. Bands are labelled against the definition
+`tools/measure_router.py` already puts to a model, word for word -- *low: a
+small local model will answer this adequately; moderate: it will probably manage
+but a larger one would answer better; high: it needs the larger model* -- and
+deliberately **not** by what iriguchi's rules would say, because grading an
+estimator against its own output measures nothing.
+
+The result, on those 42 alone:
+
+| labelled ↓ / iriguchi said → | low | moderate | high |
+|---|---:|---:|---:|
+| **low** | **14** | 1 | 0 |
+| **moderate** | 12 | **2** | 0 |
+| **high** | 7 | 4 | **2** |
+
+**Band accuracy 42.9%, against 35.7% for always answering `low`.** On the 21
+generated cases the same estimator scores 81.0%.
+
+The aggregate understates how one-sided this is. `low` is nearly perfect at
+14/15: the estimator recognises easy work. **`moderate` is 2 of 14 and `high` is
+2 of 13** -- eleven of the thirteen hardest prompts were kept local, seven of
+them called `low` outright.
+
+The cause is visible in the rule set. Every escalating marker is a phrase --
+`prove`, `compare`, `why`, `証明`, `比較` -- so **the estimator detects difficulty
+only when the request announces it**. *"Plan the migration of this table with
+zero downtime, including the rollback path and what makes it irreversible"* names
+no marker and scores zero.
+
+That is not a bug in a rule. It is the residual
+[ADR-0004](adr/0004-decide-before-the-request.md) predicted in writing -- semantic
+features need a model, this estimator is built from the complementary half, and
+is "by construction the weaker of the two axes." **The claim was always there;
+until now there was no number attached to it.**
 
 ### What is not the fix
 
@@ -149,7 +190,7 @@ of a chain silences every state behind it.
 
 ## F4. The default scanner's documented remedy is the uninstallable package
 
-`missed findings` is **63.5%** (66 of 104 must-stay-local cases), and
+`missed findings` is **61.7%**, and
 `measurements.md` argues correctly that this is the fallback working as
 specified rather than a bug: it has no model, and mamori's corpus is full of
 bare names, English names, company names and addresses.

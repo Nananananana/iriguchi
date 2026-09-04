@@ -473,13 +473,13 @@ def cmd_doctor(config: IriguchiConfig, out: TextIO) -> int:
         # is named for what it is.
         usable, _ = SCANNERS.describe("presidio").available()
         remedy = (
-            "`iriguchi --scanner fallback+presidio` runs both and misses 27.9%"
+            "`iriguchi --scanner fallback+presidio` runs both and misses 27.1%"
             if usable
             else 'install `pip install "iriguchi[presidio]"` plus a spaCy model '
-            "and run `--scanner fallback+presidio`, which misses 27.9%"
+            "and run `--scanner fallback+presidio`, which misses 27.1%"
         )
         lines.append(
-            "note: the built-in scanner over-detects on purpose and misses 63.5% "
+            "note: the built-in scanner over-detects on purpose and misses 61.7% "
             "of must-stay-local cases -- names without an honorific, English "
             f"names, company names and addresses entirely. {remedy}. mamori is "
             "better still and is not on PyPI. See docs/measurements.md for the "

@@ -186,7 +186,7 @@ class TestEverythingStillWorks:
         """
         _, output = run("doctor")
         assert "mamori is not installed" in output
-        assert "63.5%" in output, "doctor no longer says what the fallback costs"
+        assert "61.7%" in output, "doctor no longer says what the fallback costs"
         assert "presidio" in output, "doctor offers no remedy a reader can install"
 
     def test_the_corpus_still_loads(self, without_mamori: None) -> None:
@@ -197,7 +197,13 @@ class TestEverythingStillWorks:
         exists to avoid.
         """
         _, output = run("--local", "--external", "eval")
-        assert "cases                155" in output
+        from iriguchi.evaluation.dataset import load_corpus
+
+        # Derived, not typed. The literal `155` here was a second place the
+        # corpus size lived, and it went red for the right reason and the wrong
+        # cost when `requests.json` landed -- this test is about mamori being
+        # absent, not about how many cases exist.
+        assert f"cases{len(load_corpus()):>19}" in output
 
 
 class TestAskingForItAnywayIsRefused:
