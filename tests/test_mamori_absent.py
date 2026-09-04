@@ -310,3 +310,94 @@ class TestLookingForItCanItselfFail:
         state, detail = mamori_state()
         assert state is SiblingState.BROKEN
         assert "looking for mamori failed" in detail
+
+
+class TestAvailableHasToMeanYouCanUseIt:
+    """Measured against a wheel in a clean venv, which is what a user has.
+
+    `iriguchi doctor` with `EXTERNAL=1`, a real URL and a real model printed::
+
+        external service  available    some-model at https://example.invalid/v1
+
+    and every `ask --external` against that configuration is refused, because
+    `MamoriChannel.__init__` finds no mamori and there is no unprotected
+    fallback. The word was wrong in the one place a person checks before
+    trusting the setup.
+
+    `_endpoint` already avoids this defect for a missing endpoint -- its own
+    docstring names it, *a true sentence that sends the reader to fix the wrong
+    thing* -- and did not check the other thing `ask` requires. The two are not
+    interchangeable, either: a missing endpoint is two environment variables
+    away, and missing protection is a package that **is not on PyPI**, so a
+    reader who conflates them goes looking for a fix that does not exist.
+    """
+
+    @staticmethod
+    def _describe() -> str:
+        from iriguchi.config import IriguchiConfig
+
+        return IriguchiConfig(
+            external=True,
+            external_url="https://example.invalid/v1",
+            external_model="some-model",
+        ).describe()
+
+    def test_it_is_not_called_available_when_nothing_can_protect_it(
+        self, without_mamori: None
+    ) -> None:
+        external = next(
+            line for line in self._describe().splitlines() if line.startswith("external service")
+        )
+        assert "available" not in external, external
+
+    def test_it_says_what_is_missing(self, without_mamori: None) -> None:
+        """About the external service specifically. The scanner line has
+        mentioned mamori all along, and a report where the only explanation sits
+        beside a different setting is a report somebody reads past."""
+        report = self._describe()
+        assert "external service cannot be used" in report, report
+        assert "mamori" in report
+
+    def test_it_says_routing_and_asking_will_disagree(self, without_mamori: None) -> None:
+        """`route` will happily say a prompt may leave. Somebody who tests with
+        `route` and deploys with `ask` finds out at the wrong moment."""
+        report = self._describe()
+        assert "`route` still decides" in report, report
+
+    def test_it_does_not_send_the_reader_after_the_endpoint(self, without_mamori: None) -> None:
+        """The endpoint is set. Telling somebody to set `EXTERNAL_URL` here is
+        the wrong-fix defect with a different subject."""
+        report = self._describe()
+        assert f"{'IRIGUCHI_'}EXTERNAL_URL" not in report, report
+
+    def test_broken_is_still_not_absent(self, broken_mamori: None) -> None:
+        """The distinction the whole module exists for, kept in the report.
+        Telling somebody to install what they already have is the defect
+        pointing the opposite way."""
+        report = self._describe()
+        assert "not installed" not in report, report
+
+    def test_with_mamori_present_it_is_available_again(self) -> None:
+        """A floor. The three assertions above pass against a report that says
+        nothing is ever available, which would be a worse bug than the one being
+        fixed."""
+        from iriguchi.infrastructure.scanners.mamori_scanner import SiblingState, mamori_state
+
+        if mamori_state()[0] is not SiblingState.AVAILABLE:
+            pytest.skip("mamori is not importable here; the positive case cannot be shown")
+        external = next(
+            line for line in self._describe().splitlines() if line.startswith("external service")
+        )
+        assert "available" in external, external
+
+    def test_the_command_itself_shows_it(self, without_mamori: None) -> None:
+        """Through `doctor`, because the command is what somebody ran."""
+        import os
+
+        os.environ["IRIGUCHI_EXTERNAL"] = "1"
+        os.environ["IRIGUCHI_EXTERNAL_URL"] = "https://example.invalid/v1"
+        os.environ["IRIGUCHI_EXTERNAL_MODEL"] = "some-model"
+        code, report = run("doctor")
+        assert code == EXIT_OK
+        external = next(line for line in report.splitlines() if line.startswith("external service"))
+        assert "available" not in external, external
