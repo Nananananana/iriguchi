@@ -174,9 +174,20 @@ class TestEverythingStillWorks:
         assert "mamori." not in output
 
     def test_doctor_says_mamori_is_missing_and_what_that_costs(self, without_mamori: None) -> None:
+        """The cost as a number, and a remedy that can be run.
+
+        This used to grep the sentence `misses names without an honorific`,
+        which broke the day the sentence was reworded to lead with the measured
+        rate -- a test about phrasing rather than about what the reader is told.
+
+        What has to hold is: the miss rate is stated, and the fix offered is one
+        that exists. For as long as mamori was the only better scanner, `doctor`
+        named a 63.5% miss rate and pointed at a package that is not on PyPI.
+        """
         _, output = run("doctor")
         assert "mamori is not installed" in output
-        assert "misses names without an honorific" in output
+        assert "63.5%" in output, "doctor no longer says what the fallback costs"
+        assert "presidio" in output, "doctor offers no remedy a reader can install"
 
     def test_the_corpus_still_loads(self, without_mamori: None) -> None:
         """The 134 borrowed cases are committed fixtures, not read from mamori.

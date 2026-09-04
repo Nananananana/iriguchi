@@ -428,11 +428,25 @@ def cmd_doctor(config: IriguchiConfig, out: TextIO) -> int:
             "would send you to fix the wrong thing. iriguchi is using the fallback."
         )
     else:
+        # **The remedy has to be one the reader can actually run.** This note
+        # said "install mamori" for as long as mamori was the only better
+        # scanner, and mamori is not on PyPI -- so it named the miss rate and
+        # then pointed at a package nobody outside this machine can get. Now
+        # that a followable answer exists it goes first, and the unreachable one
+        # is named for what it is.
+        usable, _ = SCANNERS.describe("presidio").available()
+        remedy = (
+            "`iriguchi --scanner fallback+presidio` runs both and misses 27.9%"
+            if usable
+            else 'install `pip install "iriguchi[presidio]"` plus a spaCy model '
+            "and run `--scanner fallback+presidio`, which misses 27.9%"
+        )
         lines.append(
-            "note: the built-in scanner over-detects on purpose and misses names "
-            "without an honorific, English names, company names and addresses "
-            "entirely. Install mamori for a scanner that does not, and see "
-            "docs/measurements.md for the number."
+            "note: the built-in scanner over-detects on purpose and misses 63.5% "
+            "of must-stay-local cases -- names without an honorific, English "
+            f"names, company names and addresses entirely. {remedy}. mamori is "
+            "better still and is not on PyPI. See docs/measurements.md for the "
+            "trade each one makes."
         )
     print("\n".join(lines), file=out)
     return EXIT_OK

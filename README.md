@@ -376,6 +376,37 @@ and it is what a build can honestly gate on
 Every number in this repository is measured, ships with the script that produced
 it, and states what it does not say.
 
+## Tuning it
+
+Every number the rules use is reachable, validated, and defaults to what it was
+before it could be reached:
+
+```python
+from iriguchi import route
+from iriguchi.infrastructure.estimators.rules import RulesEstimator, RulesSettings
+
+route(
+    prompt,
+    local=True,
+    estimator=RulesEstimator(
+        RulesSettings(
+            long_input_at=300,  # in display columns
+            marker_weights={"complexity.multi-step": 0.6},  # retune one rule, not twenty
+        )
+    ),
+)
+```
+
+`scanner=` and `estimator=` take an **object** as well as a name, so a detector
+of your own needs no registry entry. A weight outside `[0,1]` or a rule id
+nobody registered is refused at construction, not on the prompt that reveals it.
+
+**Lengths are measured in display columns, not code points.** The same request
+is about half as many characters in Japanese, so a code-point threshold quietly
+asked a Japanese user for twice the content — 660 against 375 for one measured
+pair. `unicodedata.east_asian_width` fixes it with no dependency, and
+[`docs/feasibility.md`](docs/feasibility.md) F6 has the table.
+
 ## Configuring it
 
 Both destinations default to **off**, which is the fail-safe value: somebody who
