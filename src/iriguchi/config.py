@@ -268,18 +268,48 @@ class IriguchiConfig:
         return MamoriChannel()
 
     @staticmethod
-    def _endpoint(on: bool, url: str, model: str) -> str:
-        """Three states, not two.
+    def _protection() -> tuple[bool, str]:
+        """Whether anything on this machine can protect an outbound prompt.
+
+        Asked of the registry rather than of the adapter, for the reason the
+        scanner line gives: one module names the sibling and everything else
+        asks it, which is one fewer `ignore_imports` line rather than one more.
+
+        The detail already separates *absent* from *installed and will not
+        import*, and both are returned unchanged -- telling somebody to install
+        what they already have is the same wrong-fix defect pointing the other
+        way.
+        """
+        return SCANNERS.describe("mamori").available()
+
+    @staticmethod
+    def _endpoint(on: bool, url: str, model: str, protected: bool = True) -> str:
+        """Four states, not two.
 
         "available" for a destination with nowhere to send would be the same
         defect `describe` already avoids for mamori: a true sentence that sends
         the reader to fix the wrong thing.
+
+        `protected` is the fourth, and it was missing until a wheel in a clean
+        venv was asked. The external service had a URL and a model and printed
+        **available**, and every `ask --external` against it was refused,
+        because protecting an outbound prompt needs mamori and there is no
+        unprotected fallback by construction.
+
+        The two blockers share one framing -- **available for routing**, then
+        what stops the asking -- because that half is true in both: `route`
+        needs no endpoint and no protection, and it works. The first version of
+        this said `cannot be used` and took precedence over the endpoint
+        message, which hid a gap a test was already checking for. Both are
+        real, and the one with an endpoint set is the one that was lying.
         """
         if not on:
             return "not configured"
-        if url.strip() and model.strip():
-            return f"available    {model.strip()} at {url.strip()}"
-        return "available for routing, no endpoint for asking"
+        if not (url.strip() and model.strip()):
+            return "available for routing, no endpoint for asking"
+        if not protected:
+            return "available for routing, nothing can protect an outbound prompt"
+        return f"available    {model.strip()} at {url.strip()}"
 
     def describe(self) -> str:
         """What this configuration does with your prompts, in prose.
@@ -292,6 +322,11 @@ class IriguchiConfig:
         # printing "not installed" for the second tells somebody to install what
         # they already have. Same defect as `policy.prefer-local` had: a wrong
         # stated reason, sending the reader to fix the wrong thing.
+        # Asked once and used twice: the scanner line below says whether mamori
+        # could be the scanner, and the external line says whether anything can
+        # protect a prompt on the way out. Same fact, two consequences, and only
+        # one of them was being reported.
+        protects, protection = self._protection()
         chosen = "mamori" if self.use_mamori else (self.scanner or SCANNERS.default)
         if chosen != SCANNERS.default:
             scanner = chosen
@@ -309,7 +344,7 @@ class IriguchiConfig:
         lines = [
             f"local model       {self._endpoint(self.local, self.local_url, self.local_model)}",
             f"external service  "
-            f"{self._endpoint(self.external, self.external_url, self.external_model)}",
+            f"{self._endpoint(self.external, self.external_url, self.external_model, protects)}",
             f"scanner           {scanner}",
             "",
         ]
@@ -326,6 +361,18 @@ class IriguchiConfig:
             )
             if on and not (url.strip() and model.strip())
         ]
+        # Named before the endpoint gap for the same reason `_endpoint` reports
+        # it first: this one cannot be closed by setting a variable.
+        if self.external and not protects:
+            lines.append(
+                f"warning: the external service cannot be used: "
+                f"{protection.rstrip('.')}. Protecting an "
+                f"outbound prompt is what mamori does, and there is no unprotected "
+                f"fallback -- the alternative to protecting a prompt is not sending it. "
+                f"`route` still decides, and will say a prompt may leave; `ask --external` "
+                f"refuses. Until then this machine is local-only in practice."
+            )
+            lines.append("")
         if half:
             lines.append(
                 f"{half} can be routed to and not asked. `route` needs no endpoint and "

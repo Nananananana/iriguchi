@@ -310,3 +310,163 @@ class TestLookingForItCanItselfFail:
         state, detail = mamori_state()
         assert state is SiblingState.BROKEN
         assert "looking for mamori failed" in detail
+
+
+class TestAvailableHasToMeanYouCanUseIt:
+    """Measured against a wheel in a clean venv, which is what a user has.
+
+    `iriguchi doctor` with `EXTERNAL=1`, a real URL and a real model printed::
+
+        external service  available    some-model at https://example.invalid/v1
+
+    and every `ask --external` against that configuration is refused, because
+    `MamoriChannel.__init__` finds no mamori and there is no unprotected
+    fallback. The word was wrong in the one place a person checks before
+    trusting the setup.
+
+    `_endpoint` already avoids this defect for a missing endpoint -- its own
+    docstring names it, *a true sentence that sends the reader to fix the wrong
+    thing* -- and did not check the other thing `ask` requires. The two are not
+    interchangeable, either: a missing endpoint is two environment variables
+    away, and missing protection is a package that **is not on PyPI**, so a
+    reader who conflates them goes looking for a fix that does not exist.
+    """
+
+    @staticmethod
+    def _describe() -> str:
+        from iriguchi.config import IriguchiConfig
+
+        return IriguchiConfig(
+            external=True,
+            external_url="https://example.invalid/v1",
+            external_model="some-model",
+        ).describe()
+
+    @staticmethod
+    def _external_line(report: str) -> str:
+        return next(line for line in report.splitlines() if line.startswith("external service"))
+
+    def test_it_does_not_read_as_a_destination_you_can_ask(self, without_mamori: None) -> None:
+        """Not *the word `available` is absent* -- that was the first version of
+        this test and it was about a word rather than about a claim. `available
+        for routing` is true with no mamori, because routing does work.
+
+        What must not appear is the rendering that means **you can send to
+        this**: the model and the URL sitting after `available` with nothing
+        qualifying them."""
+        external = self._external_line(self._describe())
+        assert "some-model at" not in external, external
+        assert "for routing" in external, external
+
+    def test_the_line_says_which_thing_is_missing(self, without_mamori: None) -> None:
+        """Two different blockers render two different lines. One `unavailable`
+        covering both would send half the readers to the wrong fix."""
+        external = self._external_line(self._describe())
+        assert "protect" in external, external
+        assert "endpoint" not in external, external
+
+    def test_it_says_what_is_missing(self, without_mamori: None) -> None:
+        """About the external service specifically. The scanner line has
+        mentioned mamori all along, and a report where the only explanation sits
+        beside a different setting is a report somebody reads past."""
+        report = self._describe()
+        assert "external service cannot be used" in report, report
+        assert "mamori" in report
+
+    def test_it_says_routing_and_asking_will_disagree(self, without_mamori: None) -> None:
+        """`route` will happily say a prompt may leave. Somebody who tests with
+        `route` and deploys with `ask` finds out at the wrong moment."""
+        report = self._describe()
+        assert "`route` still decides" in report, report
+
+    def test_it_does_not_send_the_reader_after_the_endpoint(self, without_mamori: None) -> None:
+        """The endpoint is set. Telling somebody to set `EXTERNAL_URL` here is
+        the wrong-fix defect with a different subject."""
+        report = self._describe()
+        assert f"{'IRIGUCHI_'}EXTERNAL_URL" not in report, report
+
+    def test_broken_is_still_not_absent(self, broken_mamori: None) -> None:
+        """The distinction the whole module exists for, kept in the report.
+        Telling somebody to install what they already have is the defect
+        pointing the opposite way."""
+        report = self._describe()
+        assert "not installed" not in report, report
+
+    def test_with_mamori_present_it_is_available_again(self) -> None:
+        """A floor. The three assertions above pass against a report that says
+        nothing is ever available, which would be a worse bug than the one being
+        fixed."""
+        from iriguchi.infrastructure.scanners.mamori_scanner import SiblingState, mamori_state
+
+        if mamori_state()[0] is not SiblingState.AVAILABLE:
+            pytest.skip("mamori is not importable here; the positive case cannot be shown")
+        external = self._external_line(self._describe())
+        assert "some-model at" in external, external
+
+    def test_the_command_itself_shows_it(self, without_mamori: None) -> None:
+        """Through `doctor`, because the command is what somebody ran."""
+        import os
+
+        os.environ["IRIGUCHI_EXTERNAL"] = "1"
+        os.environ["IRIGUCHI_EXTERNAL_URL"] = "https://example.invalid/v1"
+        os.environ["IRIGUCHI_EXTERNAL_MODEL"] = "some-model"
+        code, report = run("doctor")
+        assert code == EXIT_OK
+        external = self._external_line(report)
+        assert "some-model at" not in external, external
+        assert "protect" in external, external
+
+
+class TestAdviceSomebodyCanFollow:
+    """Every sentence that tells a reader to install mamori says it is not on PyPI.
+
+    `mamori` is a 404 on PyPI. iriguchi's remedy was `uv pip install -e
+    ../mamori` -- a relative path that resolves on a machine with both checkouts
+    side by side, which is one machine. A reader who has never seen this layout
+    reads that as a typo for a package name, tries `pip install mamori`, and
+    concludes the advice is stale rather than that the package is unpublished.
+
+    The comment above `_MISSING` had said *not on PyPI yet, so the instruction
+    is a checkout rather than a package name* since it was written. **The string
+    somebody actually reads did not.** A true fact in a comment is a fact the
+    user never gets.
+
+    Collected from the constants rather than grepped out of the files, so a
+    reflowed line does not fail this and a fourth message does not slip past it.
+    """
+
+    @staticmethod
+    def _remedies() -> dict[str, str]:
+        from iriguchi.infrastructure.registry import SCANNERS
+        from iriguchi.infrastructure.scanners.mamori_scanner import _MISSING
+
+        with ImportBlocker("absent"):
+            _, from_registry = SCANNERS.describe("mamori").available()
+            try:
+                from iriguchi.infrastructure.channels.mamori_channel import MamoriChannel
+
+                MamoriChannel()
+            except Exception as refusal:
+                from_channel = str(refusal)
+            else:  # pragma: no cover - reached only if the refusal stops working
+                from_channel = ""
+        return {"scanner": _MISSING, "registry": from_registry, "channel": from_channel}
+
+    def test_there_are_three_of_them(self) -> None:
+        """A floor. The parametrized assertions below all pass over an empty
+        set, and the point of collecting them is to catch a fourth."""
+        remedies = self._remedies()
+        assert len(remedies) == 3
+        assert all(remedies.values()), remedies
+
+    @pytest.mark.parametrize("where", ["scanner", "registry", "channel"])
+    def test_it_says_the_package_is_not_published(self, where: str) -> None:
+        message = self._remedies()[where]
+        assert "not on PyPI" in message, message
+
+    @pytest.mark.parametrize("where", ["scanner", "registry", "channel"])
+    def test_it_still_says_what_to_do_instead(self, where: str) -> None:
+        """Naming the problem without naming the fix would be the opposite
+        failure: a reader who now knows they are stuck and not how to proceed."""
+        message = self._remedies()[where]
+        assert "checkout" in message and "../mamori" in message, message

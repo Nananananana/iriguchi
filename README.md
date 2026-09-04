@@ -53,6 +53,16 @@ because it is hard" is unrepresentable when the prompt contains a credential —
 not discouraged, unrepresentable
 ([ADR-0003](docs/adr/0003-sensitivity-is-a-veto.md)).
 
+**One of the two axes is measured; the other is designed.** The veto has a leak
+rate, a miss rate and a section arguing about each. The complexity preference
+changes **2 outcomes in 155** on the corpus, and **0 of the 134 cases borrowed
+from mamori** — their median length is 34 characters, because they are a PII
+detector's samples rather than requests for work. So the corpus can say what the
+veto does and cannot say whether the preference is right. That is a gap in the
+evidence, not a claim that the axis is wrong, and it is written down in
+[`docs/feasibility.md`](docs/feasibility.md) rather than left for a reader to
+discover. `python tools/which_axis.py` prints the counts.
+
 **Fail closed.** Doubt routes local. A prompt that must stay local, on a machine
 with no local model, is refused — it does not fall through to the network. A
 fallback that "helpfully" reaches out when the local model is missing converts

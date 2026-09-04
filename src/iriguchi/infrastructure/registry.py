@@ -146,7 +146,12 @@ def _mamori_state() -> tuple[bool, str]:
         return True, ""
     if state is SiblingState.BROKEN:
         return False, f"mamori is installed and will not import ({detail})"
-    return False, "mamori is not installed (`uv pip install -e ../mamori`)"
+    # Says *not on PyPI* rather than only naming the path, because `../mamori`
+    # on its own reads as a typo for a package name that would work.
+    return False, (
+        "mamori is not installed and is not on PyPI; it needs a checkout beside "
+        "this one (`uv pip install -e ../mamori`)"
+    )
 
 
 #: The sensitivity axis. A veto: whatever it finds removes destinations, and

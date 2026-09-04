@@ -168,3 +168,124 @@ class TestWhatIsNotChecked:
         for the wrong reason."""
         assert "134 borrowed cases" in published
         assert CORPUS.name == "generated.json"
+
+
+FEASIBILITY = ROOT / "docs" / "feasibility.md"
+
+
+@pytest.fixture(scope="module")
+def audit() -> str:
+    text = FEASIBILITY.read_text(encoding="utf-8")
+    marker = "## F1."
+    assert marker in text, "the section this file checks is gone"
+    return text[text.index(marker) : text.index("## F2.")]
+
+
+@pytest.fixture(scope="module")
+def counts() -> tuple[dict[str, int], dict[str, dict[str, int]], dict[str, str]]:
+    from collections import Counter
+    from statistics import median
+
+    from which_axis import ORDER, decided_by
+
+    from iriguchi.application.routing import PromptRouter
+    from iriguchi.evaluation.dataset import load_corpus
+    from iriguchi.infrastructure.registry import ESTIMATORS, SCANNERS
+
+    router = PromptRouter(scanner=SCANNERS.build("fallback"), estimator=ESTIMATORS.build("rules"))
+    overall: Counter[str] = Counter()
+    by_source: dict[str, Counter[str]] = {}
+    lengths: dict[str, list[int]] = {}
+    for case in load_corpus():
+        what = decided_by(case.prompt, router)
+        overall[what] += 1
+        by_source.setdefault(case.source, Counter())[what] += 1
+        lengths.setdefault(case.source, []).append(len(case.prompt))
+    assert set(overall) <= set(ORDER), "an outcome nobody named"
+    return (
+        dict(overall),
+        {source: dict(counter) for source, counter in by_source.items()},
+        # Formatted, not truncated. The tool prints `{median:5.0f}`, and a
+        # median of 33.5 is 34 there and 33 under `int()` -- a test that
+        # disagrees with the instrument it cites about rounding fails on
+        # arithmetic rather than on the claim it is making.
+        {source: f"{median(values):.0f}" for source, values in lengths.items()},
+    )
+
+
+class TestTheFeasibilityAuditIsStillTrue:
+    """`docs/feasibility.md` F1, recomputed.
+
+    An audit is the document most likely to be quietly outgrown. Its whole
+    argument is a set of counts -- *the second axis changes two outcomes in a
+    hundred and fifty-five* -- and the day somebody adds twenty long prompts to
+    the corpus, that sentence stops being true and nothing says so. A finding
+    that has been fixed and still reads as open is worse than no finding: it
+    sends the next reader to solve a solved problem.
+
+    So every number in F1's two tables is derived here from the corpus as it is
+    now, through `tools/which_axis.py`, which is the same instrument the
+    document cites. If the corpus changes, this goes red and the audit gets
+    edited -- which is the only mechanism that keeps a written measurement from
+    becoming a written belief.
+    """
+
+    def test_there_is_a_table_to_check(self, audit: str) -> None:
+        """A floor. Every assertion below passes against a section with no
+        tables in it, which is what a rewrite would leave."""
+        assert audit.count("|---") >= 2, "F1 has lost its tables"
+
+    @pytest.mark.parametrize(
+        "label", ["the veto removed external", "complexity kept it local", "complexity sent it out"]
+    )
+    def test_each_outcome_row_is_what_the_corpus_gives(
+        self,
+        label: str,
+        audit: str,
+        counts: tuple[dict[str, int], dict[str, dict[str, int]], dict[str, str]],
+    ) -> None:
+        overall, _, _ = counts
+        total = sum(overall.values())
+        row = _row(audit, label)
+        assert row[1].strip("*") == str(overall[label]), (
+            f"F1 publishes {row[1]} for {label!r} and the corpus now gives {overall[label]}."
+        )
+        assert row[2].strip("*") == f"{100 * overall[label] / total:.1f}%"
+
+    @pytest.mark.parametrize("source", ["borrowed:mamori", "generated"])
+    def test_each_source_row_is_what_the_corpus_gives(
+        self,
+        source: str,
+        audit: str,
+        counts: tuple[dict[str, int], dict[str, dict[str, int]], dict[str, str]],
+    ) -> None:
+        from which_axis import ORDER
+
+        _, by_source, lengths = counts
+        row = _row(audit, source)
+        counter = by_source[source]
+        published = [cell.strip("*") for cell in row[1:]]
+        expected = [str(sum(counter.values()))] + [str(counter.get(w, 0)) for w in ORDER]
+        assert published[:4] == expected, (
+            f"F1's row for {source} publishes {published[:4]} and the corpus now gives {expected}."
+        )
+        assert published[4].startswith(lengths[source]), (
+            f"F1 publishes a median of {published[4]} for {source} and it is now "
+            f"{lengths[source]} chars. The argument that these prompts are too "
+            f"short to band rests on this number."
+        )
+
+    def test_the_claim_the_argument_rests_on(
+        self, counts: tuple[dict[str, int], dict[str, dict[str, int]], dict[str, str]]
+    ) -> None:
+        """Stated as a behaviour rather than as a row, because this is the one
+        sentence somebody would act on: **the borrowed corpus cannot exercise
+        the complexity axis.** The day it can, F1 is obsolete."""
+        from which_axis import SENT
+
+        _, by_source, _ = counts
+        assert by_source["borrowed:mamori"].get(SENT, 0) == 0, (
+            "borrowed cases now reach the external destination on complexity "
+            "alone. F1 says they cannot, and F1 is now wrong -- rewrite it "
+            "rather than deleting this test."
+        )
