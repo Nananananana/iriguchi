@@ -31,3 +31,4 @@ current-state document for code that does not exist.
 | [0013](0013-iriguchi-reads-a-protection-record-and-keeps-none.md) | iriguchi reads a protection record and keeps none |
 | [0014](0014-ask-holds-its-own-upstream.md) | `ask` holds its own upstream, and does not go through mamori's proxy |
 | [0015](0015-what-zero-runtime-dependencies-promises.md) | What "zero runtime dependencies" promises, and what it does not |
+| [0016](0016-a-decision-can-be-published-because-it-holds-no-prompt.md) | A decision can be published, because it holds no prompt |

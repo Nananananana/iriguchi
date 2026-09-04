@@ -66,6 +66,7 @@ interfaces --> application --> domain
 | `ports/` | `domain`, `errors` |
 | `application/` | `domain`, `ports`, `errors` |
 | `infrastructure/` | `domain`, `ports`, `errors` |
+| `interop/` | `domain`, `errors` — **narrower than an adapter**: it translates somebody else's vocabulary into domain values, implements no port and does no I/O |
 | `evaluation/` | `domain`, `ports`, `application`, `infrastructure` |
 | `config.py` | `domain`, `ports`, `application`, `infrastructure` |
 | `interfaces/` | everything above, `config` included |
@@ -152,6 +153,34 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   now — a tree walk rather than a grep, so this bullet does not satisfy the rule
   it describes. The README sentences are checked too: a check that outlives its
   claim leaves two documents disagreeing about what was promised.
+- **A published schema that nothing validates against is a promise with no
+  check.** `jsonschema` is a dev dependency for exactly that and nothing else;
+  every document `route --json` can emit is validated against the shipped
+  schema. `cosmic-ray` was refused for 726 lines of `uv.lock` and this was
+  accepted for 154 — the difference is a convenience versus an obligation to
+  somebody downstream, not the size.
+- **`uv add --dev` writes to the wrong list.** It appends to
+  `[dependency-groups]`, which is PEP 735; CI installs `.[dev]`, which is a PEP
+  621 extra and does not read it. A package added that way is present locally
+  and missing in CI, and the failure is an `ImportError` in a job nobody was
+  changing. Add development dependencies to `[project.optional-dependencies]`
+  by hand, and there is deliberately no second list to choose between.
+- **`uv run pytest`, without `-q`.** `addopts` already carries one, so adding
+  another makes it `-qq` and the *"N passed"* line disappears — leaving a row of
+  dots that looks identical for 12 tests and for 1285. Every "the suite passes"
+  in this session was read off that row. mamori found it in their own workflow
+  and passed it on.
+- **A green run should mean the same thing every time.** `hypothesis` draws
+  fresh inputs per run, so a property failing on one input in six passes most
+  runs and a green CI is a *sample*. CI uses a derandomized profile with more
+  examples; a developer's machine stays random and the example database carries
+  anything it finds back as a regression.
+- **The most dangerous field is not the one you cannot fill — it is the one you
+  filled with something it does not mean.** mamori's, found as an
+  `analysis_explanation` holding a dict Presidio reads as a structured type.
+  Here it arrives as a number: `score` and `weight` are in [0,1], which is the
+  shape of a probability, and neither is one. Every published number says what
+  it is not, and a test holds that.
 - **Two questions about a check, not one.** *How many files did the type checker
   see* is the first, and widening `files` answered it. *How many of those can a
   user see* is the second, and `py.typed` is what answers that: without the

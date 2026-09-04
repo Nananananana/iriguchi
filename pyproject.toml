@@ -27,6 +27,11 @@ classifiers = [
 # runtime dependency is code with unsupervised read access to all of it.
 dependencies = []
 
+# **One list, and this is it.** `uv add --dev` writes to `[dependency-groups]`,
+# which is PEP 735 and which `pip install .[dev]` does not read -- so a package
+# added that way is present locally, absent in CI, and the failure is an
+# `ImportError` in a job nobody was touching. Two things named `dev` that mean
+# different things, with the tooling reading one each.
 [project.optional-dependencies]
 dev = [
     "pytest>=8",
@@ -36,6 +41,11 @@ dev = [
     "mypy>=1.10",
     "import-linter>=2",
     "pre-commit",
+    # Validates `iriguchi.routing-decision/1` against the schema the wheel
+    # ships. Development-only; the `zero runtime dependencies` job proves that
+    # separately by installing the wheel with no extras at all.
+    "jsonschema>=4.26.0",
+    "types-jsonschema>=4.26.0.20260518",
 ]
 
 # There is deliberately no `siblings` extra yet. mamori is not on PyPI, so

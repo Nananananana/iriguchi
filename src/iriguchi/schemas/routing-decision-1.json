@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Nananananana/iriguchi/schemas/routing-decision-1.json",
+  "title": "iriguchi.routing-decision/1",
+  "description": "Where a prompt was allowed to go and the whole account of why, carrying no part of the prompt. Frozen at version 1. The one invariant this schema cannot express is in the $comment below and is the reason the document exists at all: nothing here is derived from the text except an offset.",
+  "type": "object",
+  "required": ["contract", "by", "route", "sensitivity", "complexity", "reasons", "removed"],
+  "additionalProperties": false,
+  "properties": {
+    "contract": {
+      "description": "Frozen contract identifier. A consumer that does not recognise one must refuse the document rather than read the fields it happens to know -- the rule iriguchi applies to mamori's records and to its own settings, applied to what it produces.",
+      "const": "iriguchi.routing-decision/1"
+    },
+    "by": {
+      "description": "Producer, as name/version. The version says which rules and which thresholds were in force, and a decision cannot be reproduced without it.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]+/[A-Za-z0-9._+-]+$"
+    },
+    "route": {
+      "description": "What was decided. `refused` is not an error: the router worked and the answer was no, and a caller that cannot tell those apart will retry a refusal forever.",
+      "enum": ["local", "external", "refused"]
+    },
+    "sensitivity": {
+      "type": "object",
+      "required": ["level", "findings"],
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "description": "The veto axis. `restricted` removes the external destination whatever the complexity says; nothing on this axis ever adds a destination back.",
+          "enum": ["clear", "restricted"]
+        },
+        "findings": {
+          "description": "What a scanner objected to, as a rule id, the scanner that proposed it, and where. **Never the matched text.** A finding names a span into a prompt the reader of this document does not have.",
+          "type": "array",
+          "items": { "$ref": "#/$defs/finding" }
+        }
+      }
+    },
+    "complexity": {
+      "type": "object",
+      "required": ["band", "score", "short_circuited", "signals"],
+      "additionalProperties": false,
+      "properties": {
+        "band": {
+          "description": "The preference axis. It can ask for the larger model and can never overrule the veto.",
+          "enum": ["low", "moderate", "high"]
+        },
+        "score": {
+          "description": "Weights combined as independent evidence, 1 - prod(1 - w). Reported next to the band because a HIGH band beside a score of 0.02 is the short circuit, and an explanation that hides that looks broken. **NOT a confidence.** It is in [0,1] and it is the same shape as a probability and it is neither: the weights are assigned by hand and nothing has calibrated them against an outcome. A consumer arriving from Presidio, where `RecognizerResult.score` IS a confidence, will read this as one unless told. Compare it to a threshold; do not report it as a certainty.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "short_circuited": {
+          "description": "True when the band came from the escalating-signal rule rather than from the score.",
+          "type": "boolean"
+        },
+        "signals": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/signal" }
+        }
+      }
+    },
+    "reasons": {
+      "description": "The account, in a stable order: reasons about the request as a whole first, then by offset. A decision that cannot say why is a decision nobody can check.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/reason" }
+    },
+    "removed": {
+      "description": "Destinations taken off the table, and what took them. Empty means nothing was removed, which is not the same as nothing having been available -- the reasons say which.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["destination", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "destination": { "enum": ["local", "external"] },
+          "reason": { "$ref": "#/$defs/reason" }
+        }
+      }
+    },
+    "thresholds": {
+      "description": "Where the bands began for this decision. Absent means the producer did not record them, not that the defaults applied -- the same distinction mamori draws for `recall`.",
+      "type": "object",
+      "required": ["moderate_at", "high_at", "short_circuit_at"],
+      "additionalProperties": false,
+      "properties": {
+        "moderate_at": {
+          "description": "The first score that is not `low`. Inclusive.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "high_at": {
+          "description": "The first score that is `high`. Inclusive.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "short_circuit_at": {
+          "description": "How many escalating signals reach the top band regardless of score.",
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  },
+  "$defs": {
+    "span": {
+      "description": "Half-open, in code points of the prompt as it was typed. Not bytes: an offset into UTF-8 bytes and an offset into characters disagree on every Japanese prompt, and a consumer that guesses wrong highlights the wrong words.",
+      "type": "object",
+      "required": ["start", "end"],
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "description": "Inclusive, in code points.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "end": {
+          "description": "Exclusive, in code points.",
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "finding": {
+      "type": "object",
+      "description": "**There is deliberately no score here.** A scanner that is unsure has two honest options -- report it or do not -- and a confidence would become a threshold, and a threshold is a score somebody tunes until the leak rate looks acceptable. A Presidio `RecognizerResult` carries a `score`; this does not, and the absence is the decision rather than a gap.",
+      "required": ["rule", "source", "span"],
+      "additionalProperties": false,
+      "properties": {
+        "rule": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 },
+        "span": { "$ref": "#/$defs/span" }
+      }
+    },
+    "signal": {
+      "type": "object",
+      "required": ["rule", "kind", "weight", "escalating"],
+      "additionalProperties": false,
+      "properties": {
+        "rule": { "type": "string", "minLength": 1 },
+        "kind": { "enum": ["lexical", "structural"] },
+        "weight": {
+          "description": "How much this marker moves the score, assigned by hand when the rule was written. **Not a confidence and not an importance measured from anything** -- it is the number the rule author chose, and it is published so a reader can see which markers did the work rather than guess.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "escalating": { "type": "boolean" },
+        "span": { "$ref": "#/$defs/span" }
+      }
+    },
+    "reason": {
+      "type": "object",
+      "required": ["rule", "source", "detail"],
+      "additionalProperties": false,
+      "properties": {
+        "rule": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 },
+        "detail": {
+          "description": "One sentence a person can act on. Carries rule ids, spans and types, and never a matched value -- the rule that also makes this document safe to keep.",
+          "type": "string",
+          "minLength": 1
+        },
+        "span": { "$ref": "#/$defs/span" }
+      }
+    }
+  },
+  "$comment": "The invariant JSON Schema cannot express, and the one that matters: **no string in this document is derived from the prompt.** Rule ids, source names and details are written by iriguchi; spans are offsets. A consumer holding this document and not the prompt learns that something was found at 12-19 and by which rule, and cannot recover what was there. That is why ADR-0012's refusal to keep a decision does not extend to publishing one under this contract -- a document with no values in it is not the prompt, and the constraint is enforced by `tests/test_the_claims_with_no_mechanism.py` rather than by this sentence."
+}

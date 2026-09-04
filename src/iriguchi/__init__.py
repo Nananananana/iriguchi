@@ -4,19 +4,175 @@ It stands between a person and every model they use, and decides -- locally,
 deterministically, and before a single byte leaves the machine -- where each
 prompt is allowed to go.
 
-**The domain exists; nothing above it does.** ``iriguchi.domain`` decides a
-route from a sensitivity and a complexity, and there is not yet anything that
-produces either -- no scanner, no estimator, no CLI. The design is
-``docs/proposals/0001-the-design.md`` and the decisions it rests on are in
-``docs/adr/``. See ``docs/README.md`` for where the project actually is.
+    >>> from iriguchi import route
+    >>> decision = route("Summarise this article.", local=True, external=True)
+    >>> decision.leaves_the_machine
+    False
+    >>> [reason.detail for reason in decision.reasons]
+    ['complexity band low does not call for the larger model, and a local model is permitted']
 
-Nothing is re-exported here yet. A top-level name is a promise about a public
-API, and the API is not settled until something outside the domain uses it;
-until then, import from ``iriguchi.domain`` and expect it to move.
+Both destinations default to **off**, which is the fail-safe value: a caller who
+says nothing gets a refusal that names what is missing, rather than a router
+quietly assuming a model exists.
+
+For a machine-readable decision, `iriguchi.as_document` renders one as
+`iriguchi.routing-decision/1` -- rule ids, spans and bands, and no part of the
+prompt. `iriguchi schema` prints the shape, and `iriguchi route --json` writes
+one from the command line.
+
+The design is ``docs/proposals/0001-the-design.md``; the decisions it rests on
+are in ``docs/adr/``.
 """
 
 from __future__ import annotations
 
 __version__ = "0.1.0.dev0"
 
-__all__ = ["__version__"]
+
+def route(
+    text: str,
+    *,
+    local: bool = False,
+    external: bool = False,
+    scanner: str | None = None,
+    estimator: str | None = None,
+    findings: Iterable[Finding] | None = None,
+    moderate_at: float | None = None,
+    high_at: float | None = None,
+) -> RoutingDecision:
+    """Where `text` is allowed to go, and the whole account of why.
+
+    The one call somebody should need. Everything under it is available and
+    swappable -- `iriguchi.config.IriguchiConfig` for the composition root,
+    `iriguchi.infrastructure.registry` for what can sit behind each port -- and
+    a person evaluating whether this tool is worth adopting should not have to
+    assemble three objects to find out.
+
+    Args:
+        text: The prompt, exactly as typed. Nothing here normalizes it.
+        local: Whether a local model is available. **Passed in, never probed**
+            (ADR-0011), which is what lets this run with no network at all.
+        external: Whether an external service is reachable.
+        scanner: Which sensitivity scanner, by name. `None` takes the registry's
+            default, which is the built-in one **even when mamori is installed**
+            -- changing the scanner changes what leaves this machine, and that
+            is not a thing to inherit from what happens to be on the system.
+        findings: Findings from somewhere else -- your own Presidio analyzer,
+            your own detector -- used **instead of** running a scanner here.
+            `iriguchi.interop.findings_from_presidio` converts a
+            `RecognizerResult` list without importing Presidio. Passing this
+            with `scanner=` is refused rather than silently preferring one:
+            somebody who named a scanner and also handed over findings has two
+            intentions and iriguchi cannot tell which.
+        estimator: Which complexity estimator, by name.
+        moderate_at: Where the middle band begins. `None` keeps the default;
+            `python tools/calibrate.py --escalate 0.3` derives one from a target
+            escalation rate rather than inventing a number.
+        high_at: Where the top band begins.
+
+    Returns:
+        A `RoutingDecision`, which is a value: frozen, and carrying the reasons
+        that produced it. It is never written anywhere by iriguchi (ADR-0012).
+
+    Raises:
+        ConfigurationError: for a scanner or estimator name nobody registered,
+            for one that is registered and unavailable here, or for thresholds
+            that would make a band unreachable. Refused rather than defaulted:
+            somebody who named an algorithm is relying on it.
+
+    Never raises for a scanner or estimator that fails at run time. A broken
+    proposer yields the most restrictive route available and says so in the
+    reasons (ADR-0002) -- a person with a broken scanner can still work locally.
+    """
+    from .config import IriguchiConfig
+
+    if findings is not None and scanner is not None:
+        from .errors import ConfigurationError
+
+        raise ConfigurationError(
+            "both `findings=` and `scanner=` were given. Findings from elsewhere "
+            "replace the scan; naming a scanner as well says to run one. Pick "
+            "the one you meant -- guessing here would decide what leaves the "
+            "machine on a coin toss."
+        )
+
+    config = IriguchiConfig(
+        local=local,
+        external=external,
+        scanner=scanner or "",
+        estimator=estimator or "",
+        moderate_at="" if moderate_at is None else repr(moderate_at),
+        high_at="" if high_at is None else repr(high_at),
+    )
+    router = config.router()
+    if findings is not None:
+        from dataclasses import replace as _replace
+
+        from .infrastructure.scanners.supplied import SuppliedScanner
+
+        router = _replace(router, scanner=SuppliedScanner(tuple(findings)))
+    return router.route(text, config.available)
+
+
+def __getattr__(name: str) -> object:
+    """Re-exports, resolved on first use.
+
+    `route` is a function so that importing `iriguchi` costs nothing but a
+    module object; the names below are the types a caller needs to annotate
+    what it returns, and they are wired lazily for the same reason.
+
+    Spelled as `__getattr__` rather than a block of imports at the top because
+    the package docstring is the first thing a reader meets, and a screen of
+    imports above it is a screen they scroll past.
+    """
+    lazy = {
+        "RoutingDecision": ("iriguchi.domain.decision", "RoutingDecision"),
+        "Route": ("iriguchi.domain.destination", "Route"),
+        "Destination": ("iriguchi.domain.destination", "Destination"),
+        "Reason": ("iriguchi.domain.reason", "Reason"),
+        "Finding": ("iriguchi.domain.sensitivity", "Finding"),
+        "Span": ("iriguchi.domain.span", "Span"),
+        "findings_from_presidio": ("iriguchi.interop", "findings_from_presidio"),
+        "to_presidio": ("iriguchi.interop", "to_presidio"),
+        "Thresholds": ("iriguchi.domain.complexity", "Thresholds"),
+        "as_document": ("iriguchi.interfaces.contract", "as_document"),
+        "schema": ("iriguchi.interfaces.contract", "schema"),
+        "CONTRACT": ("iriguchi.interfaces.contract", "CONTRACT"),
+        "ConfigurationError": ("iriguchi.errors", "ConfigurationError"),
+        "IriguchiError": ("iriguchi.errors", "IriguchiError"),
+    }
+    if name not in lazy:
+        raise AttributeError(f"module 'iriguchi' has no attribute {name!r}")
+    module_name, attribute = lazy[name]
+    import importlib
+
+    return getattr(importlib.import_module(module_name), attribute)
+
+
+if __debug__:  # pragma: no cover - typing only
+    from typing import TYPE_CHECKING
+
+    if TYPE_CHECKING:
+        from collections.abc import Iterable
+
+        from .domain.decision import RoutingDecision
+        from .domain.sensitivity import Finding
+
+__all__ = [
+    "CONTRACT",
+    "ConfigurationError",
+    "Destination",
+    "Finding",
+    "IriguchiError",
+    "Reason",
+    "Route",
+    "RoutingDecision",
+    "Span",
+    "Thresholds",
+    "__version__",
+    "as_document",
+    "findings_from_presidio",
+    "route",
+    "schema",
+    "to_presidio",
+]
