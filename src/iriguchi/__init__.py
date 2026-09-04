@@ -153,10 +153,30 @@ if __debug__:  # pragma: no cover - typing only
     from typing import TYPE_CHECKING
 
     if TYPE_CHECKING:
+        # **Every name `__getattr__` resolves, listed here too.**
+        #
+        # The lazy re-export is a runtime convenience and a type checker cannot
+        # see through it: `__getattr__` is annotated `-> object`, so a user who
+        # wrote `from iriguchi import findings_from_presidio` got a callable
+        # mypy refused to call, and `from iriguchi import Finding` got a type
+        # that was not one. The ergonomic spelling -- the one the README shows
+        # -- was the one that did not typecheck.
+        #
+        # Caught by this project's own README test, which imports the way the
+        # README says to. The two lists are kept in step by
+        # `tests/test_the_public_surface.py`, because two lists of names in one
+        # file is a pair that drifts.
         from collections.abc import Iterable
 
+        from .domain.complexity import Thresholds
         from .domain.decision import RoutingDecision
+        from .domain.destination import Destination, Route
+        from .domain.reason import Reason
         from .domain.sensitivity import Finding
+        from .domain.span import Span
+        from .errors import ConfigurationError, IriguchiError
+        from .interfaces.contract import CONTRACT, as_document, schema
+        from .interop import findings_from_presidio, to_presidio
 
 __all__ = [
     "CONTRACT",

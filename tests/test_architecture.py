@@ -164,11 +164,40 @@ class TestLayering:
     def test_nothing_imports_the_outer_layers(self, path: Path) -> None:
         layer = layer_of(path)
         for target in imported_layers(path):
-            if target in NEVER_IMPORTED and layer not in {target, OUTERMOST}:
-                pytest.fail(
-                    f"{path.relative_to(PACKAGE_ROOT)} imports '{target}'. Nothing may "
-                    "depend on the CLI or the evaluation harness."
-                )
+            if target not in NEVER_IMPORTED:
+                continue
+            if layer in {target, OUTERMOST}:
+                continue
+            # The package root is the public surface and sits *outside*
+            # `interfaces` rather than beside it: `iriguchi.as_document` and
+            # `iriguchi.schema` are re-exports of things that live there, and
+            # `__getattr__` has resolved them through `importlib` since they
+            # were added -- invisible to this check, and real. Naming them in a
+            # `TYPE_CHECKING` block is what made the dependency visible, and a
+            # dependency that was always there should not fail the day it is
+            # written down.
+            #
+            # `evaluation` is still refused here. The root re-exports no part of
+            # the harness, and a facade that pulls the corpus into every
+            # `import iriguchi` would be a real cost paid by everybody.
+            if layer in PACKAGE_INIT_LAYERS and target != "evaluation":
+                continue
+            pytest.fail(
+                f"{path.relative_to(PACKAGE_ROOT)} imports '{target}'. Nothing may "
+                "depend on the CLI or the evaluation harness."
+            )
+
+    def test_the_package_root_still_may_not_reach_the_harness(self) -> None:
+        """The half of the exemption above that is not an exemption.
+
+        Written as its own test because a skip with a condition in it is a rule
+        somebody widens without noticing, and this is the part that would cost
+        every user something: `evaluation` imports the corpus, and a facade that
+        reaches it makes `import iriguchi` load 155 labelled prompts.
+        """
+        root = PACKAGE_ROOT / "__init__.py"
+        assert root.exists(), "the package root moved; this test is guarding nothing"
+        assert "evaluation" not in imported_layers(root)
 
     def test_the_documented_table_names_every_layer(self) -> None:
         """AGENTS.md describes this file. It has to keep describing it.

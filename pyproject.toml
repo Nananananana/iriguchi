@@ -33,6 +33,17 @@ dependencies = []
 # `ImportError` in a job nobody was touching. Two things named `dev` that mean
 # different things, with the tooling reading one each.
 [project.optional-dependencies]
+# Microsoft Presidio (MIT). The first scanner worth having that a user can
+# actually install -- mamori is not on PyPI (docs/feasibility.md F2), and until
+# it is, the built-in fallback's 63.5% miss rate had no followable remedy.
+#
+# An extra rather than a dependency: `pip install iriguchi` still pulls nothing,
+# and the `zero runtime dependencies` job proves it by installing the wheel with
+# no extras at all. Presidio brings spaCy and wants a language model of a few
+# hundred megabytes, which is a fair price for detection and an unfair one for a
+# router somebody wanted to read in an afternoon.
+presidio = ["presidio-analyzer>=2.2"]
+
 dev = [
     "pytest>=8",
     "pytest-cov",
@@ -166,6 +177,15 @@ disable_error_code = ["attr-defined", "unreachable"]
 
 [[tool.mypy.overrides]]
 module = "mamori.*"
+ignore_missing_imports = true
+
+# Optional adapters, both absent from the type-check environment on purpose:
+# checking against a library that is installed here and not for a user is how a
+# `[presidio]` extra grows a hard dependency nobody notices. `spacy` arrives
+# with presidio-analyzer and is named separately because the download guard
+# imports it directly.
+[[tool.mypy.overrides]]
+module = ["presidio_analyzer.*", "spacy.*"]
 ignore_missing_imports = true
 
 [tool.coverage.run]

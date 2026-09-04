@@ -4,9 +4,88 @@
 model you use, and decides — locally, deterministically, before a single byte
 leaves your machine — where each prompt is allowed to go.
 
-> **v0.1 is built and headless.** The router, the CLI, and a labelled corpus that
-> scores it — no GUI, no network, no model. The output below is real. See
-> [docs/README.md](docs/README.md) for what is not built yet.
+[![Licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](LICENSE)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%20%7C%203.13-blue.svg)](pyproject.toml)
+[![Runtime dependencies: 0](https://img.shields.io/badge/runtime%20dependencies-0-brightgreen.svg)](docs/adr/0015-what-zero-runtime-dependencies-promises.md)
+[![Architecture: enforced](https://img.shields.io/badge/architecture-enforced%20by%20CI-brightgreen.svg)](docs/adr/0010-the-layering-is-a-test.md)
+
+```python
+from iriguchi import route
+
+decision = route("Summarise this article.", local=True, external=True)
+decision.leaves_the_machine  # False -- it is easy enough for the local model
+decision.reasons[0].detail  # and it says why, every time
+```
+
+```console
+$ iriguchi route "Email the Q3 figures to tanaka@example.com"
+  route        LOCAL      nothing leaves this machine
+  sensitivity  restricted   (1 finding)
+  complexity   low
+
+  reasons
+    policy.prefer-local
+        complexity band low does not call for the larger model, and a local model is permitted
+
+  removed
+    external     restricted: 1 finding(s), the first from fallback.email-shape at 24-42; not permitted to leave
+  sent         nothing
+```
+
+No model call in the deciding path. No learned weights. No prompt leaves the
+machine to decide where the prompt should go.
+
+> **v0.1 is built and headless** — the router, the CLI, and a labelled corpus
+> that scores it. No GUI. [`docs/feasibility.md`](docs/feasibility.md) is the
+> honest account of what this design cannot currently do, including the half of
+> it that has no evidence yet.
+
+---
+
+## Install
+
+iriguchi is **not on PyPI yet**, so today it installs from a checkout. The
+command that will work when it is published is given beside each one, so nothing
+here is a promise you have to discover is false.
+
+```bash
+git clone https://github.com/Nananananana/iriguchi && cd iriguchi
+uv pip install -e .                 # will be: pip install iriguchi
+iriguchi --local --external demo
+```
+
+**Zero runtime dependencies.** A tool that sees every prompt you type is a tool
+whose dependency list is a threat model. There isn't one, and CI proves it by
+installing the wheel with no extras and asserting nothing came along.
+
+### Better detection, optional
+
+The built-in scanner has no model and **misses 63.5%** of the must-stay-local
+cases in the corpus — bare names, English names, company names, addresses. That
+is it working as specified, and it is not enough for most people.
+
+```bash
+uv pip install -e ".[presidio]"     # will be: pip install "iriguchi[presidio]"
+python -m spacy download en_core_web_lg
+iriguchi --scanner fallback+presidio route "..."
+```
+
+| scanner | missed findings | over-caution | needs |
+|---|---:|---:|---|
+| `fallback` | 63.5% | 15.7% | nothing |
+| `presidio` | 45.2% | | `[presidio]` + a spaCy model |
+| **`fallback+presidio`** | **27.9%** | 60.8% | the same |
+| `mamori` | 1.0%\* | | a sibling checkout — [not on PyPI](docs/feasibility.md) |
+
+\*on mamori's own corpus. Measured: [`docs/measurements.md`](docs/measurements.md).
+Run it yourself with `iriguchi --scanner <name> eval`.
+
+**Neither of the first two dominates the other**, which is why the composite
+exists rather than a recommendation to switch. Presidio finds `Katherine
+Whitfield` where the built-in rules find nothing; the built-in rules find
+`田中さん` where Presidio, running an English model, finds nothing. Running both
+is safe because sensitivity is a veto — a union of findings is at least as
+restrictive as either half.
 
 ---
 
@@ -297,15 +376,43 @@ and it is what a build can honestly gate on
 Every number in this repository is measured, ships with the script that produced
 it, and states what it does not say.
 
-## Trying it
+## Configuring it
+
+Both destinations default to **off**, which is the fail-safe value: somebody who
+has configured nothing gets refusals rather than a router quietly assuming a
+model exists.
 
 ```bash
-uv pip install -e ".[dev]" && iriguchi --local --external demo
+export IRIGUCHI_LOCAL=1                          # a local model exists
+export IRIGUCHI_LOCAL_URL=http://127.0.0.1:11434/v1
+export IRIGUCHI_LOCAL_MODEL=qwen2.5:3b
+iriguchi doctor                                  # what is missing, and what its absence costs
 ```
 
-Both destinations default to **off**, which is the fail-safe value: a person who
-has configured nothing gets refusals rather than a router quietly assuming a
-model exists. `iriguchi doctor` says what is missing and what its absence costs.
+Every setting is a flag as well as an environment variable, and an unknown
+`IRIGUCHI_*` key is **refused rather than ignored** — a typo that silently does
+nothing is worse than an error, because you would believe you had changed
+something.
+
+| | |
+|---|---|
+| `--scanner` | `fallback`, `presidio`, `fallback+presidio`, `mamori` |
+| `--estimator` | `rules` |
+| `IRIGUCHI_MODERATE_AT` / `IRIGUCHI_HIGH_AT` | where the bands begin. `python tools/calibrate.py --escalate 0.3` derives them from a target escalation rate instead of inventing a number |
+
+`iriguchi algorithms` prints every choice with **the trade it makes**, because a
+list of names is a menu with no prices.
+
+## Contributing
+
+```bash
+uv pip install -e ".[dev]" && uv run pytest && uv run lint-imports
+```
+
+The layering is a test, not a convention ([ADR-0010](docs/adr/0010-the-layering-is-a-test.md)):
+six `import-linter` contracts plus an AST check, and a change that breaks the
+architecture fails CI rather than review. Every number in a document is either
+recomputed by a test or dated and marked as recorded.
 
 ## Licence
 

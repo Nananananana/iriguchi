@@ -289,3 +289,82 @@ class TestTheExplanationWithNothingToExplain:
 
         assert _source_rank("routing") < _source_rank("policy")
         assert _source_rank("policy") < _source_rank("something-new")
+
+
+class TestTheScannerFlagIsActuallyUsed:
+    """`--scanner` was accepted by the parser and dropped by the merge.
+
+    Found while measuring: `iriguchi --scanner fallback+presidio eval` printed
+    **63.5% missed findings**, which is the built-in fallback's number. The flag
+    parsed, validated against the registry's `choices`, and then `_config`
+    reduced the whole of it to::
+
+        use_mamori=args.scanner == "mamori"
+
+    so every name except `mamori` was silently replaced by the default. A user
+    who selected a scanner got a different one, with nothing said -- which is
+    the exact outcome the registry's own refusal message calls *the worst
+    available*, promised in one module and broken in another.
+
+    The sharpest part is that `_config`'s docstring is about this bug. It
+    explains that `replace` was chosen over a constructor call because the
+    constructor "listed the three fields that existed when it was written, so
+    every field added afterwards would have been read from the environment and
+    then silently dropped". The flag was added afterwards and silently dropped.
+    """
+
+    @staticmethod
+    def _config_for(*argv: str) -> object:
+        from iriguchi.interfaces.cli.main import _config, build_parser
+
+        return _config(build_parser().parse_args(list(argv)))
+
+    def test_the_name_reaches_the_configuration(self) -> None:
+        assert self._config_for("--scanner", "fallback", "config").scanner == "fallback"  # type: ignore[attr-defined]
+
+    @pytest.mark.parametrize("name", ["fallback", "presidio", "fallback+presidio", "mamori"])
+    def test_every_registered_name_survives_the_merge(self, name: str) -> None:
+        """Parametrized over the registry's own names rather than over a list
+        typed here, so a scanner added later is covered by this without anybody
+        remembering to come back."""
+        from iriguchi.infrastructure.registry import SCANNERS
+
+        assert name in SCANNERS, f"{name} is not registered; this test is guarding nothing"
+        config = self._config_for("--scanner", name, "config")
+        assert config.scanner_name() == name, (  # type: ignore[attr-defined]
+            f"--scanner {name} produced {config.scanner_name()!r}"  # type: ignore[attr-defined]
+        )
+
+    def test_no_flag_leaves_the_environment_alone(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """The other half of the same defect. A merge that writes a field
+        unconditionally overwrites whatever the environment said."""
+        monkeypatch.setenv("IRIGUCHI_SCANNER", "fallback")
+        assert self._config_for("config").scanner == "fallback"  # type: ignore[attr-defined]
+
+    def test_a_flag_beats_the_environment(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("IRIGUCHI_SCANNER", "fallback")
+        assert self._config_for("--scanner", "mamori", "config").scanner_name() == "mamori"  # type: ignore[attr-defined]
+
+    @pytest.mark.parametrize("command", ["config", "doctor", "algorithms"])
+    def test_every_surface_names_the_same_scanner(self, command: str) -> None:
+        """The expression `"mamori" if use_mamori else (scanner or default)` was
+        written out **four times** -- twice in `config.py`, twice in the CLI --
+        and the CLI's merge fed three of them a value it had thrown away. Four
+        copies of *which algorithm did the user pick* is how a flag comes to be
+        accepted and ignored.
+
+        There is one copy now, and this is what notices if a fifth appears: a
+        surface that disagrees with the others about what is selected.
+        """
+        import io
+
+        from iriguchi.interfaces.cli.main import main
+
+        out = io.StringIO()
+        main(["--local", "--scanner", "fallback", command], out=out)
+        report = out.getvalue()
+        assert "fallback" in report
+        # `presidio` is registered and not selected. A surface reading a stale
+        # field would show the default, so this only passes if the flag landed.
+        selected = self._config_for("--scanner", "presidio", command)
+        assert selected.scanner_name() == "presidio", command  # type: ignore[attr-defined]
