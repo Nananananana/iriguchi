@@ -1,2 +1,12 @@
+# Normalise line endings on the way into the repository.
+#
+# Without this, every commit from Windows tripped the `mixed-line-ending`
+# pre-commit hook, which rewrote the files and failed, so each commit had to be
+# made twice. The hook was right and the fix belongs here: git decides what is
+# stored, the working tree keeps whatever the platform wants.
 * text=auto eol=lf
+
+# Not text. `text=auto` guesses well and a wrong guess corrupts these.
 *.png binary
+*.jpg binary
+*.ico binary
