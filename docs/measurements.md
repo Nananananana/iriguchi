@@ -369,6 +369,81 @@ the wrong direction for portability: the *labels* are the hand that could see
 these rules. Recorded as `borrowed:mamori`, that was one word for two hands, and
 it named the flattering one.
 
+## What installing Presidio buys
+
+Measured 2026-09-04, against presidio-analyzer 2.2 with `en_core_web_lg`, in a
+clean venv holding iriguchi and Presidio and nothing else. Reproduce with
+`iriguchi --scanner <name> eval`.
+
+| scanner | missed findings | over-caution |
+|---|---:|---:|
+| `fallback` | 63.5% | 15.7% |
+| `presidio` | 45.2% | |
+| **`fallback+presidio`** | **27.9%** | **60.8%** |
+
+### Neither scanner dominates the other
+
+This is the finding, and it is the reason `fallback+presidio` exists rather than
+a recommendation to switch:
+
+    "Please summarise the memo that Katherine Whitfield sent."
+        presidio  ->  presidio.person          fallback  ->  nothing
+
+    "Acme Corporation の田中さんに連絡してください"
+        presidio  ->  nothing                  fallback  ->  fallback.japanese-honorific
+
+Presidio has spaCy NER and finds English names the built-in rules were never
+going to reach. The built-in rules have a Japanese honorific pattern and
+Presidio, running an English model, does not. **A user who read "Presidio is the
+better scanner" and selected it would have made their Japanese detection
+worse** — 45.2% against 63.5% overall, and strictly worse on the cases the
+fallback was written for.
+
+Running both is sound because sensitivity is a **veto** ([ADR-0003](adr/0003-sensitivity-is-a-veto.md)):
+findings remove destinations and never add one, so a union is at least as
+restrictive as either member. There is no combination rule to get wrong, no
+weight to tune, and no way for two scanners to disagree.
+
+### The over-caution is the price, and it is not tuned away
+
+60.8% of may-leave prompts are held back by the composite, against 15.7% for the
+fallback alone. Where it comes from, over the 51 may-leave cases:
+
+| entity | cases it fires on | |
+|---|---:|---:|
+| `DATE_TIME` | 14 | 27.5% |
+| `PERSON` | 6 | 11.8% |
+| `LOCATION` | 4 | 7.8% |
+| `URL` | 3 | 5.9% |
+| `IP_ADDRESS`, `NRP` | 1 each | 2.0% |
+
+`DATE_TIME` is the obvious thing to remove — *"by Friday"* is not a reason to
+keep a prompt off the network. So it was removed, and measured:
+
+| entities | missed findings | over-caution |
+|---|---:|---:|
+| every one Presidio supports | **27.9%** | 60.8% |
+| minus `DATE_TIME` | 32.7% | 41.2% |
+| minus `DATE_TIME`, `URL` | 37.5% | 37.3% |
+| minus `DATE_TIME`, `URL`, `LOCATION`, `NRP` | 44.2% | 27.5% |
+
+**Dropping `DATE_TIME` costs 4.8 points of coverage.** Some must-stay-local
+cases are caught by nothing else — a date of birth is a date. Every row is a
+real trade and none of them is free.
+
+So the default is every entity, which is the fail-closed one, and `entities=`
+exists for somebody who has read this table. Picking a row here on the user's
+behalf would be iriguchi deciding how much detection their prompts are worth.
+
+### What this does not say
+
+The corpus is 155 cases, 134 of them borrowed from mamori's PII samples. It is a
+good test of a *detector* and, as [`feasibility.md`](feasibility.md) F1 records,
+no test at all of the complexity axis. These numbers describe Presidio on
+**these** prompts, most of which are short strings built to contain personal
+data, which is the shape Presidio is strongest on. A miss rate on somebody's
+real work is not this number.
+
 ## What this is not measured against
 
 RouterBench (405k precomputed inferences, 11 models across 7 tasks) and
