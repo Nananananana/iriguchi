@@ -23,17 +23,12 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from .application.routing import PromptRouter
+from .domain.complexity import DEFAULT_THRESHOLDS, Thresholds
 from .domain.destination import Destination
 from .errors import ConfigurationError
 from .infrastructure.channels.mamori_channel import MamoriChannel
-from .infrastructure.estimators.rules import RulesEstimator
 from .infrastructure.models.openai_compatible import OpenAICompatibleModel
-from .infrastructure.scanners.fallback import FallbackScanner
-from .infrastructure.scanners.mamori_scanner import (
-    MamoriScanner,
-    SiblingState,
-    mamori_state,
-)
+from .infrastructure.registry import ESTIMATORS, SCANNERS
 
 __all__ = ["ENV_PREFIX", "IriguchiConfig"]
 
@@ -55,6 +50,16 @@ KNOWN_KEYS = frozenset(
         "EXTERNAL_URL",
         "EXTERNAL_MODEL",
         "EXTERNAL_KEY",
+        # Which algorithm sits behind each port. Names, validated against the
+        # registry and refused when unknown with the alternatives listed -- the
+        # way a modern library names an estimator rather than exposing a boolean.
+        "SCANNER",
+        "ESTIMATOR",
+        # Where the bands begin. Numbers an operator should not have to invent:
+        # `python tools/calibrate.py --escalate 0.3` derives them from a target
+        # rate against the corpus, which is the shape RouteLLM argues for.
+        "MODERATE_AT",
+        "HIGH_AT",
     }
 )
 
@@ -107,6 +112,14 @@ class IriguchiConfig:
     #: Never printed. See `SECRET_KEYS`.
     external_key: str = field(default="", repr=False)
 
+    #: Which algorithm answers each axis. Empty means the registry's default,
+    #: which is deliberately not "the best one installed" -- see `registry.py`.
+    scanner: str = ""
+    estimator: str = ""
+    #: Where the bands begin. Empty means the domain's defaults.
+    moderate_at: str = ""
+    high_at: str = ""
+
     @property
     def available(self) -> frozenset[Destination]:
         destinations = set()
@@ -146,7 +159,43 @@ class IriguchiConfig:
             external_url=found.get("EXTERNAL_URL", ""),
             external_model=found.get("EXTERNAL_MODEL", ""),
             external_key=found.get("EXTERNAL_KEY", ""),
+            scanner=found.get("SCANNER", ""),
+            estimator=found.get("ESTIMATOR", ""),
+            moderate_at=found.get("MODERATE_AT", ""),
+            high_at=found.get("HIGH_AT", ""),
         )
+
+    def thresholds(self) -> Thresholds:
+        """Where the bands begin, from settings or from the domain's defaults.
+
+        A number that will not parse is refused rather than ignored, and the
+        message says which setting -- the same rule as an unknown key. Somebody
+        who wrote `IRIGUCHI_HIGH_AT=hight` has changed nothing and believes they
+        changed something.
+        """
+        supplied: dict[str, float] = {}
+        for name, raw in (("moderate_at", self.moderate_at), ("high_at", self.high_at)):
+            if not raw.strip():
+                continue
+            try:
+                supplied[name] = float(raw)
+            except ValueError:
+                raise ConfigurationError(
+                    f"{ENV_PREFIX}{name.upper()}={raw!r} is not a number. Bands begin "
+                    f"at a score between 0 and 1; `python tools/calibrate.py` derives "
+                    f"one from a target escalation rate."
+                ) from None
+        try:
+            # Spelled out rather than `**supplied`, because `short_circuit_at`
+            # is an `int` and a `dict[str, float]` splat makes mypy right to
+            # complain: the two settings here are floats and the third is not
+            # configurable, and that is worth reading rather than inferring.
+            return Thresholds(
+                moderate_at=supplied.get("moderate_at", DEFAULT_THRESHOLDS.moderate_at),
+                high_at=supplied.get("high_at", DEFAULT_THRESHOLDS.high_at),
+            )
+        except ValueError as bad:
+            raise ConfigurationError(str(bad)) from bad
 
     def local_answerer(self) -> OpenAICompatibleModel:
         """The local model, or a refusal naming what is missing.
@@ -192,8 +241,15 @@ class IriguchiConfig:
                 finding what the fallback cannot, and quietly giving them the
                 fallback instead would be the worst available outcome.
         """
-        scanner = MamoriScanner() if self.use_mamori else FallbackScanner()
-        return PromptRouter(scanner=scanner, estimator=RulesEstimator())
+        # `use_mamori` predates the registry and still wins, because
+        # `--scanner mamori` is a flag people already use. It is a shorthand for
+        # a name now rather than a second mechanism.
+        name = "mamori" if self.use_mamori else (self.scanner or SCANNERS.default)
+        return PromptRouter(
+            scanner=SCANNERS.build(name),
+            estimator=ESTIMATORS.build(self.estimator or ESTIMATORS.default),
+            thresholds=self.thresholds(),
+        )
 
     def channel(self) -> MamoriChannel:
         """The escalation channel this configuration describes.
@@ -236,14 +292,19 @@ class IriguchiConfig:
         # printing "not installed" for the second tells somebody to install what
         # they already have. Same defect as `policy.prefer-local` had: a wrong
         # stated reason, sending the reader to fix the wrong thing.
-        if self.use_mamori:
-            scanner = "mamori"
-        elif mamori_state()[0] is SiblingState.AVAILABLE:
-            scanner = "built-in fallback (mamori is installed but not selected)"
-        elif mamori_state()[0] is SiblingState.BROKEN:
-            scanner = "built-in fallback (mamori is installed and will not import)"
+        chosen = "mamori" if self.use_mamori else (self.scanner or SCANNERS.default)
+        if chosen != SCANNERS.default:
+            scanner = chosen
         else:
-            scanner = "built-in fallback (mamori is not installed)"
+            # Asked of the registry rather than of the adapter. This module used
+            # to import `mamori_scanner` to answer it, which made `interfaces ->
+            # config -> mamori_scanner -> mamori` a second path the contract had
+            # to forgive. **One module names the sibling now**, and everything
+            # else asks it -- which is one fewer `ignore_imports` line rather
+            # than one more.
+            usable, detail = SCANNERS.describe("mamori").available()
+            note = "installed but not selected" if usable else detail
+            scanner = f"built-in fallback ({note})"
 
         lines = [
             f"local model       {self._endpoint(self.local, self.local_url, self.local_model)}",

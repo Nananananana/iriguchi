@@ -12,6 +12,18 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - ADR-0015: what "zero runtime dependencies" promises. It is about the Python
   dependency graph and says nothing about the OS package graph, and `tkinter`
   is where those differ. The wheel job now **reports** what a GUI would find.
+- `tools/mutate.py`: mutation testing on the standard library. The first run
+  scored **62.1%** on the domain and the survivors named two real gaps — nothing
+  asserted the values were immutable, and neither band threshold was tested at
+  the threshold. **75.9%** after.
+- **Algorithms are chosen by name.** `IRIGUCHI_SCANNER`, `IRIGUCHI_ESTIMATOR`,
+  `--scanner`, `--estimator`, and `iriguchi algorithms` to see what each one
+  costs. An unknown name is refused with the alternatives listed; "there is no
+  such algorithm" and "you do not have it" are different sentences.
+- **The bands are a value, not three constants.** `Thresholds`, with
+  `IRIGUCHI_MODERATE_AT` and `IRIGUCHI_HIGH_AT`, and
+  `python tools/calibrate.py --escalate 0.3` to derive them from a target rate
+  rather than invent a 0.7 — RouteLLM's framing, without its learned score.
 - The design: `docs/proposals/0001-the-design.md`, written before any code
   exists and kept that way.
 - Ten architecture decision records, `docs/adr/0001` through `0010`.

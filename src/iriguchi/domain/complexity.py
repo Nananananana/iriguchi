@@ -28,7 +28,7 @@ from math import prod
 
 from .span import Span
 
-__all__ = ["Complexity", "ComplexityBand", "Signal", "SignalKind"]
+__all__ = ["Complexity", "ComplexityBand", "Signal", "SignalKind", "Thresholds"]
 
 #: Score at or above which a prompt is no longer obviously easy.
 _MODERATE_AT = 0.3
@@ -94,6 +94,57 @@ class ComplexityBand(Enum):
 
 
 @dataclass(frozen=True, slots=True)
+class Thresholds:
+    """Where the bands begin, as a value rather than three module constants.
+
+    **This is the one knob the routing literature agrees is worth exposing.**
+    RouteLLM (Apache-2.0, LMSYS) frames a router as a score plus a cost
+    threshold α, calibrated so that a chosen fraction of queries reaches the
+    strong model — because *"send 30% to the big one"* is a sentence an operator
+    can hold an opinion about and *"0.7"* is not. `tools/calibrate.py` turns a
+    target rate into these numbers against the corpus.
+
+    They stay in the domain because the band is the domain's decision; what
+    moves outward is only the choice of numbers. A `Thresholds` with the
+    defaults is exactly the behaviour that shipped before this type existed.
+
+    `__post_init__` refuses an ordering that would make a band unreachable.
+    A `moderate_at` above `high_at` is not a strange configuration, it is one
+    where `MODERATE` can never be returned — and a band nothing can produce is
+    the same shape as a check that cannot fail.
+    """
+
+    #: The first score that is not `LOW`. Inclusive, and unobservable at the
+    #: shipped weights -- see `tests/test_what_the_mutants_survived.py`.
+    moderate_at: float = 0.3
+    #: The first score that is `HIGH`.
+    high_at: float = 0.7
+    #: How many escalating signals reach the top band regardless of score.
+    short_circuit_at: int = 2
+
+    def __post_init__(self) -> None:
+        if not 0.0 <= self.moderate_at <= 1.0:
+            raise ValueError(f"moderate_at is {self.moderate_at}; a score is in [0, 1]")
+        if not 0.0 <= self.high_at <= 1.0:
+            raise ValueError(f"high_at is {self.high_at}; a score is in [0, 1]")
+        if self.moderate_at > self.high_at:
+            raise ValueError(
+                f"moderate_at {self.moderate_at} is above high_at {self.high_at}, "
+                f"which makes MODERATE unreachable. A band nothing can produce is "
+                f"worse than a band nobody wanted."
+            )
+        if self.short_circuit_at < 1:
+            raise ValueError(
+                f"short_circuit_at is {self.short_circuit_at}; at zero every "
+                f"estimate would short-circuit to HIGH, including an empty one."
+            )
+
+
+#: What shipped before `Thresholds` existed, and what is used when nobody says.
+DEFAULT_THRESHOLDS = Thresholds()
+
+
+@dataclass(frozen=True, slots=True)
 class Complexity:
     """What an estimator concluded."""
 
@@ -106,7 +157,9 @@ class Complexity:
     short_circuited: bool = False
 
     @classmethod
-    def from_signals(cls, signals: Iterable[Signal]) -> Complexity:
+    def from_signals(
+        cls, signals: Iterable[Signal], thresholds: Thresholds | None = None
+    ) -> Complexity:
         """Combine signals into a band.
 
         Weights combine as independent evidence -- ``1 - prod(1 - w)`` -- rather
@@ -122,15 +175,16 @@ class Complexity:
         lands in the middle. "Compare these two papers and prove the third's
         lemma" is two small numbers and one very hard request.
         """
+        cut = thresholds if thresholds is not None else DEFAULT_THRESHOLDS
         ordered = tuple(sorted(signals, key=lambda s: (s.rule, s.kind.value)))
         score = 1.0 - prod(1.0 - signal.weight for signal in ordered)
 
         escalating = sum(1 for signal in ordered if signal.escalating)
-        short_circuited = escalating >= _SHORT_CIRCUIT_AT
+        short_circuited = escalating >= cut.short_circuit_at
 
-        if short_circuited or score >= _HIGH_AT:
+        if short_circuited or score >= cut.high_at:
             band = ComplexityBand.HIGH
-        elif score >= _MODERATE_AT:
+        elif score >= cut.moderate_at:
             band = ComplexityBand.MODERATE
         else:
             band = ComplexityBand.LOW
