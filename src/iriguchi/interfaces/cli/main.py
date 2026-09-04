@@ -185,7 +185,13 @@ def _config(args: argparse.Namespace) -> IriguchiConfig:
             )
             if value is not None
         },
-        use_mamori=args.scanner == "mamori",
+        # `--scanner` used to arrive here as `use_mamori=args.scanner ==
+        # "mamori"` and nothing else, so every other name -- including every
+        # name the registry offers -- was accepted by the parser and then
+        # replaced by the default with nothing said. A user who selected a
+        # scanner got a different one, which the registry's own refusal message
+        # calls the worst available outcome.
+        **({"scanner": args.scanner} if getattr(args, "scanner", None) else {}),
         **({"estimator": args.estimator} if getattr(args, "estimator", None) else {}),
     )
 
@@ -359,7 +365,7 @@ def cmd_algorithms(config: IriguchiConfig, out: TextIO) -> int:
     things.
     """
     for title, registry, chosen in (
-        ("scanners", SCANNERS, "mamori" if config.use_mamori else (config.scanner or "")),
+        ("scanners", SCANNERS, config.scanner_name()),
         ("estimators", ESTIMATORS, config.estimator),
     ):
         print(f"\n  {title}", file=out)
@@ -403,7 +409,7 @@ def cmd_doctor(config: IriguchiConfig, out: TextIO) -> int:
             "is refused. That is fail-closed working as intended (ADR-0002), and it is "
             "also most of what you would want to ask."
         )
-    if config.use_mamori:
+    if config.scanner_name() == "mamori":
         lines.append(
             "scanner: mamori. It misses far less than the fallback -- 1.0% against "
             "67.3% on its own corpus -- and over-detects more, which is the trade. "

@@ -55,9 +55,10 @@ class TestTheRegistry:
         relying on it, and quietly giving them another is the worst available
         outcome -- the same rule as an unknown setting."""
         with pytest.raises(ConfigurationError, match="no scanner called"):
-            SCANNERS.build("presidio")
-        with pytest.raises(ConfigurationError, match=r"\['fallback', 'mamori'\]"):
-            SCANNERS.build("presidio")
+            SCANNERS.build("spacy")
+        expected = r"\['fallback', 'fallback\+presidio', 'mamori', 'presidio'\]"
+        with pytest.raises(ConfigurationError, match=expected):
+            SCANNERS.build("spacy")
 
     def test_unknown_and_unavailable_are_different_sentences(self) -> None:
         """ "There is no such algorithm" and "you do not have that one" send a
@@ -158,7 +159,11 @@ class TestTheThresholds:
     def test_a_name_is_or_is_not_in_the_registry(self) -> None:
         """`in`, so a caller can ask before building rather than by catching."""
         assert "fallback" in SCANNERS
-        assert "presidio" not in SCANNERS
+        assert "presidio" in SCANNERS
+        # `presidio` used to be the example here of a name nobody registered,
+        # which is a fine example right up until somebody registers it. A test
+        # whose negative case is a plausible future feature expires quietly.
+        assert "spacy" not in SCANNERS
 
     def test_a_moderate_threshold_outside_the_range_is_refused_too(self) -> None:
         """Both ends checked, not just `high_at`. A validator that guards one

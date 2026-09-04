@@ -132,6 +132,25 @@ class Registry[T]:
         return choice.build()
 
 
+def _fallback_and_presidio() -> SensitivityScanner:
+    from .scanners.composite import CompositeScanner
+    from .scanners.presidio_scanner import PresidioScanner
+
+    return CompositeScanner([FallbackScanner(), PresidioScanner()])
+
+
+def _presidio_scanner() -> SensitivityScanner:
+    from .scanners.presidio_scanner import PresidioScanner
+
+    return PresidioScanner()
+
+
+def _presidio_state() -> tuple[bool, str]:
+    from .scanners.presidio_scanner import presidio_state
+
+    return presidio_state()
+
+
 def _mamori_scanner() -> SensitivityScanner:
     from .scanners.mamori_scanner import MamoriScanner
 
@@ -169,6 +188,36 @@ SCANNERS: Registry[SensitivityScanner] = Registry(
                 "external route, a false negative costs a leak."
             ),
             build=FallbackScanner,
+        ),
+        "presidio": Choice(
+            name="presidio",
+            summary="Microsoft Presidio (MIT), spaCy-backed NER plus pattern recognisers",
+            trade=(
+                "The only scanner worth having that a user can actually install: "
+                '`pip install "iriguchi[presidio]"` plus a spaCy model, which is '
+                "roughly 600MB and several seconds of import. It finds the names, "
+                "organisations and locations the built-in scanner misses, and it "
+                "emits low-confidence guesses that are filtered by Presidio's own "
+                "`score_threshold` rather than by anything here -- iriguchi has no "
+                "confidence to interpret and refuses to invent one."
+            ),
+            build=_presidio_scanner,
+            available=_presidio_state,
+        ),
+        "fallback+presidio": Choice(
+            name="fallback+presidio",
+            summary="both of the above, findings unioned -- the most detection available on PyPI",
+            trade=(
+                "Costs whatever Presidio costs and finds strictly more than "
+                "either member, because a measurement said the obvious ranking "
+                "was wrong: Presidio finds the English names the built-in "
+                "scanner misses and misses the Japanese honorifics it catches. "
+                "Sound only because sensitivity is a veto -- a union of findings "
+                "is at least as restrictive as either half, so there is no "
+                "combination rule here to get wrong."
+            ),
+            build=_fallback_and_presidio,
+            available=_presidio_state,
         ),
         "mamori": Choice(
             name="mamori",

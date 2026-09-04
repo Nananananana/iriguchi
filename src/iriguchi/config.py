@@ -244,7 +244,7 @@ class IriguchiConfig:
         # `use_mamori` predates the registry and still wins, because
         # `--scanner mamori` is a flag people already use. It is a shorthand for
         # a name now rather than a second mechanism.
-        name = "mamori" if self.use_mamori else (self.scanner or SCANNERS.default)
+        name = self.scanner_name()
         return PromptRouter(
             scanner=SCANNERS.build(name),
             estimator=ESTIMATORS.build(self.estimator or ESTIMATORS.default),
@@ -266,6 +266,22 @@ class IriguchiConfig:
                 protecting an outbound prompt is not sending it.
         """
         return MamoriChannel()
+
+    def scanner_name(self) -> str:
+        """Which scanner this configuration selects, by name.
+
+        One expression, in one place. It used to be written out twice -- once
+        where the router is built and once where the report is rendered -- and
+        two copies of *which algorithm did the user pick* is how the CLI came to
+        accept `--scanner` and then use a different one.
+
+        `use_mamori` is still honoured ahead of `scanner` because it is the
+        older spelling and somebody may still be setting it; with both given,
+        the more specific one wins.
+        """
+        if self.use_mamori:
+            return "mamori"
+        return self.scanner or SCANNERS.default
 
     @staticmethod
     def _protection() -> tuple[bool, str]:
@@ -327,7 +343,7 @@ class IriguchiConfig:
         # protect a prompt on the way out. Same fact, two consequences, and only
         # one of them was being reported.
         protects, protection = self._protection()
-        chosen = "mamori" if self.use_mamori else (self.scanner or SCANNERS.default)
+        chosen = self.scanner_name()
         if chosen != SCANNERS.default:
             scanner = chosen
         else:
