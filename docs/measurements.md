@@ -107,19 +107,36 @@ entropy; they are the half that catches these at all.
 
 ## The router, over the corpus
 
-155 cases: 21 generated with adversaries planted (ADR-0007), 134 borrowed from
-mamori's labelled detection corpus. Run with `FallbackScanner` and
-`RulesEstimator`, no mamori installed, no model, no network.
+197 cases: 21 generated with adversaries planted (ADR-0007), 134 borrowed from
+mamori's labelled detection corpus, and 42 **requests** written to measure the
+complexity axis (see below). Run with `FallbackScanner` and `RulesEstimator`, no
+mamori installed, no model, no network.
 
-| | whole | generated | borrowed |
-|---|---|---|---|
-| cases | 155 | 21 | 134 |
-| **missed findings** | **63.5%** | | |
-| leak rate | 0.0% | 0.0% | 0.0% |
-| over-caution rate | 15.7% | 20.0% | 13.9% |
-| route accuracy | 98.7% | 90.5% | 100% |
-| band accuracy | 96.1% | 81.0% | 98.5% |
-| decision latency | 0.03 ms median | | 3.07 ms slowest |
+| | whole | generated | borrowed | requests |
+|---|---|---|---|---|
+| cases | 197 | 21 | 134 | 42 |
+| **missed findings** | **61.7%** | | | 0.0% |
+| leak rate | 0.0% | 0.0% | 0.0% | 0.0% |
+| over-caution rate | 8.9% | 20.0% | 13.9% | 0.0% |
+| route accuracy | 93.9% | 90.5% | 100% | 76.2% |
+| band accuracy | 84.8% | 81.0% | 98.5% | **42.9%** |
+| decision latency | 0.03 ms median | | | 3.10 ms slowest |
+
+### Read the band row across, not down
+
+**84.8% is the most misleading number on this page.** It is an average over
+three corpora that are not measuring the same thing, and the 134 that dominate
+it are 34-character PII strings where the answer is `low` every time -- so the
+estimator scores 98.5% there by having almost nothing to decide.
+
+On the 42 prompts written to actually exercise the axis it scores **42.9%,
+against 35.7% for always answering `low`.** That is the number that describes
+what the complexity axis does, and it is the reason
+[`feasibility.md`](feasibility.md) F1 exists.
+
+This is the same shape as the leak-rate finding below, one axis over: an
+aggregate that looks healthy because the easy cases outnumber the informative
+ones. The fix in both cases was to publish the number that can go wrong.
 
 ### Where the time went, and where it goes now
 
@@ -187,6 +204,12 @@ finding — and requiring the captured value not to begin with kana or kanji
 bought it back. Net: strictly better on both axes.
 
 ### 63.5% is not a bug, and it is not being fixed here
+
+> **Scope.** The figures in this section were measured on the 155-case corpus,
+> before `requests.json` added 42 more. They are kept as recorded rather than
+> re-derived, the way the model rows are. The current whole-corpus figure is
+> **61.7%**, and the scanner comparison that matters to a user today is in
+> [What installing Presidio buys](#what-installing-presidio-buys).
 
 The fallback scanner cannot find a name without an honorific, an English name, a
 company name or an address. mamori's corpus is full of all four. **63.5% is the
@@ -409,9 +432,17 @@ clean venv holding iriguchi and Presidio and nothing else. Reproduce with
 
 | scanner | missed findings | over-caution |
 |---|---:|---:|
-| `fallback` | 63.5% | 15.7% |
-| `presidio` | 45.2% | |
-| **`fallback+presidio`** | **27.9%** | **60.8%** |
+| `fallback` | 61.7% | 8.9% |
+| `presidio` | 44.9% | 35.6% |
+| **`fallback+presidio`** | **27.1%** | **41.1%** |
+
+Re-measured on the 197-case corpus. The composite's over-caution fell from 60.8%
+to 41.1% when `requests.json` landed, and that is a real result rather than an
+improvement to the scanner: the 42 new cases are ordinary work requests with
+almost nothing in them to object to, so a detector that over-fires had 42 more
+chances to stay quiet. **Over-caution is a rate over the may-leave cases, and
+which prompts those are is a property of the corpus.** The entity breakdown below
+was taken on the earlier 155 and is kept as recorded.
 
 ### Neither scanner dominates the other
 

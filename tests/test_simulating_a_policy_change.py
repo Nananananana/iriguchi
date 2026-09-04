@@ -48,13 +48,21 @@ class TestItMeasuresTheChange:
         _, output, _ = run("--marker-weight", "complexity.multi-step=0.8")
         assert "did not leave this machine now would" in output
 
-    def test_a_change_that_moves_nothing_says_so(self) -> None:
-        """`--high-at 0.5` moves nothing on this corpus, which is F1 restated
-        rather than a broken simulator -- and the report has to be able to say
-        *nothing happened* without looking like a failure."""
+    def test_a_barely_moving_change_reports_a_small_number(self) -> None:
+        """`--high-at 0.5` moved **nothing at all** until `requests.json`
+        landed, which was F1 in one line: no prompt in the corpus sat in the
+        band a threshold change could reach.
+
+        It moves one now. The assertion is on the shape of the report rather
+        than on the count, because the count is a property of the corpus and
+        this test is about the simulator being able to describe a small change
+        without it looking like a failure.
+        """
+        from iriguchi.evaluation.dataset import load_corpus
+
         code, output, _ = run("--high-at", "0.5")
         assert code == 0
-        assert "0 of 155" in output
+        assert f"of {len(load_corpus())} prompts change route" in output
 
     def test_a_quieter_marker_keeps_prompts_home(self) -> None:
         """The other direction, so the report is not only able to describe

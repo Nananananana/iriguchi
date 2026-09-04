@@ -2,7 +2,7 @@
 
 The most common thing a person already has, when they arrive here, is a
 **Presidio analyzer**. They have tuned recognizers, they trust the output, and
-being told to throw it away and use a built-in scanner that misses 63.5% of
+being told to throw it away and use a built-in scanner that misses 61.7% of
 must-stay-local cases is not an offer.
 
 So: bring your results, keep your analyzer.

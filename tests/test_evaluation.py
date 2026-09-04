@@ -349,9 +349,17 @@ class TestTheCorpusShipsInTheWheel:
 
         assert DATA_DIR.is_relative_to(Path(iriguchi.__file__).parent)
 
-    def test_both_files_are_there(self) -> None:
+    def test_every_case_file_is_there(self) -> None:
+        """Named rather than counted, and a superset check would be no check --
+        a file that stops shipping is exactly what this catches.
+
+        The set is edited when a file is added, on purpose. `requests.json`
+        arrived and this went red, which is the whole mechanism: a corpus that
+        can grow without anything noticing is a corpus whose published numbers
+        drift silently.
+        """
         names = {path.name for path in DATA_DIR.glob("*.json")}
-        assert names == {"generated.json", "borrowed-mamori.json"}
+        assert names == {"generated.json", "borrowed-mamori.json", "requests.json"}
 
 
 class TestProvenanceIsWrittenDownBeforeItIsGuessed:

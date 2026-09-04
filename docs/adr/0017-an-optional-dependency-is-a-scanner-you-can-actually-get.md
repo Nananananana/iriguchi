@@ -7,13 +7,13 @@
 Two facts sat next to each other for a long time without being read together.
 
 The first is in [`measurements.md`](../measurements.md): the built-in fallback
-scanner **misses 63.5%** of the must-stay-local cases. That document argues,
+scanner **misses 61.7%** of the must-stay-local cases. That document argues,
 correctly, that this is the fallback working as specified rather than a bug — it
 has no model, and mamori's corpus is full of bare names, English names, company
 names and addresses.
 
 The second is in [`feasibility.md`](../feasibility.md) F2: **mamori is a 404 on
-PyPI.** The remedy iriguchi printed beside that 63.5% was *install mamori*, and
+PyPI.** The remedy iriguchi printed beside that number was *install mamori*, and
 the command it printed was `uv pip install -e ../mamori` — a relative path that
 resolves on a machine with two checkouts side by side, which is one machine.
 
@@ -47,9 +47,9 @@ rather than chosen in advance.
 
 | scanner | missed findings | over-caution |
 |---|---:|---:|
-| `fallback` | 63.5% | 15.7% |
-| `presidio` | 45.2% | |
-| **`fallback+presidio`** | **27.9%** | **60.8%** |
+| `fallback` | 61.7% | 8.9% |
+| `presidio` | 44.9% | 35.6% |
+| **`fallback+presidio`** | **27.1%** | **41.1%** |
 
 Presidio finds `Katherine Whitfield` where the fallback finds nothing. The
 fallback finds `田中さん` where Presidio, running an English model, finds

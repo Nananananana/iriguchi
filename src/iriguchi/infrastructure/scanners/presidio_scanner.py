@@ -1,6 +1,6 @@
 """Microsoft Presidio as a `SensitivityScanner`.
 
-The second real answer to the built-in scanner's **63.5% miss rate**, and the
+The second real answer to the built-in scanner's **61.7% miss rate**, and the
 first one a user can actually install: `pip install "iriguchi[presidio]"`.
 mamori is not on PyPI (`docs/feasibility.md` F2), so until it is, this is the
 only way somebody who is not the author gets detection worth having.
