@@ -164,6 +164,16 @@ Taken from `kiseki`, `mamori` and `tsumugi`, which paid for them.
   and missing in CI, and the failure is an `ImportError` in a job nobody was
   changing. Add development dependencies to `[project.optional-dependencies]`
   by hand, and there is deliberately no second list to choose between.
+- **`uv run pytest`, without `-q`.** `addopts` already carries one, so adding
+  another makes it `-qq` and the *"N passed"* line disappears — leaving a row of
+  dots that looks identical for 12 tests and for 1285. Every "the suite passes"
+  in this session was read off that row. mamori found it in their own workflow
+  and passed it on.
+- **A green run should mean the same thing every time.** `hypothesis` draws
+  fresh inputs per run, so a property failing on one input in six passes most
+  runs and a green CI is a *sample*. CI uses a derandomized profile with more
+  examples; a developer's machine stays random and the example database carries
+  anything it finds back as a regression.
 - **Two questions about a check, not one.** *How many files did the type checker
   see* is the first, and widening `files` answered it. *How many of those can a
   user see* is the second, and `py.typed` is what answers that: without the

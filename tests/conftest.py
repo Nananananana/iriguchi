@@ -20,11 +20,31 @@ promise is that it did not use it.
 
 from __future__ import annotations
 
+import os
 import socket
 from collections.abc import Iterator
 from typing import Any, NoReturn
 
 import pytest
+from hypothesis import settings
+
+# A green run should mean the same thing every time.
+#
+# `hypothesis` draws fresh inputs on every run, so a property that fails on one
+# input in six passes most runs -- and **a green CI is then a sample, not a
+# result.** mamori measured their own version of this today: a check they had
+# just written went red on 2 of 12 poisoned runs, and twelve passing runs read
+# as "the property holds".
+#
+# So CI is derandomized and explores more, and a developer's machine stays
+# random. The trade is stated rather than hidden: CI can no longer *discover* a
+# counterexample it has not seen, and in exchange a green CI run is reproducible
+# and a red one is reproducible too. Exploration moves to the machine where
+# somebody is watching, and `hypothesis`'s example database carries anything it
+# finds back into CI as a regression.
+settings.register_profile("ci", derandomize=True, max_examples=400)
+settings.register_profile("local", max_examples=100)
+settings.load_profile("ci" if os.environ.get("CI") else "local")
 
 
 class NetworkAccessError(AssertionError):

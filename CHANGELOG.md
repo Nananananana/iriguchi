@@ -34,6 +34,8 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **`from iriguchi import route`.** One call instead of three objects and a
   domain vocabulary. The package docstring stopped claiming there was no
   scanner, no estimator and no CLI.
+- Property tests are derandomized in CI and explore more, so a green run is
+  reproducible rather than a sample of the input space.
 - The design: `docs/proposals/0001-the-design.md`, written before any code
   exists and kept that way.
 - Ten architecture decision records, `docs/adr/0001` through `0010`.
