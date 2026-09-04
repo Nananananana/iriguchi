@@ -116,7 +116,7 @@ def fake_presidio(monkeypatch: pytest.MonkeyPatch) -> Iterator[list[_Engine]]:
 
 def _scanner(results: list[_Result], **kwargs: Any) -> PresidioScanner:
     scanner = PresidioScanner(**kwargs)
-    scanner._engine._results = results  # type: ignore[attr-defined]
+    scanner._engine._results = results
     return scanner
 
 
@@ -180,7 +180,7 @@ class TestWhatItAsksPresidioFor:
     def test_the_defaults_are_passed_through(self, fake_presidio: list[_Engine]) -> None:
         scanner = _scanner([])
         scanner.scan("Contact Zoe at zoe@example.com")
-        [call] = scanner._engine.calls  # type: ignore[attr-defined]
+        [call] = scanner._engine.calls
         assert call["language"] == "en"
         assert call["score_threshold"] == 0.5
 
@@ -189,12 +189,12 @@ class TestWhatItAsksPresidioFor:
         iriguchi deciding a medical licence number is not sensitive."""
         scanner = _scanner([])
         scanner.scan("anything")
-        assert scanner._engine.calls[0]["entities"] is None  # type: ignore[attr-defined]
+        assert scanner._engine.calls[0]["entities"] is None
 
     def test_a_caller_can_narrow_it(self, fake_presidio: list[_Engine]) -> None:
         scanner = _scanner([], entities=["PERSON", "EMAIL_ADDRESS"])
         scanner.scan("anything")
-        assert scanner._engine.calls[0]["entities"] == ["PERSON", "EMAIL_ADDRESS"]  # type: ignore[attr-defined]
+        assert scanner._engine.calls[0]["entities"] == ["PERSON", "EMAIL_ADDRESS"]
 
     def test_the_threshold_goes_to_presidio_and_not_applied_here(
         self, fake_presidio: list[_Engine]
@@ -205,9 +205,9 @@ class TestWhatItAsksPresidioFor:
         the leak rate looks acceptable. It is filtered where it means what it
         says, by the knob Presidio's authors documented."""
         scanner = _scanner([_Result("PERSON", 0, 3, score=0.01)], score_threshold=0.9)
-        assert scanner._engine.calls == []  # type: ignore[attr-defined]
+        assert scanner._engine.calls == []
         findings = scanner.scan("Zoe")
-        assert scanner._engine.calls[0]["score_threshold"] == 0.9  # type: ignore[attr-defined]
+        assert scanner._engine.calls[0]["score_threshold"] == 0.9
         # The low-scoring result still becomes a finding, because filtering it
         # was Presidio's job and Presidio said it passed.
         assert len(findings) == 1
@@ -243,7 +243,7 @@ class TestWhatComesBack:
         that says so. Returning `()` would turn a broken scanner into a clean
         prompt."""
         scanner = _scanner([])
-        scanner._engine._results = RuntimeError("spaCy exploded")  # type: ignore[attr-defined]
+        scanner._engine._results = RuntimeError("spaCy exploded")
         with pytest.raises(ScanError, match="spaCy exploded"):
             scanner.scan("anything")
 

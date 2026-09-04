@@ -106,6 +106,10 @@ class TestThePythonExample:
     def test_the_presidio_interop_snippet_still_typechecks_at_runtime(self) -> None:
         """The README tells a Presidio user they can bring results without
         installing anything. That claim is the whole of `interop/`."""
+        # Imported the way the README says to. That spelling used to be the one
+        # that did not typecheck -- `__getattr__` is annotated `-> object`, so
+        # mypy refused to call it -- which is how the missing TYPE_CHECKING
+        # re-exports in `iriguchi/__init__.py` were found.
         from iriguchi import findings_from_presidio, route
 
         findings = findings_from_presidio([{"entity_type": "PERSON", "start": 0, "end": 5}])
