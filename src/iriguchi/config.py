@@ -28,7 +28,8 @@ from .domain.destination import Destination
 from .errors import ConfigurationError
 from .infrastructure.channels.mamori_channel import MamoriChannel
 from .infrastructure.models.openai_compatible import OpenAICompatibleModel
-from .infrastructure.registry import ESTIMATORS, SCANNERS
+from .infrastructure.registry import ESTIMATORS, JUDGES, SCANNERS
+from .ports.judge import AnswerJudge
 
 __all__ = ["ENV_PREFIX", "IriguchiConfig"]
 
@@ -55,6 +56,10 @@ KNOWN_KEYS = frozenset(
         # way a modern library names an estimator rather than exposing a boolean.
         "SCANNER",
         "ESTIMATOR",
+        # The cascade, off unless named. `consistency` needs the local model
+        # passed in, so it is built by `answer_judge()` rather than by the
+        # registry -- the same reason `SuppliedScanner` has no name.
+        "JUDGE",
         # Where the bands begin. Numbers an operator should not have to invent:
         # `python tools/calibrate.py --escalate 0.3` derives them from a target
         # rate against the corpus, which is the shape RouteLLM argues for.
@@ -67,6 +72,11 @@ KNOWN_KEYS = frozenset(
 #: other field; a key is the one thing here worth stealing, and a report that
 #: quotes it turns "what does this configuration do" into a disclosure.
 SECRET_KEYS = frozenset({"EXTERNAL_KEY"})
+
+#: What the consistency judge samples at. Not the temperature `ask` answers
+#: with: a model pinned at 0 agrees with itself always, and a judge that can
+#: never disagree is the inert signal this axis was built to replace.
+SAMPLING_TEMPERATURE = 1.0
 
 _TRUE = frozenset({"1", "true", "yes", "on"})
 _FALSE = frozenset({"0", "false", "no", "off"})
@@ -116,6 +126,12 @@ class IriguchiConfig:
     #: which is deliberately not "the best one installed" -- see `registry.py`.
     scanner: str = ""
     estimator: str = ""
+    #: Which judge inspects a local answer, if any. **Empty means no cascade**,
+    #: which is not the same as a judge that finds nothing: without one, a local
+    #: answer is simply final. Off by default because the only judge measured to
+    #: work doubles local latency, and a router should not spend a second model
+    #: call on somebody who did not ask for one (ADR-0018).
+    judge: str = ""
     #: Where the bands begin. Empty means the domain's defaults.
     moderate_at: str = ""
     high_at: str = ""
@@ -161,9 +177,47 @@ class IriguchiConfig:
             external_key=found.get("EXTERNAL_KEY", ""),
             scanner=found.get("SCANNER", ""),
             estimator=found.get("ESTIMATOR", ""),
+            judge=found.get("JUDGE", ""),
             moderate_at=found.get("MODERATE_AT", ""),
             high_at=found.get("HIGH_AT", ""),
         )
+
+    def answer_judge(self) -> AnswerJudge | None:
+        """The judge for the cascade, or `None` when no cascade was asked for.
+
+        `consistency` is built here rather than looked up in the registry
+        because it needs the **local** model passed in, and a registry entry is
+        a name with a zero-argument constructor behind it. Naming it is refused
+        when there is no local model to re-ask: a cascade over a model that does
+        not exist is a setting that silently does nothing, and this project
+        refuses those loudly (`from_env` does the same for an unknown key).
+
+        The sampling temperature is deliberately not the one `ask` answers with.
+        Self-consistency measures how much a model wanders, and a model pinned
+        at temperature 0 does not wander -- it would agree with itself always
+        and the judge would never fire, which is the inert-signal failure this
+        whole axis exists because of.
+        """
+        if not self.judge:
+            return None
+        if self.judge == "consistency":
+            if not (self.local and self.local_url.strip() and self.local_model.strip()):
+                raise ConfigurationError(
+                    "IRIGUCHI_JUDGE=consistency re-asks the local model to see "
+                    "whether it agrees with itself, and there is no local model "
+                    "configured to re-ask. Set IRIGUCHI_LOCAL_URL and "
+                    "IRIGUCHI_LOCAL_MODEL, or drop the judge."
+                )
+            from .infrastructure.judges.consistency import ConsistencyJudge
+
+            return ConsistencyJudge(
+                OpenAICompatibleModel(
+                    self.local_url.strip(),
+                    self.local_model.strip(),
+                    temperature=SAMPLING_TEMPERATURE,
+                )
+            )
+        return JUDGES.build(self.judge)
 
     def thresholds(self) -> Thresholds:
         """Where the bands begin, from settings or from the domain's defaults.

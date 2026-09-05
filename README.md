@@ -411,6 +411,18 @@ model the same thing twice does work**, because a model that is unsure wanders:
 python tools/measure_cascade.py --model qwen2.5:7b-instruct-q4_K_M --judge consistency
 ```
 
+Turn it on with `--judge consistency` (or `IRIGUCHI_JUDGE`). It is **off by
+default** — a router should not spend a second model call on somebody who did
+not ask for one — and it is skipped entirely when escalation was never possible,
+so a machine with no external endpoint pays nothing for having named it.
+
+```console
+$ iriguchi --judge consistency ask "Summarise in one line: the meeting moved to Thursday."
+  route        LOCAL      nothing leaves this machine
+  cascade      there is no external service configured, so there is nowhere to
+               escalate to. That is a missing endpoint rather than a refusal
+```
+
 One extra local call, no larger model, and the threshold picked from a published
 curve rather than by taste. It is **non-deterministic by construction** and opt-in
 for that reason — [`docs/measurements.md`](docs/measurements.md) has the curve and

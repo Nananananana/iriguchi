@@ -41,7 +41,7 @@ from .decision import RoutingDecision
 from .destination import Destination, Route
 from .reason import Reason
 
-__all__ = ["EscalationVerdict", "may_escalate"]
+__all__ = ["EscalationVerdict", "escalation_possible", "may_escalate"]
 
 #: What says the escalation is iriguchi's own decision rather than a scanner's.
 SOURCE = "cascade"
@@ -68,6 +68,65 @@ def _reason(rule: str, detail: str) -> Reason:
     return Reason(rule=f"{SOURCE}.{rule}", source=SOURCE, span=None, detail=detail)
 
 
+def escalation_possible(
+    decision: RoutingDecision, available: frozenset[Destination]
+) -> EscalationVerdict | None:
+    """Whether escalation could happen at all, before anyone judges anything.
+
+    Every refusal here is a property of the routing decision and the machine,
+    not of the answer -- so all of them can be settled **before** a judge runs.
+    That matters because judging is not free: the only judge measured to work
+    re-asks the local model, and paying for a second inference to discover there
+    was never anywhere to escalate to is a bill for nothing.
+
+    Found by running it. A machine with a local model and no external endpoint
+    took the second call every time and then reported *there is nowhere to
+    escalate to* -- correct, and after the money.
+
+    Returns:
+        The refusal, when there is one. `None` when escalation is structurally
+        possible and the only remaining question is whether the answer deserves
+        it -- which is `may_escalate`'s half.
+    """
+    if decision.route is Route.REFUSED:
+        return EscalationVerdict(
+            False,
+            _reason(
+                "nothing-was-answered",
+                "the prompt was refused, so there is no local answer to escalate from",
+            ),
+        )
+    if decision.route is Route.EXTERNAL:
+        return EscalationVerdict(
+            False,
+            _reason(
+                "already-external",
+                "this prompt was already answered externally; a cascade escalates a "
+                "local answer, and there is no larger destination beyond this one",
+            ),
+        )
+    if Destination.EXTERNAL not in available:
+        return EscalationVerdict(
+            False,
+            _reason(
+                "no-external-destination",
+                "there is no external service configured, so there is nowhere to "
+                "escalate to. That is a missing endpoint rather than a refusal",
+            ),
+        )
+    if Destination.EXTERNAL in {removal.destination for removal in decision.removed}:
+        return EscalationVerdict(
+            False,
+            _reason(
+                "external-was-removed",
+                "the external destination was removed for this prompt and a weak "
+                "answer is not evidence about sensitivity. The finding did not "
+                "become less true because the local model struggled",
+            ),
+        )
+    return None
+
+
 def may_escalate(
     decision: RoutingDecision,
     quality: AnswerQuality,
@@ -91,45 +150,9 @@ def may_escalate(
         A verdict carrying the reason, in every branch. There is no branch that
         returns a bare `False`.
     """
-    if decision.route is Route.REFUSED:
-        return EscalationVerdict(
-            False,
-            _reason(
-                "nothing-was-answered",
-                "the prompt was refused, so there is no local answer to escalate from",
-            ),
-        )
-    if decision.route is Route.EXTERNAL:
-        return EscalationVerdict(
-            False,
-            _reason(
-                "already-external",
-                "this prompt was already answered externally; a cascade escalates a "
-                "local answer, and there is no larger destination beyond this one",
-            ),
-        )
-
-    if Destination.EXTERNAL not in available:
-        return EscalationVerdict(
-            False,
-            _reason(
-                "no-external-destination",
-                "there is no external service configured, so there is nowhere to "
-                "escalate to. That is a missing endpoint rather than a refusal",
-            ),
-        )
-
-    removed = {removal.destination for removal in decision.removed}
-    if Destination.EXTERNAL in removed:
-        return EscalationVerdict(
-            False,
-            _reason(
-                "external-was-removed",
-                "the external destination was removed for this prompt and a weak "
-                "answer is not evidence about sensitivity. The finding did not "
-                "become less true because the local model struggled",
-            ),
-        )
+    impossible = escalation_possible(decision, available)
+    if impossible is not None:
+        return impossible
 
     if not quality.is_weak:
         return EscalationVerdict(
