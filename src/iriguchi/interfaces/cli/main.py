@@ -27,13 +27,14 @@ from collections.abc import Sequence
 from dataclasses import replace
 from typing import TextIO
 
+from ...application.asking import Answer
 from ...application.routing import PromptRouter
 from ...config import ENV_PREFIX, IriguchiConfig
 from ...domain.destination import Destination, Route
 from ...errors import EscalationRefusedError, IriguchiError
 from ...evaluation.dataset import load_corpus
 from ...evaluation.scoring import run as run_evaluation
-from ...infrastructure.registry import ESTIMATORS, SCANNERS
+from ...infrastructure.registry import ESTIMATORS, JUDGES, SCANNERS
 from ...infrastructure.scanners.mamori_scanner import (
     SiblingState,
     mamori_is_available,
@@ -95,6 +96,18 @@ def build_parser() -> argparse.ArgumentParser:
             "when mamori is installed: changing the scanner changes what leaves this "
             "machine, and that is not a thing to inherit from what happens to be on "
             "the system."
+        ),
+    )
+
+    parser.add_argument(
+        "--judge",
+        choices=(*JUDGES.names, "consistency"),
+        default=None,
+        help=(
+            "inspect the local answer and escalate it if it looks weak. Off by "
+            "default: `consistency` re-asks the local model, which doubles local "
+            "latency, and escalation only ever reaches a destination the routing "
+            "decision had already permitted."
         ),
     )
 
@@ -193,6 +206,7 @@ def _config(args: argparse.Namespace) -> IriguchiConfig:
         # calls the worst available outcome.
         **({"scanner": args.scanner} if getattr(args, "scanner", None) else {}),
         **({"estimator": args.estimator} if getattr(args, "estimator", None) else {}),
+        **({"judge": args.judge} if getattr(args, "judge", None) else {}),
     )
 
 
@@ -302,6 +316,7 @@ def cmd_ask(args: argparse.Namespace, config: IriguchiConfig, out: TextIO) -> in
         local=config.local_answerer() if config.local else None,
         external=config.external_answerer() if config.external else None,
         channel=config.channel() if config.external else None,
+        judge=config.answer_judge(),
     )
     answer = asker.ask(prompt, config.available)
     print(
@@ -314,6 +329,8 @@ def cmd_ask(args: argparse.Namespace, config: IriguchiConfig, out: TextIO) -> in
     )
     if not answer.answered:
         return EXIT_REFUSED
+
+    _report_cascade(answer, out)
 
     # ADR-0013: iriguchi only escalates when its own scanner said CLEAR, so
     # anything mamori protected on the way out is something the scanner missed.
@@ -329,7 +346,36 @@ def cmd_ask(args: argparse.Namespace, config: IriguchiConfig, out: TextIO) -> in
     # "answered:" would be a model appearing to say something.
     assert answer.text is not None
     print_content(answer.text, out)
+    if answer.superseded is not None:
+        print("\nthe local answer this replaced:\n", file=out)
+        print_content(answer.superseded, out, indent="  ")
     return EXIT_OK
+
+
+def _report_cascade(answer: Answer, out: TextIO) -> None:
+    """What the judge thought, when one ran.
+
+    Printed **above** the answer, like the route is, and for the same reason:
+    somebody reading a terminal should see how they got this answer before they
+    see the answer. A cascade that silently replaced a local answer with an
+    external one would be the single most surprising thing this tool could do.
+
+    Silent when no judge was configured. An absent judge is not an opinion, and
+    a line saying "not judged" on every ordinary run is a line people stop
+    reading.
+    """
+    if answer.escalation is None:
+        return
+    print(f"\n  cascade      {answer.escalation.reason.detail}", file=out)
+    if answer.quality is not None and answer.quality.signals:
+        rules = ", ".join(signal.rule for signal in answer.quality.signals)
+        print(f"      the local answer showed {rules}", file=out)
+    if answer.cascaded:
+        print(
+            "      the local answer below was replaced; it is kept because "
+            "you are entitled to see it",
+            file=out,
+        )
 
 
 def _decide_only(args: argparse.Namespace, config: IriguchiConfig, prompt: str, out: TextIO) -> int:

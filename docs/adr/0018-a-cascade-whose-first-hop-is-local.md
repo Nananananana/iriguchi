@@ -122,6 +122,31 @@ is worse than a name that is not offered.
 It also doubles local latency, one extra call per prompt. That is the price of
 the only signal found that works.
 
+## What wiring it changed
+
+Two defects, both found by running the thing rather than by reading it.
+
+**The judge was being paid for nothing.** `may_escalate` refuses for four
+reasons and three of them are properties of the decision and the machine —
+already external, already refused, no external endpoint, external removed by a
+finding — none of which depends on the answer. The first version judged first
+and asked the gate afterwards, so a machine with a local model and no external
+endpoint bought a second inference on every prompt and then reported *there is
+nowhere to escalate to*. Correct, and after the money.
+
+`escalation_possible(decision, available)` is that half, split out and asked
+first. It returns the refusal or `None`, and only `None` costs a judgement.
+
+**`--dry-run` must not build one.** A consistency judge sends — to the local
+model, twice — and `--dry-run` promises to construct nothing that can send. It
+already returned before the `Asker` existed, which is the same structural
+promise that let it work on a machine without mamori, and a test now says so.
+
+The escalation itself goes through **exactly the channel a direct external route
+would use**. There is no second, lighter way out, and that is asserted rather
+than intended: a cascade cannot become a path that sends something the router
+would not have sent.
+
 ## Consequences
 
 **The second axis stops depending on a guess.** Nothing about the 42.9% is
