@@ -89,6 +89,39 @@ proxy, and the shape weights follow a stated rule rather than taste:
 truncated answer may be terse; an echo may be a summary; a short answer may be
 right. Four identical lines is a model that has come apart.
 
+## What measuring it changed
+
+The judge was built as rules over the answer text, and then run against a real
+model. **It escalated nothing** — 0 of 42 for a 7B model and 0 of 42 for a 14B
+one ([measurements.md](../measurements.md)). The gate was correct and the signal
+was inert.
+
+The cause was already written down as this design's stated trade: *a confident
+wrong answer looks exactly like a confident right one*, and an instruct-tuned
+model does not decline an ordinary work request. Every rule over the answer text
+was reading the wrong surface. Lowering the threshold until it fired would have
+been fitting a number to a wish.
+
+**Asking the model twice does separate them.** Self-consistency — sample the same
+prompt again at a temperature that lets the model wander, and measure agreement —
+gives a 4.3× gap between `low` and everything else, and at a threshold chosen by
+a stated rule escalates **0% of the easy prompts and 77% of the hard ones**.
+
+That adds a fourth constraint to the three above, and it is a real cost rather
+than a footnote:
+
+**The consistency judge is not deterministic.** Everything else in this project
+answers identically twice in a row on purpose; this cannot, because it works
+*because* the model wanders. `may_escalate` stays deterministic given a quality —
+the quality itself is now a sample. A caller who needs reproducibility records
+the `AnswerQuality` rather than expecting to recompute it. It is opt-in, needs a
+model passed in, and is deliberately **not in the registry** for the reason
+`SuppliedScanner` is not: a name somebody can select that then fails to construct
+is worse than a name that is not offered.
+
+It also doubles local latency, one extra call per prompt. That is the price of
+the only signal found that works.
+
 ## Consequences
 
 **The second axis stops depending on a guess.** Nothing about the 42.9% is
