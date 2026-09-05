@@ -507,6 +507,82 @@ no test at all of the complexity axis. These numbers describe Presidio on
 data, which is the shape Presidio is strongest on. A miss rate on somebody's
 real work is not this number.
 
+## What the cascade's judge actually catches
+
+Measured 2026-09-05 against a live ollama on this machine, over the 42
+`requests` prompts. Reproduce with `python tools/measure_cascade.py --model
+<name> [--judge consistency]`. It calls a model, so it never runs in CI.
+
+**The prompts and the band labels are ours; the answers are not.** That is what
+makes this different from the estimator's 42.9%, which is scored entirely
+against material this project wrote.
+
+### The rules judge does nothing
+
+| model | judged weak | signals that fired |
+|---|---:|---|
+| `qwen2.5:7b-instruct-q4_K_M` | **0 of 42** | `repetition` ×5, `truncated` ×2 |
+| `qwen2.5:14b-instruct` | **0 of 42** | `repetition` ×1 |
+
+Not a single escalation, at either size. The `repetition` count moving 5 → 1
+between the small and large model is real signal in the right direction, and it
+never crossed the threshold.
+
+**This is the trade the registry entry stated before anything was run**: a
+confident wrong answer looks exactly like a confident right one, and an
+instruct-tuned model does not say *I don't know* to an ordinary work request.
+Every rule over the answer text was reading the wrong surface.
+
+Lowering the threshold until it fired would have been fitting a number to a
+wish, and the cost of a false *weak* is a prompt sent off the machine.
+
+### Asking twice does separate them
+
+Sampling the same prompt twice at temperature 1.0 and measuring agreement:
+
+| labelled band | median agreement |
+|---|---:|
+| `low` | **0.435** |
+| `moderate` | 0.088 |
+| `high` | 0.101 |
+
+A **4.3×** separation between easy and not-easy. It does not distinguish
+`moderate` from `high` — those are the same number — and does not need to: the
+cascade asks *escalate or not*.
+
+### The threshold came from the curve, not from taste
+
+Agreement was recorded per case, and the escalation rate computed at each cut:
+
+| threshold | low | moderate | high | all |
+|---|---:|---:|---:|---:|
+| 0.05 | 0% | 7% | 23% | 10% |
+| **0.10** | **0%** | **57%** | **62%** | **38%** |
+| 0.15 | 27% | 57% | 92% | 57% |
+| 0.25 | 40% | 86% | 100% | 74% |
+
+The rule is **the highest threshold at which no `low` prompt escalates**, which
+picks 0.10 — not 0.15, which separates the bands six points better and sends 27%
+of the easy prompts off the machine to do it.
+
+Re-run at that default, end to end:
+
+| band | judged weak |
+|---|---:|
+| `low` | **0 of 15 — 0%** |
+| `moderate` | 5 of 14 — 36% |
+| `high` | 10 of 13 — **77%** |
+
+### What these numbers are not
+
+**A sample, not a constant.** The judge is non-deterministic by construction, and
+re-running the whole measurement moves these figures by several points — the two
+runs above at threshold 0.10 gave 57%/62% and 36%/77% for moderate/high. The
+direction is stable; the digits are not.
+
+**One model, 42 prompts, one machine.** And still no evidence about *correctness*:
+every signal here is about confidence, and a model can be consistently wrong.
+
 ## What this is not measured against
 
 RouterBench (405k precomputed inferences, 11 models across 7 tasks) and

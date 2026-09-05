@@ -396,6 +396,26 @@ difficulty is only detected when the request announces it. So iriguchi can also
 **stop predicting**: answer locally, look at what came back, and escalate only if
 it was visibly poor.
 
+Reading the answer's *text* turned out not to be enough. Against a live 7B model
+the rules judge escalated **0 of 42** prompts, and 0 of 42 again at 14B — a
+confident wrong answer looks exactly like a confident right one. **Asking the
+model the same thing twice does work**, because a model that is unsure wanders:
+
+| band | escalated |
+|---|---:|
+| `low` | **0 of 15 — 0%** |
+| `moderate` | 5 of 14 — 36% |
+| `high` | 10 of 13 — **77%** |
+
+```bash
+python tools/measure_cascade.py --model qwen2.5:7b-instruct-q4_K_M --judge consistency
+```
+
+One extra local call, no larger model, and the threshold picked from a published
+curve rather than by taste. It is **non-deterministic by construction** and opt-in
+for that reason — [`docs/measurements.md`](docs/measurements.md) has the curve and
+the caveats.
+
 The two cases above carry the *same* refusal and reach opposite verdicts, because
 the second prompt's external destination had already been removed by the veto.
 That is the rule: a weak answer is evidence about a model, never about
