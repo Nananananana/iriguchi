@@ -354,3 +354,67 @@ class TestTheOrderOfReasons:
         first = Reason(rule="a.rule", source="s", span=None, detail="d")
         second = Reason(rule="b.rule", source="s", span=None, detail="d")
         assert sorted((second, first), key=lambda r: r.sort_key) == [first, second]
+
+
+class TestSlotsIsCheckedForWhatOnlySlotsDoes:
+    """`test_a_decision_cannot_grow_a_field_after_the_fact` cannot see `slots`.
+
+    It accepts `(AttributeError, TypeError)`, and `FrozenInstanceError` **is an
+    `AttributeError`** -- so a frozen dataclass raises something in that tuple
+    whether or not it has slots, and `slots=True -> False` survives on anything
+    the rest of the suite does not happen to cover another way.
+
+    `EscalationVerdict` was the one that proved it: a fresh value, in the sweep,
+    with every other mutant killed and that one alive.
+
+    The discriminator is the absence of `__dict__`, which is the thing `slots`
+    actually does. Without it a value carries a per-instance dictionary, and the
+    memory that costs is the smaller half -- the larger half is that a decision
+    somebody can annotate after the fact is a decision that can be edited
+    downstream of the deciding.
+    """
+
+    @pytest.mark.parametrize("name", sorted(VALUES))
+    def test_a_value_has_no_instance_dictionary(self, name: str) -> None:
+        value = VALUES[name]
+        assert not hasattr(value, "__dict__"), (
+            f"{name} carries a per-instance __dict__, so `slots=True` is not in "
+            f"force. Nothing else in this file can tell that apart: a frozen "
+            f"dataclass refuses an unknown attribute either way."
+        )
+
+    def test_an_unknown_attribute_cannot_tell_slots_apart(self) -> None:
+        """Measured on both interpreters rather than asserted about one.
+
+        **CPython 3.13 changed this and the measurement caught it.** On 3.12 a
+        frozen+slots class raised `TypeError` for an unknown attribute and a
+        frozen one raised `FrozenInstanceError`; on 3.13 both raise
+        `FrozenInstanceError`. The first version of this test hard-coded the
+        3.12 behaviour, passed on 3.12, and failed on 3.13 -- which is the whole
+        reason it measures instead of claiming.
+
+        Either way the conclusion is the same and is the point of the class:
+        **whatever each version raises, the sweep's `(AttributeError,
+        TypeError)` accepts it in both cases**, so that test cannot see `slots`.
+        On 3.13 it is even less able to, because the two are now identical.
+        """
+        import dataclasses as dc
+
+        @dc.dataclass(frozen=True)
+        class WithoutSlots:
+            a: int = 0
+
+        @dc.dataclass(frozen=True, slots=True)
+        class WithSlots:
+            a: int = 0
+
+        raised: list[type[BaseException]] = []
+        for cls in (WithoutSlots, WithSlots):
+            with pytest.raises((AttributeError, TypeError)) as caught:
+                setattr(cls(), "added_later", "no")  # noqa: B010 - the point is the failure, not the write
+            raised.append(type(caught.value))
+        assert all(issubclass(kind, AttributeError | TypeError) for kind in raised), raised
+
+        # And the check that does discriminate, on every version.
+        assert hasattr(WithoutSlots(), "__dict__")
+        assert not hasattr(WithSlots(), "__dict__")

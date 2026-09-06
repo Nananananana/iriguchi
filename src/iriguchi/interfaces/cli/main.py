@@ -337,7 +337,20 @@ def _findings_from(source: str | None) -> tuple[Finding, ...] | None:
     """
     if source is None:
         return None
-    raw = sys.stdin.buffer.read() if source == "-" else Path(source).read_bytes()
+    if source == "-":
+        raw = sys.stdin.buffer.read()
+    else:
+        # `OSError` is not an `IriguchiError`, so without this a missing file
+        # reached `main` untouched and printed a Python traceback -- to a caller
+        # that spawns this as a subprocess and reads stderr. A tool asked for a
+        # path it cannot read should say so in its own voice and exit 1.
+        try:
+            raw = Path(source).read_bytes()
+        except OSError as failure:
+            raise ConfigurationError(
+                f"--findings could not read {source!r}: {failure.strerror or failure}. "
+                f"It wants a file holding a JSON array, or `-` for standard input."
+            ) from failure
     try:
         loaded = json.loads(raw.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as failure:

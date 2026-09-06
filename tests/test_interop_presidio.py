@@ -233,12 +233,47 @@ class TestTheScannerThatScansNothing:
         found = Finding(rule="presidio.person", source="presidio", span=Span(0, 4))
         assert self._scanner(found).scan("any text at all") == (found,)  # type: ignore[attr-defined]
 
-    def test_the_text_makes_no_difference(self) -> None:
-        """The property that defines it. If a future version started reading the
-        prompt, this is what would notice."""
+    def test_the_text_does_not_choose_the_findings(self) -> None:
+        """The property that defines it, stated precisely enough to be true.
+
+        It used to read *the text makes no difference* and compared `scan("")`
+        with `scan("田中太郎 ...")` on a finding at 0-4. That is the property
+        which let a finding at 0-9999 reach a two-character prompt's published
+        document, so it now says what it means: the text does not **choose** the
+        findings, and two prompts both long enough to contain them get the same
+        answer.
+        """
         found = Finding(rule="presidio.person", source="presidio", span=Span(0, 4))
         scanner = self._scanner(found)
-        assert scanner.scan("") == scanner.scan("田中太郎 tanaka@example.com")  # type: ignore[attr-defined]
+        assert scanner.scan("aaaa") == scanner.scan("田中太郎 tanaka@example.com")  # type: ignore[attr-defined]
+
+    def test_a_finding_that_cannot_be_about_this_prompt_is_refused(self) -> None:
+        """The defect the old property permitted. `Span` checks that an offset
+        is not negative and that the end is not before the start; it has no text
+        to compare against, so nothing was checking that a supplied span could
+        be true of the prompt it arrived with."""
+        from iriguchi.errors import ScanError
+
+        found = Finding(rule="presidio.person", source="presidio", span=Span(0, 9999))
+        with pytest.raises(ScanError, match="past the end of this prompt"):
+            self._scanner(found).scan("hi")  # type: ignore[attr-defined]
+
+    def test_the_refusal_names_the_rule_and_never_the_text(self) -> None:
+        """ADR-0006 holds in an error message too. A reader needs to know which
+        finding was wrong; they already have the prompt."""
+        from iriguchi.errors import ScanError
+
+        found = Finding(rule="presidio.person", source="presidio", span=Span(0, 40))
+        with pytest.raises(ScanError) as raised:
+            self._scanner(found).scan("pomegranate")  # type: ignore[attr-defined]
+        assert "presidio.person" in str(raised.value)
+        assert "pomegranate" not in str(raised.value)
+
+    def test_a_span_that_ends_exactly_at_the_end_is_fine(self) -> None:
+        """Half-open, so a span ending at `len(text)` covers the last character
+        and is the commonest correct case there is."""
+        found = Finding(rule="presidio.person", source="presidio", span=Span(0, 5))
+        assert self._scanner(found).scan("hello") == (found,)  # type: ignore[attr-defined]
 
     def test_it_names_itself_for_what_it_is(self) -> None:
         """`supplied`, not `presidio`. A caller mixing two analyzers would
