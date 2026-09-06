@@ -383,10 +383,21 @@ class TestSlotsIsCheckedForWhatOnlySlotsDoes:
             f"dataclass refuses an unknown attribute either way."
         )
 
-    def test_the_two_failures_really_are_different(self) -> None:
-        """The measurement the class above rests on, rather than a claim about
-        CPython. If these ever converge, the `__dict__` check is the only one
-        left that means anything -- and this says so out loud."""
+    def test_an_unknown_attribute_cannot_tell_slots_apart(self) -> None:
+        """Measured on both interpreters rather than asserted about one.
+
+        **CPython 3.13 changed this and the measurement caught it.** On 3.12 a
+        frozen+slots class raised `TypeError` for an unknown attribute and a
+        frozen one raised `FrozenInstanceError`; on 3.13 both raise
+        `FrozenInstanceError`. The first version of this test hard-coded the
+        3.12 behaviour, passed on 3.12, and failed on 3.13 -- which is the whole
+        reason it measures instead of claiming.
+
+        Either way the conclusion is the same and is the point of the class:
+        **whatever each version raises, the sweep's `(AttributeError,
+        TypeError)` accepts it in both cases**, so that test cannot see `slots`.
+        On 3.13 it is even less able to, because the two are now identical.
+        """
         import dataclasses as dc
 
         @dc.dataclass(frozen=True)
@@ -397,10 +408,13 @@ class TestSlotsIsCheckedForWhatOnlySlotsDoes:
         class WithSlots:
             a: int = 0
 
-        with pytest.raises(dc.FrozenInstanceError):
-            WithoutSlots().added_later = "no"  # type: ignore[attr-defined]
-        assert issubclass(dc.FrozenInstanceError, AttributeError)
-        with pytest.raises(TypeError):
-            WithSlots().added_later = "no"  # type: ignore[attr-defined]
-        assert not hasattr(WithSlots(), "__dict__")
+        raised: list[type[BaseException]] = []
+        for cls in (WithoutSlots, WithSlots):
+            with pytest.raises((AttributeError, TypeError)) as caught:
+                setattr(cls(), "added_later", "no")  # noqa: B010 - the point is the failure, not the write
+            raised.append(type(caught.value))
+        assert all(issubclass(kind, AttributeError | TypeError) for kind in raised), raised
+
+        # And the check that does discriminate, on every version.
         assert hasattr(WithoutSlots(), "__dict__")
+        assert not hasattr(WithSlots(), "__dict__")
