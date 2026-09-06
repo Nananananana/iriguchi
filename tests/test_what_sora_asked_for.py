@@ -331,3 +331,99 @@ class TestRouteWithoutAPromptOrABatch:
         code, out = _run(["route"])
         assert code == EXIT_ERROR
         assert "--batch" in out
+
+
+class TestUnreadablePathsAreRefusedInIriguchisOwnVoice:
+    """`OSError` is not an `IriguchiError`.
+
+    A missing `--findings` file reached `main` untouched and printed a Python
+    traceback -- to a caller that spawns iriguchi as a subprocess and reads
+    stderr expecting `iriguchi: ...` and an exit code it knows. Found by asking
+    for a path that is not there, which nobody had.
+    """
+
+    def test_a_missing_file(self) -> None:
+        code, out = _run(["route", "--findings", "/no/such/file.json", "hi"])
+        assert code == EXIT_ERROR
+        assert "could not read" in out
+        assert "Traceback" not in out
+
+    def test_a_directory(self, tmp_path: Path) -> None:
+        code, out = _run(["route", "--findings", str(tmp_path), "hi"])
+        assert code == EXIT_ERROR
+        assert "could not read" in out
+
+    def test_the_message_says_what_it_wanted(self) -> None:
+        """A refusal that names the obstacle and not the shape of the fix is a
+        dead end wearing an explanation."""
+        _, out = _run(["route", "--findings", "/no/such/file.json", "hi"])
+        assert "JSON array" in out
+
+    def test_a_readable_file_still_works(self, tmp_path: Path) -> None:
+        """The floor: a reader that refuses everything passes all three above."""
+        path = tmp_path / "f.json"
+        path.write_text('[{"entity_type": "PERSON", "start": 0, "end": 2}]', encoding="utf-8")
+        code, out = _run(["route", "--json", "--findings", str(path), "hi"])
+        assert code == EXIT_OK
+        assert [f["rule"] for f in _doc(out)["sensitivity"]["findings"]] == ["presidio.person"]
+
+
+class TestASuppliedFindingMustBeAboutThisPrompt:
+    """The defect a comment claimed was handled elsewhere.
+
+    `supplied.py` said a span running past the end of the prompt "is caught
+    where spans are validated rather than here". It was not caught anywhere:
+    `Span` checks that an offset is not negative and that the end is not before
+    the start, and it has no text to compare against, so the claim was
+    unimplementable where it pointed.
+
+    A finding at 0-9999 on a two-character prompt reached the published
+    document, which states that spans are "in code points of the prompt as it
+    was typed". A consumer holding that highlights nothing, or worse.
+    """
+
+    OUT_OF_RANGE = json.dumps([{"entity_type": "PERSON", "start": 0, "end": 9999}])
+
+    def test_no_impossible_span_reaches_the_document(self) -> None:
+        code, out = _run(["route", "--json", "--findings", "-", "hi"], self.OUT_OF_RANGE.encode())
+        assert code == EXIT_OK
+        document = _doc(out)
+        for finding in document["sensitivity"]["findings"]:
+            assert finding["span"]["end"] <= len("hi"), finding
+
+    def test_it_fails_closed_rather_than_dropping_the_finding(self) -> None:
+        """Silently discarding it would be a veto quietly weaker than the caller
+        asked for. ADR-0002 turns the scanner's refusal into the most
+        restrictive route, with a reason."""
+        _, out = _run(["route", "--json", "--findings", "-", "hi"], self.OUT_OF_RANGE.encode())
+        document = _doc(out)
+        assert document["sensitivity"]["level"] == "restricted"
+        assert [r["destination"] for r in document["removed"]] == ["external"]
+
+    def test_the_reason_says_which_finding_and_how_long_the_prompt_was(self) -> None:
+        _, out = _run(["route", "--json", "--findings", "-", "hi"], self.OUT_OF_RANGE.encode())
+        detail = " ".join(r["detail"] for r in _doc(out)["reasons"])
+        assert "presidio.person" in detail
+        assert "2 character(s)" in detail
+
+    def test_a_span_ending_exactly_at_the_end_is_accepted(self) -> None:
+        """Half-open. The commonest correct case there is, and an over-strict
+        check would refuse it."""
+        exact = json.dumps([{"entity_type": "PERSON", "start": 0, "end": 2}])
+        code, out = _run(["route", "--json", "--findings", "-", "hi"], exact.encode())
+        assert code == EXIT_OK
+        assert [f["rule"] for f in _doc(out)["sensitivity"]["findings"]] == ["presidio.person"]
+
+    def test_a_batch_line_is_refused_without_taking_the_batch_down(self) -> None:
+        """One bad line costs its own prompt the external route and nothing
+        else: the other decisions are still written, in order."""
+        lines = (
+            '{"id":1,"prompt":"fine here"}\n'
+            '{"id":2,"prompt":"hi","findings":[{"entity_type":"PERSON","start":0,"end":900}]}\n'
+        )
+        code, out = _run(["route", "--batch"], lines.encode())
+        assert code == EXIT_OK
+        rows = [json.loads(line) for line in out.splitlines() if line.strip()]
+        assert [r["id"] for r in rows] == [1, 2]
+        assert rows[0]["decision"]["sensitivity"]["level"] == "clear"
+        assert rows[1]["decision"]["sensitivity"]["level"] == "restricted"

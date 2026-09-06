@@ -354,3 +354,53 @@ class TestTheOrderOfReasons:
         first = Reason(rule="a.rule", source="s", span=None, detail="d")
         second = Reason(rule="b.rule", source="s", span=None, detail="d")
         assert sorted((second, first), key=lambda r: r.sort_key) == [first, second]
+
+
+class TestSlotsIsCheckedForWhatOnlySlotsDoes:
+    """`test_a_decision_cannot_grow_a_field_after_the_fact` cannot see `slots`.
+
+    It accepts `(AttributeError, TypeError)`, and `FrozenInstanceError` **is an
+    `AttributeError`** -- so a frozen dataclass raises something in that tuple
+    whether or not it has slots, and `slots=True -> False` survives on anything
+    the rest of the suite does not happen to cover another way.
+
+    `EscalationVerdict` was the one that proved it: a fresh value, in the sweep,
+    with every other mutant killed and that one alive.
+
+    The discriminator is the absence of `__dict__`, which is the thing `slots`
+    actually does. Without it a value carries a per-instance dictionary, and the
+    memory that costs is the smaller half -- the larger half is that a decision
+    somebody can annotate after the fact is a decision that can be edited
+    downstream of the deciding.
+    """
+
+    @pytest.mark.parametrize("name", sorted(VALUES))
+    def test_a_value_has_no_instance_dictionary(self, name: str) -> None:
+        value = VALUES[name]
+        assert not hasattr(value, "__dict__"), (
+            f"{name} carries a per-instance __dict__, so `slots=True` is not in "
+            f"force. Nothing else in this file can tell that apart: a frozen "
+            f"dataclass refuses an unknown attribute either way."
+        )
+
+    def test_the_two_failures_really_are_different(self) -> None:
+        """The measurement the class above rests on, rather than a claim about
+        CPython. If these ever converge, the `__dict__` check is the only one
+        left that means anything -- and this says so out loud."""
+        import dataclasses as dc
+
+        @dc.dataclass(frozen=True)
+        class WithoutSlots:
+            a: int = 0
+
+        @dc.dataclass(frozen=True, slots=True)
+        class WithSlots:
+            a: int = 0
+
+        with pytest.raises(dc.FrozenInstanceError):
+            WithoutSlots().added_later = "no"  # type: ignore[attr-defined]
+        assert issubclass(dc.FrozenInstanceError, AttributeError)
+        with pytest.raises(TypeError):
+            WithSlots().added_later = "no"  # type: ignore[attr-defined]
+        assert not hasattr(WithSlots(), "__dict__")
+        assert hasattr(WithoutSlots(), "__dict__")
