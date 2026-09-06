@@ -143,6 +143,39 @@ jobs:
             exit 1
           fi
 
+      # The same trap as py.typed, one directory over. A schema that exists in
+      # `src/` and not in the wheel looks identical from inside the repository,
+      # and a consumer told to run `iriguchi schema` to fetch a shape would get
+      # a traceback. Nothing in `pyproject.toml` names these files -- hatchling
+      # ships everything under the listed package directory -- so this step is
+      # the only thing standing between that convenience and a silent omission.
+      #
+      # Parsed rather than validated: there is deliberately no jsonschema here,
+      # and the assertion above is what that costs. `tests/test_the_draft_contracts.py`
+      # does the validating, in the environment that has a validator.
+      - name: Every published schema reached the wheel
+        run: |
+          python - <<'PY'
+          from iriguchi.interfaces.contract import SCHEMAS, schema
+
+          for contract in sorted(SCHEMAS):
+              document = schema(contract)
+              assert document["title"] == contract, (
+                  f"{SCHEMAS[contract]} is installed but describes "
+                  f"{document['title']!r} rather than {contract!r}"
+              )
+              print(f"{contract} -> {SCHEMAS[contract]}")
+          PY
+          # Through the command a consumer is actually told to run, not only
+          # through the import. The names are spelled out rather than read from
+          # `SCHEMAS`, so a document quietly dropped from the registry fails here
+          # instead of shrinking the loop to nothing.
+          for contract in iriguchi.routing-decision/1 iriguchi.route-batch/1-draft iriguchi.rules/1-draft
+          do
+            iriguchi schema "$contract" | python -c "import json,sys; json.load(sys.stdin)"
+          done
+          iriguchi rules | python -c "import json,sys; json.load(sys.stdin)"
+
       # The other half of the mamori-is-optional promise. There is genuinely no
       # mamori in this environment, so this is stronger than the import-blocking
       # fixture in tests/test_mamori_absent.py -- and weaker in one way, since it

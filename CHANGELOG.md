@@ -9,6 +9,13 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- **A schema for every document iriguchi publishes, and one command that prints
+  any of them.** It published three and shipped a schema for one; the other two
+  existed as an example in a reply, which is a shape a consumer has to infer
+  from output — and Sora vendored `route-batch/1-draft` on exactly that basis.
+  `iriguchi schema <contract>` now takes a name and defaults to the frozen one.
+  The wheel job asserts all three arrive in the installed package, the same trap
+  `py.typed` was already watched for one directory over.
 - ADR-0015: what "zero runtime dependencies" promises. It is about the Python
   dependency graph and says nothing about the OS package graph, and `tkinter`
   is where those differ. The wheel job now **reports** what a GUI would find.

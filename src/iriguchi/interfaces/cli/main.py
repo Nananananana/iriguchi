@@ -42,7 +42,7 @@ from ...infrastructure.scanners.mamori_scanner import (
     mamori_is_available,
     mamori_state,
 )
-from ..contract import as_document, schema
+from ..contract import CONTRACT, SCHEMAS, as_document, schema
 from .console import print_content
 from .render import render_decision
 
@@ -198,7 +198,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     commands.add_parser("config", help="what this configuration does with your prompts")
-    commands.add_parser("schema", help="the JSON contract `route --json` writes")
+    published = commands.add_parser("schema", help="the JSON contract `route --json` writes")
+    published.add_argument(
+        "contract",
+        nargs="?",
+        default=CONTRACT,
+        choices=sorted(SCHEMAS),
+        help=(
+            "which published document to print the schema for. Defaults to the frozen "
+            "routing decision -- the one a caller with no opinion means."
+        ),
+    )
     commands.add_parser(
         "rules", help="every rule identifier a decision can carry, and what each means"
     )
@@ -279,14 +289,18 @@ def _read(prompt: str) -> str:
         ) from failure
 
 
-def cmd_schema(out: TextIO) -> int:
-    """The contract, from the installed package.
+def cmd_schema(args: argparse.Namespace, out: TextIO) -> int:
+    """One published contract, from the installed package.
 
     Printed rather than linked, because a consumer generating code from it
     should be reading the one in the wheel they have and not the one on a branch
     somebody is editing.
+
+    All three are reachable here. Two of them were reachable only as an example
+    in a reply, which is a shape a consumer has to infer from output -- and Sora
+    vendored one on exactly that basis.
     """
-    print(json.dumps(schema(), ensure_ascii=False, indent=2), file=out)
+    print(json.dumps(schema(args.contract), ensure_ascii=False, indent=2), file=out)
     return EXIT_OK
 
 
@@ -802,7 +816,7 @@ def main(argv: Sequence[str] | None = None, out: TextIO | None = None) -> int:
         if args.command == "config":
             return cmd_config(config, stream)
         if args.command == "schema":
-            return cmd_schema(stream)
+            return cmd_schema(args, stream)
         if args.command == "rules":
             return cmd_rules(stream)
         if args.command == "algorithms":

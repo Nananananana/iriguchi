@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Nananananana/iriguchi/schemas/route-batch-1-draft.json",
+  "title": "iriguchi.route-batch/1-draft",
+  "description": "One line of `iriguchi route --batch` output: a decision, and the caller's own identifier for the prompt that produced it. An envelope and nothing more -- the decision inside is `iriguchi.routing-decision/1`, frozen, and this document does not touch it. A consumer strips the envelope and hands the decision to whatever already reads that contract.",
+  "type": "object",
+  "required": ["contract", "decision"],
+  "additionalProperties": false,
+  "properties": {
+    "contract": {
+      "description": "Frozen contract identifier for the envelope. Read this before anything else, and refuse a version you do not recognise rather than reading the fields you happen to know -- the rule iriguchi applies to mamori's records and to its own settings, applied to what it produces.",
+      "const": "iriguchi.route-batch/1-draft"
+    },
+    "id": {
+      "description": "Whatever the caller put on the input line, echoed unchanged. **Any JSON value, including null.** iriguchi does not read it, does not require it, and does not check it for uniqueness -- it exists so a caller routing five prompts in one process can tell which answer is whose, and constraining it to a string here would shut out a caller who wanted an integer. A caller that wants stricter ids should impose that on itself.\n\n`null` is what an input line with no `id` produces. It is not an error and it is not an identifier: it means the caller did not supply one, and a consumer matching answers to prompts by id should refuse a batch where any id is null rather than guess by position."
+    },
+    "decision": {
+      "description": "The routing decision for this line's prompt, as `iriguchi.routing-decision/1`, byte-for-byte what `route --json` would have written for the same prompt alone. **Not summarised and not extended.** The frozen contract cannot grow an `id`, which is the whole reason this envelope exists rather than a field being added there.",
+      "type": "object",
+      "required": ["contract", "by", "route", "sensitivity", "complexity", "reasons", "removed"],
+      "properties": {
+        "contract": {
+          "const": "iriguchi.routing-decision/1"
+        }
+      },
+      "$comment": "Deliberately not a copy of `routing-decision-1.json`. A second copy of that schema would be a second thing to keep in step, and the one that goes stale is always the copy. This asserts the envelope's obligation -- that the value is a decision and says which contract it is -- and a consumer validating the decision itself uses the schema iriguchi ships for it. `iriguchi schema` prints that one."
+    }
+  },
+  "$comment": "A draft. It freezes when a second program both produces and consumes it, which is the family's rule -- and the rule is about a program that used it and found something, not about a validator that accepted it. Sora is the consumer; no second producer exists yet.\n\nThe ordering guarantee is not expressible here and is part of the contract: **one output line per input line, in input order.** So is the atomicity: every input line is parsed and checked before any output line is written, because a batch that wrote three decisions and then died on the fourth would leave a consumer holding output it cannot tell apart from a complete run. Both are asserted by `tests/test_what_sora_asked_for.py`."
+}
