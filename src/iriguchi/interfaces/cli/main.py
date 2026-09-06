@@ -25,13 +25,15 @@ import json
 import sys
 from collections.abc import Sequence
 from dataclasses import replace
+from pathlib import Path
 from typing import TextIO
 
 from ...application.asking import Answer
 from ...application.routing import PromptRouter
 from ...config import ENV_PREFIX, IriguchiConfig
 from ...domain.destination import Destination, Route
-from ...errors import EscalationRefusedError, IriguchiError
+from ...domain.sensitivity import Finding
+from ...errors import ConfigurationError, EscalationRefusedError, IriguchiError
 from ...evaluation.dataset import load_corpus
 from ...evaluation.scoring import run as run_evaluation
 from ...infrastructure.registry import ESTIMATORS, JUDGES, SCANNERS
@@ -124,7 +126,36 @@ def build_parser() -> argparse.ArgumentParser:
     commands = parser.add_subparsers(dest="command", required=True)
 
     route = commands.add_parser("route", help="where would this prompt go, and why")
-    route.add_argument("prompt", help="the prompt. Use - to read standard input.")
+    route.add_argument(
+        "prompt",
+        nargs="?",
+        help=(
+            "the prompt. Use - to read standard input as UTF-8, whatever the "
+            "console's code page. Omitted only with --batch."
+        ),
+    )
+    route.add_argument(
+        "--findings",
+        metavar="PATH",
+        help=(
+            "a JSON array of Presidio-shaped results (`entity_type`, `start`, `end`) "
+            "from your own analyzer, used INSTEAD of running a scanner here. `-` "
+            "reads them from standard input, in which case the prompt cannot also "
+            "be `-`. Their `score` is discarded: the veto has no degrees."
+        ),
+    )
+    route.add_argument(
+        "--batch",
+        action="store_true",
+        help=(
+            "read JSON Lines from standard input -- one object per line with "
+            "`prompt` and optionally `id` and `findings` -- and write one decision "
+            "per line, in order, as `iriguchi.route-batch/1-draft`. One process for "
+            "many prompts: the interpreter costs about 85 ms and this pays it once. "
+            "Implies --json. Every line is validated before any is routed, so a "
+            "malformed line fails the whole batch with nothing written."
+        ),
+    )
     route.add_argument(
         "--explain",
         action="store_true",
@@ -211,7 +242,38 @@ def _config(args: argparse.Namespace) -> IriguchiConfig:
 
 
 def _read(prompt: str) -> str:
-    return sys.stdin.read() if prompt == "-" else prompt
+    """The prompt, from the argument or -- for `-` -- from standard input.
+
+    **Standard input is decoded as UTF-8 regardless of the locale**, and this
+    was found by piping Japanese into `route --json -` on a Windows machine
+    without `PYTHONUTF8`. `sys.stdin.read()` decoded it as cp932, the honorific
+    finding **disappeared**, and the email span shifted by four -- a veto miss
+    caused by an encoding default. Sora's requirement said UTF-8 in one word;
+    this is why it had to.
+
+    Read as bytes and decoded explicitly, so the caller's console code page is
+    not a routing input. A prompt that is not valid UTF-8 is refused rather than
+    decoded leniently, because a replacement character at offset 12 is a span
+    into text nobody sent.
+    """
+    if prompt != "-":
+        return prompt
+    # A real console stream carries `.buffer`; a `StringIO` handed in by a test
+    # does not, and is already text. The fallback exists for the double, never
+    # for a person -- every stdin a process is given has bytes underneath.
+    binary = getattr(sys.stdin, "buffer", None)
+    if binary is None:
+        return str(sys.stdin.read())
+    raw: bytes = binary.read()
+    try:
+        return raw.decode("utf-8")
+    except UnicodeDecodeError as failure:
+        raise ConfigurationError(
+            f"standard input is not valid UTF-8 (byte {failure.start}: {failure.reason}). "
+            f"`route -` reads UTF-8 whatever the console's code page, so a caller "
+            f"has to send it that way -- decoding leniently would produce spans "
+            f"into text nobody sent."
+        ) from failure
 
 
 def cmd_schema(out: TextIO) -> int:
@@ -226,7 +288,16 @@ def cmd_schema(out: TextIO) -> int:
 
 
 def cmd_route(args: argparse.Namespace, config: IriguchiConfig, out: TextIO) -> int:
-    router: PromptRouter = config.router()
+    if args.batch:
+        return _route_batch(args, config, out)
+    if args.prompt is None:
+        raise ConfigurationError("route needs a prompt, or --batch. `-` reads standard input.")
+    if args.findings == "-" and args.prompt == "-":
+        raise ConfigurationError(
+            "--findings - and a prompt of - would both read standard input, and one "
+            "stream cannot carry two documents. Put one of them in a file."
+        )
+    router = _router_with(config, _findings_from(args.findings))
     prompt = _read(args.prompt)
     decision = router.route(prompt, config.available)
 
@@ -254,6 +325,130 @@ def cmd_route(args: argparse.Namespace, config: IriguchiConfig, out: TextIO) -> 
     if decision.route is Route.REFUSED:
         _what_would_change_this(config, out)
     return EXIT_REFUSED if decision.route is Route.REFUSED else EXIT_OK
+
+
+def _findings_from(source: str | None) -> tuple[Finding, ...] | None:
+    """Presidio-shaped results from a file or standard input, or `None`.
+
+    `None` and an empty tuple are different answers and both are kept: `None`
+    means *run a scanner*, `()` means *my analyzer found nothing, do not scan*.
+    Collapsing them would turn a clean bill of health into a request for a
+    second opinion, silently.
+    """
+    if source is None:
+        return None
+    raw = sys.stdin.buffer.read() if source == "-" else Path(source).read_bytes()
+    try:
+        loaded = json.loads(raw.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as failure:
+        raise ConfigurationError(f"--findings is not a UTF-8 JSON document: {failure}") from failure
+    if not isinstance(loaded, list):
+        raise ConfigurationError(
+            f"--findings must be a JSON array of results, the shape "
+            f"`[r.to_dict() for r in analyzer.analyze(...)]` produces; got "
+            f"{type(loaded).__name__}."
+        )
+    from ...interop import findings_from_presidio
+
+    return findings_from_presidio(loaded)
+
+
+def _router_with(config: IriguchiConfig, findings: tuple[Finding, ...] | None) -> PromptRouter:
+    """The configured router, with the scanner replaced when findings came in.
+
+    The same rule the library's `route()` applies: findings from elsewhere and a
+    scanner named here are two intentions, and guessing which one somebody meant
+    would decide what leaves the machine on a coin toss.
+    """
+    router: PromptRouter = config.router()
+    if findings is None:
+        return router
+    if config.scanner:
+        raise ConfigurationError(
+            f"both --findings and a scanner ({config.scanner!r}) were given. Findings "
+            f"from elsewhere replace the scan; naming a scanner says to run one. Pick "
+            f"the one you meant."
+        )
+    from ...infrastructure.scanners.supplied import SuppliedScanner
+
+    return replace(router, scanner=SuppliedScanner(findings))
+
+
+#: The envelope one batch line travels in. A draft, and not the frozen
+#: `routing-decision/1`, which is inside it untouched: the frozen document cannot
+#: grow an `id`, and a consumer routing five prompts in one call needs to know
+#: which answer is whose.
+BATCH_CONTRACT = "iriguchi.route-batch/1-draft"
+
+
+def _route_batch(args: argparse.Namespace, config: IriguchiConfig, out: TextIO) -> int:
+    """Many prompts, one process, one decision per line and in order.
+
+    **Every line is parsed and checked before any is routed.** A batch that
+    wrote three decisions and then died on the fourth line would leave a
+    consumer holding output it cannot tell apart from a complete run -- the
+    same reason `findings_from_presidio` refuses a whole batch on one bad item.
+    Nothing is written until everything is known to be well-formed.
+
+    Exit code follows the strictest line: `2` if any prompt was refused,
+    otherwise `0`. A malformed input is `1` with nothing written, because that
+    is a broken call rather than a decision.
+    """
+    if args.prompt is not None and args.prompt != "-":
+        raise ConfigurationError(
+            "--batch reads standard input; a prompt argument has nowhere to go."
+        )
+    if args.findings is not None:
+        raise ConfigurationError(
+            "--findings is per prompt; in --batch mode put a `findings` array on each line."
+        )
+
+    lines = sys.stdin.buffer.read().decode("utf-8").splitlines()
+    jobs: list[tuple[object, str, tuple[Finding, ...] | None]] = []
+    from ...interop import findings_from_presidio
+
+    for number, line in enumerate(lines, start=1):
+        if not line.strip():
+            continue
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError as failure:
+            raise ConfigurationError(f"batch line {number} is not JSON: {failure}") from failure
+        if not isinstance(item, dict) or not isinstance(item.get("prompt"), str):
+            raise ConfigurationError(
+                f"batch line {number} needs an object with a string `prompt`; "
+                f"optional keys are `id` and `findings`."
+            )
+        unknown = set(item) - {"id", "prompt", "findings"}
+        if unknown:
+            raise ConfigurationError(
+                f"batch line {number} has keys nobody reads: {sorted(unknown)}. Refused "
+                f"rather than ignored -- a misspelled `findings` would silently run a "
+                f"scan the caller thought they had replaced."
+            )
+        found = None
+        if "findings" in item:
+            if not isinstance(item["findings"], list):
+                raise ConfigurationError(f"batch line {number}: `findings` must be an array")
+            found = findings_from_presidio(item["findings"])
+        jobs.append((item.get("id"), item["prompt"], found))
+
+    if not jobs:
+        raise ConfigurationError("--batch read no prompts. One JSON object per line, please.")
+
+    thresholds = config.thresholds()
+    worst = EXIT_OK
+    for identifier, prompt, found in jobs:
+        decision = _router_with(config, found).route(prompt, config.available)
+        if decision.route is Route.REFUSED:
+            worst = EXIT_REFUSED
+        envelope = {
+            "contract": BATCH_CONTRACT,
+            "id": identifier,
+            "decision": as_document(decision, thresholds),
+        }
+        print(json.dumps(envelope, ensure_ascii=False), file=out)
+    return worst
 
 
 def _what_would_change_this(config: IriguchiConfig, out: TextIO) -> None:

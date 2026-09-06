@@ -466,6 +466,40 @@ asked a Japanese user for twice the content — 660 against 375 for one measured
 pair. `unicodedata.east_asian_width` fixes it with no dependency, and
 [`docs/feasibility.md`](docs/feasibility.md) F6 has the table.
 
+## Calling it from another program
+
+`route` is built to be spawned. It reads the prompt from standard input as
+**UTF-8 whatever the console's code page** — piping Japanese into `-` under
+cp932 used to lose a finding — writes the frozen `routing-decision/1` document
+to standard output, and says what happened in the exit code: `0` decided, `2`
+refused, `1` broken. A refusal still gets its document.
+
+```bash
+printf '%s' "$PROMPT" | iriguchi route --json -          # one prompt, from stdin
+python -m iriguchi route --json -                         # when Scripts/ is not on PATH
+```
+
+**Many prompts, one interpreter start.** A call costs about 215 ms and 82 ms of
+that is Python itself, so five cards in one process cost one start, not five:
+
+```bash
+printf '%s
+' '{"id":"a","prompt":"..."}' '{"id":7,"prompt":"..."}' | iriguchi route --batch
+```
+
+One JSON object in per line (`prompt`, optional `id` and `findings`), one decision
+out per line in the same order, wrapped as `iriguchi.route-batch/1-draft` with the
+frozen document inside untouched. Every line is validated before any is written.
+
+**Bring your own detector.** `--findings` takes a Presidio-shaped JSON array from
+your analyzer and uses it *instead of* running a scanner here — so
+`mamori inspect --json | iriguchi route --findings -` needs no import between
+them. `[]` means *my analyzer found nothing*, not *scan for me*.
+
+`ask` — routing and then actually answering — is for standalone use. An
+orchestration layer that owns the model lifecycle should call `route`, read the
+document, and do the asking itself; iriguchi decides, it does not need to dial.
+
 ## Simulating a change before you make it
 
 ```console
