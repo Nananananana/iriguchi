@@ -450,7 +450,10 @@ class TestTheCliWithoutMamori:
         from iriguchi.interfaces.cli.main import main
 
         monkeypatch.setattr(
-            "iriguchi.config.MamoriChannel",
+            # Patched at its home, not in `config`, which no longer holds the
+            # name: `channel()` imports the adapter when called, so `route`
+            # stops paying ~60 ms for an HTTP stack it never opens.
+            "iriguchi.infrastructure.channels.mamori_channel.MamoriChannel",
             lambda *a, **k: (_ for _ in ()).throw(
                 EscalationRefusedError("mamori is not installed")
             ),
@@ -470,7 +473,12 @@ class TestTheCliWithoutMamori:
             def prepare(self, prompt: str) -> Any:
                 raise EscalationRefusedError("a credential reached the outbound path")
 
-        monkeypatch.setattr("iriguchi.config.MamoriChannel", lambda *a, **k: Refusing())
+        monkeypatch.setattr(  # Patched at its home, not in `config`, which no longer holds the
+            # name: `channel()` imports the adapter when called, so `route`
+            # stops paying ~60 ms for an HTTP stack it never opens.
+            "iriguchi.infrastructure.channels.mamori_channel.MamoriChannel",
+            lambda *a, **k: Refusing(),
+        )
         out = io.StringIO()
         main(["--local", "--external", "route", "--explain", "--dry-run", HARMLESS], out=out)
         assert "would leave    nothing" in out.getvalue()

@@ -17,6 +17,7 @@ from the actual fenced blocks, against the actual CLI.
 
 from __future__ import annotations
 
+import argparse
 import io
 import re
 from pathlib import Path
@@ -148,8 +149,22 @@ class TestTheSettingsTable:
         # `tools/simulate.py` -- so the set of real flags is the union of both
         # parsers. Checking only the CLI's rejected `--corpus`, which exists and
         # belongs to the other one: a true flag failing a truth test.
+        # The top-level parser and every subcommand's, because `--findings` and
+        # `--batch` live on `route` and the README documents them in backticks.
+        # The first version walked only the top level and passed for as long as
+        # the README happened not to backtick a subcommand flag.
+        parser = build_parser()
+        parsers = [parser] + [
+            sub
+            for action in parser._actions
+            if isinstance(action, argparse._SubParsersAction)
+            for sub in action.choices.values()
+        ]
         options = {
-            action.option_strings[0] for action in build_parser()._actions if action.option_strings
+            action.option_strings[0]
+            for each in parsers
+            for action in each._actions
+            if action.option_strings
         } | _simulate_flags()
         claimed = set(re.findall(r"`(--[a-z][a-z-]+)`", readme))
         assert claimed, "no flags are documented; this test is guarding nothing"

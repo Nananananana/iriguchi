@@ -53,8 +53,13 @@ ALLOWED: dict[str, frozenset[str]] = {
     # default, and `IriguchiConfig.router()` is the whole of that knowledge.
     "config": frozenset({"domain", "ports", "application", "infrastructure"}),
     # The outside edge. Nothing imports it.
+    # `interop` joined this set when `route --findings` arrived: the outer edge
+    # takes somebody else's analyzer output and hands it to the router, which is
+    # exactly the translation `interop` exists for. `.importlinter` already
+    # allowed it -- `interfaces` is the top of its layers contract -- and this
+    # table had not caught up.
     "interfaces": frozenset(
-        {"domain", "ports", "application", "infrastructure", "evaluation", "config"}
+        {"domain", "ports", "application", "infrastructure", "evaluation", "config", "interop"}
     ),
     # Exceptions are shared by everything and import nothing.
     "errors": frozenset(),
@@ -134,7 +139,10 @@ assert len(ALL_FILES) >= 20, (
     f"about nothing."
 )
 FILE_IDS = [str(p.relative_to(PACKAGE_ROOT)) for p in ALL_FILES]
-PACKAGE_INIT_LAYERS = {"__init__", "py"}
+# `__main__` is the other composition point: `python -m iriguchi` hands off to
+# the CLI and holds no opinion of its own, so it is exempt for the reason
+# `__init__` is.
+PACKAGE_INIT_LAYERS = {"__init__", "__main__", "py"}
 
 
 class TestLayering:

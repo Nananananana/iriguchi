@@ -21,15 +21,26 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 from .application.routing import PromptRouter
 from .domain.complexity import DEFAULT_THRESHOLDS, Thresholds
 from .domain.destination import Destination
 from .errors import ConfigurationError
-from .infrastructure.channels.mamori_channel import MamoriChannel
-from .infrastructure.models.openai_compatible import OpenAICompatibleModel
 from .infrastructure.registry import ESTIMATORS, JUDGES, SCANNERS
 from .ports.judge import AnswerJudge
+
+if TYPE_CHECKING:
+    # **Imported lazily on purpose, and this is a measured decision.** `route`
+    # never opens a connection, yet importing this module pulled in
+    # `openai_compatible`, which pulls in `urllib.request`, `http.client` and
+    # `email.parser` -- about 60 ms of a 270 ms call, for a client the command
+    # will not construct. Sora calls `route` once per conversation turn and once
+    # per card, with a 300 ms budget for the whole decision. The adapters are
+    # imported inside the three methods that build them, and named here only so
+    # the annotations still typecheck.
+    from .infrastructure.channels.mamori_channel import MamoriChannel
+    from .infrastructure.models.openai_compatible import OpenAICompatibleModel
 
 __all__ = ["ENV_PREFIX", "IriguchiConfig"]
 
@@ -209,6 +220,7 @@ class IriguchiConfig:
                     "IRIGUCHI_LOCAL_MODEL, or drop the judge."
                 )
             from .infrastructure.judges.consistency import ConsistencyJudge
+            from .infrastructure.models.openai_compatible import OpenAICompatibleModel
 
             return ConsistencyJudge(
                 OpenAICompatibleModel(
@@ -281,6 +293,8 @@ class IriguchiConfig:
                 f"does not require an endpoint -- but `ask` sends, and it will not "
                 f"guess an address."
             )
+        from .infrastructure.models.openai_compatible import OpenAICompatibleModel
+
         return OpenAICompatibleModel(url.strip(), model.strip(), api_key=key)
 
     def router(self) -> PromptRouter:
@@ -319,6 +333,8 @@ class IriguchiConfig:
                 unprotected fallback, by construction: the alternative to
                 protecting an outbound prompt is not sending it.
         """
+        from .infrastructure.channels.mamori_channel import MamoriChannel
+
         return MamoriChannel()
 
     def scanner_name(self) -> str:

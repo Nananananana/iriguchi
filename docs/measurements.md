@@ -61,6 +61,43 @@ of every figure above (`.pth` files run an import hook at startup). Worth knowin
 when reading a stopwatch during development; not a property of the shipped
 thing.
 
+## What one `route` call costs, from the outside
+
+Measured 2026-09-06, because Sora calls `route --json -` once per conversation
+turn with a 300 ms budget and once per card. Nine subprocess runs each, median,
+this machine. Reproduce with the probe in `iriguchi-work/probes/`.
+
+| | before | after | |
+|---|---:|---:|---|
+| bare interpreter | 85 ms | 82 ms | the floor; not iriguchi's |
+| `import iriguchi` | 96 ms | 97 ms | |
+| `import iriguchi.interfaces.cli.main` | 258 ms | 186 ms | |
+| **`iriguchi route --json -`, 1.5k chars** | **270 ms** | **215 ms** | |
+| `iriguchi route --json -`, 20k chars | 274 ms | 232 ms | length barely matters |
+
+### The command that never opens a connection was paying for an HTTP client
+
+`config.py` imported the model adapter at module level, which imported
+`urllib.request`, which imports `http.client`, which imports `email.parser` —
+about **60 ms** of a 270 ms call, on `route`, which decides and sends nothing.
+The three methods that build adapters import them when called; nothing else
+changed. −55 ms.
+
+### What is left, and why there is no daemon
+
+Of the 215 ms, **82 ms is the Python interpreter** and the remaining ~130 ms is
+spread across many modules with no single offender above 20 ms. A resident
+process would save only the 82 ms floor and bring process lifetime, state and
+restarts with it. `route --batch` amortises the whole 215 ms across every prompt
+in a call instead — five cards cost one start — and that is the shape Sora's
+manifest already speaks. Revisit if the numbers change.
+
+### The first measurement was of a command that had not run
+
+`python -m iriguchi` did not exist. The first benchmark measured it anyway, got a
+fast failure, and reported 100 ms. The exit code column in the table is there so
+that cannot happen twice.
+
 ## Shannon entropy, and where the thresholds came from
 
 `tools/measure_entropy.py`. Every value is invented -- a real key in a file that
