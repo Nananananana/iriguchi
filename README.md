@@ -491,6 +491,17 @@ One JSON object in per line (`prompt`, optional `id` and `findings`), one decisi
 out per line in the same order, wrapped as `iriguchi.route-batch/1-draft` with the
 frozen document inside untouched. Every line is validated before any is written.
 
+**Translating the reasons.** Every reason carries a stable `rule` identifier,
+and `iriguchi rules` lists all of them with a sentence each, as
+`iriguchi.rules/1-draft`. A consumer that shows reasons in its own language keys
+off `rule` and can test its translations against that list — so a rule added here
+cannot reach a reader as raw ASCII.
+
+The list has two halves, and the second is the honest one: `presidio.*` and
+`mamori.*` are `f"{source}.{entity_type}"` from a foreign detector, so which
+identifiers exist depends on that detector's configuration and iriguchi cannot
+enumerate them. Those are declared as `open_namespaces` — translate by prefix.
+
 **Bring your own detector.** `--findings` takes a Presidio-shaped JSON array from
 your analyzer and uses it *instead of* running a scanner here — so
 `mamori inspect --json | iriguchi route --findings -` needs no import between

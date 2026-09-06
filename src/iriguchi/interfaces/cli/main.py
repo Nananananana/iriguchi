@@ -199,6 +199,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     commands.add_parser("config", help="what this configuration does with your prompts")
     commands.add_parser("schema", help="the JSON contract `route --json` writes")
+    commands.add_parser(
+        "rules", help="every rule identifier a decision can carry, and what each means"
+    )
     commands.add_parser("algorithms", help="what can sit behind each port, and what each one costs")
     commands.add_parser("doctor", help="what is available, and what a missing piece costs")
     commands.add_parser("demo", help="a few prompts through the router")
@@ -284,6 +287,26 @@ def cmd_schema(out: TextIO) -> int:
     somebody is editing.
     """
     print(json.dumps(schema(), ensure_ascii=False, indent=2), file=out)
+    return EXIT_OK
+
+
+def cmd_rules(out: TextIO) -> int:
+    """Every rule identifier a decision can carry, as `iriguchi.rules/1-draft`.
+
+    A consumer keys its translations off `rule`, so it needs to know when a new
+    one arrives -- otherwise a reader of Japanese meets `policy.something-new`
+    in raw ASCII. Sora tests its locale files against this.
+
+    The document has two halves and the second is the honest one: `presidio.*`
+    and `mamori.*` are `f"{source}.{entity_type}"` from a foreign detector, so
+    which identifiers exist depends on that detector's configuration and
+    iriguchi cannot enumerate them. Those are declared as prefixes with a
+    sentence each, which is translatable even when the entity type is new.
+    """
+    from ... import __version__
+    from ..rules import as_document as rules_document
+
+    print(json.dumps(rules_document(__version__), ensure_ascii=False, indent=2), file=out)
     return EXIT_OK
 
 
@@ -780,6 +803,8 @@ def main(argv: Sequence[str] | None = None, out: TextIO | None = None) -> int:
             return cmd_config(config, stream)
         if args.command == "schema":
             return cmd_schema(stream)
+        if args.command == "rules":
+            return cmd_rules(stream)
         if args.command == "algorithms":
             return cmd_algorithms(config, stream)
         if args.command == "doctor":
