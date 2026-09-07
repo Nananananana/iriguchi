@@ -57,13 +57,24 @@ from iriguchi.interfaces.rules import RULES
 
 BOTH = frozenset({Destination.LOCAL, Destination.EXTERNAL})
 
-#: The number Sora used, and the reason they used it: it is the test card the
-#: whole industry shares, and the first thing Presidio's `CREDIT_CARD` picks up.
-#: Invented in the sense that matters -- it belongs to nobody.
+#: The number Sora used, kept for the record: the test card the whole industry
+#: shares, invented in the sense that matters -- it belongs to nobody.
+#:
+#: **It is no longer a prompt the built-in scanner misses.** Sora's report had
+#: two halves, and fixing the second one invalidated this fixture:
+#: `fallback.long-digit-run` was `[0-9]{8,}` with no separators, so it caught
+#: `4111111111111111` and missed the form everybody writes. It catches both now,
+#: which is why the fixture below had to change and why this comment stays.
 CARD = "my card number is 4111 1111 1111 1111"
 
+#: A prompt the built-in scanner still misses, drawn from what it says about
+#: itself: *it does not find names without an honorific*. That documented gap
+#: is what makes `findings: []` from this scanner a weaker claim than
+#: `findings: []` from somebody else's, which is this whole file's subject.
+MISSED = "ask Katherine Whitfield whether the contract was signed"
 
-def _document(scanner: Any, text: str = CARD) -> dict[str, Any]:
+
+def _document(scanner: Any, text: str = MISSED) -> dict[str, Any]:
     decision = PromptRouter(scanner=scanner, estimator=RulesEstimator()).route(text, BOTH)
     return as_document(decision)
 
@@ -207,7 +218,7 @@ class TestThroughTheCommandSoraActuallyRuns:
         is no longer true."""
         empty = tmp_path / "empty.json"
         empty.write_text("[]", encoding="utf-8")
-        ours = self._run(["route", "--json", "-"], CARD.encode())
+        ours = self._run(["route", "--json", "-"], MISSED.encode())
         theirs = self._run(["route", "--json", "--findings", str(empty), "-"], CARD.encode())
         assert ours != theirs
         assert "scan.by-the-router" in _rules_of(ours)
@@ -219,6 +230,11 @@ class TestThroughTheCommandSoraActuallyRuns:
         empty = tmp_path / "empty.json"
         empty.write_text("[]", encoding="utf-8")
         for argv in (["route", "--json", "-"], ["route", "--json", "--findings", str(empty), "-"]):
-            rendered = json.dumps(self._run(argv, CARD.encode()), ensure_ascii=False)
-            assert "4111" not in rendered
-            assert "card number" not in rendered
+            rendered = json.dumps(self._run(argv, MISSED.encode()), ensure_ascii=False)
+            # Fragments distinctive to the prompt. The first draft swept for
+            # "contract" and matched the document's own `"contract"` field --
+            # a leak sweep that fires on the schema is a sweep that gets
+            # relaxed, and a relaxed sweep is the one that misses a real leak.
+            assert "Katherine" not in rendered
+            assert "Whitfield" not in rendered
+            assert "was signed" not in rendered

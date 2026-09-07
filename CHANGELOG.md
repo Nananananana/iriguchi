@@ -7,6 +7,28 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- **A card number written the way people write it was not detected.**
+  `fallback.long-digit-run` was `[0-9]{8,}` with no separators, so it caught
+  `4111111111111111` and missed `4111 1111 1111 1111`, `4111-1111-1111-1111`
+  and `090 1234 5678` — the form nobody writes, and not the form everybody
+  does. Sora found it on a real run: with `--external` the only destination,
+  that prompt left the machine. Not the scanner's documented dumbness — its
+  docstring lists names without honorifics, addresses and checksum-based account
+  numbers, and a spaced card number is none of those. There was a rule for runs
+  of digits and it did not fire on the standard way of writing one.
+
+  | | before | after |
+  |---|---:|---:|
+  | missed findings | 61.7% | **57.0%** |
+  | over-caution rate | 8.9% | **8.9%** |
+
+  It catches more and over-cautions no more. The pattern needs three or more
+  groups of three or more digits, because groups of two are what dates are made
+  of and a prompt losing its external destination for containing `2026-09-13`
+  would be over-caution large enough to make the veto untrustworthy.
+
 ### Changed
 
 - **A `route` stopped paying for `ask`, `eval` and `schema`.** The composition

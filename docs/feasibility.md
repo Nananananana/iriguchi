@@ -20,15 +20,15 @@ Over all 155 cases, with both destinations available:
 
 | what decided the route | cases | |
 |---|---:|---:|
-| the veto removed external | 49 | 24.9% |
-| complexity kept it local | 144 | 73.1% |
+| the veto removed external | 54 | 27.4% |
+| complexity kept it local | 139 | 70.6% |
 | **complexity sent it out** | **4** | **2.0%** |
 
 Split by where the case came from:
 
 | source | n | veto | local | external | median length |
 |---|---:|---:|---:|---:|---:|
-| `borrowed:mamori` | 134 | 37 | 97 | **0** | 34 chars |
+| `borrowed:mamori` | 134 | 42 | 92 | **0** | 34 chars |
 | `generated` | 21 | 9 | 10 | 2 | 44 chars |
 | `requests` | 42 | 3 | 37 | 2 | 78 chars |
 
@@ -245,7 +245,7 @@ of a chain silences every state behind it.
 
 ## F4. The default scanner's documented remedy is the uninstallable package
 
-`missed findings` is **61.7%**, and
+`missed findings` is **57.0%**, and
 `measurements.md` argues correctly that this is the fallback working as
 specified rather than a bug: it has no model, and mamori's corpus is full of
 bare names, English names, company names and addresses.

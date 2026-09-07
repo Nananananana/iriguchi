@@ -8,6 +8,9 @@ Two facts sat next to each other for a long time without being read together.
 
 The first is in [`measurements.md`](../measurements.md): the built-in fallback
 scanner **misses 61.7%** of the must-stay-local cases. That document argues,
+*(57.0% since 2026-09-08, when `fallback.long-digit-run` learned that a card
+number is usually written with spaces. The argument below is unchanged: the
+gap is still large and still structural.)*
 correctly, that this is the fallback working as specified rather than a bug — it
 has no model, and mamori's corpus is full of bare names, English names, company
 names and addresses.
@@ -47,7 +50,7 @@ rather than chosen in advance.
 
 | scanner | missed findings | over-caution |
 |---|---:|---:|
-| `fallback` | 61.7% | 8.9% |
+| `fallback` | 61.7% → 57.0% | 8.9% |
 | `presidio` | 44.9% | 35.6% |
 | **`fallback+presidio`** | **27.1%** | **41.1%** |
 

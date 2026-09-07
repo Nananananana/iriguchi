@@ -100,6 +100,68 @@ class TestWhatItCatches:
         assert "high-entropy-token" in rules(text)
 
 
+class TestADigitRunSurvivesItsSeparators:
+    """`[0-9]{8,}` caught the form nobody writes and missed the form everybody
+    writes.
+
+    Sora reported it from a real run: `4111 1111 1111 1111` reached the external
+    destination untouched. That is the test card the whole industry shares and
+    the first thing Presidio's `CREDIT_CARD` picks up, and iriguchi's rule saw
+    four short numbers rather than one long one.
+
+    This is **not** the scanner's documented dumbness. Its docstring lists what
+    it does not do -- names without an honorific, addresses, company names,
+    account numbers by checksum -- and a card number written with spaces is none
+    of those. There was a rule for runs of digits and it did not fire on the
+    standard way of writing one. That is a hole in a pattern, not a choice.
+
+    Widening it cost nothing measurable: missed findings **61.7% -> 57.0%** over
+    the 197-case corpus, over-caution **8.9% -> 8.9%**. It catches more and
+    over-cautions no more, which is the strongest form this trade can take.
+    """
+
+    #: The forms a person actually types.
+    SENSITIVE = (
+        "my card number is 4111 1111 1111 1111",
+        "my card is 4111-1111-1111-1111",
+        "my card is 4111111111111111",
+        "call me on 090 1234 5678",
+        "call 090-1234-5678 after six",
+        "マイナンバーは 1234 5678 9012 です",
+    )
+
+    #: **Groups of two digits are what dates are made of**, so the pattern needs
+    #: three or more groups of three or more digits. Without that floor every
+    #: prompt containing a date would lose the external destination -- which is
+    #: over-caution large enough to make the whole veto untrustworthy.
+    BENIGN = (
+        "the meeting moved to 2026-09-13",
+        "due 2026/09/13 at the latest",
+        "upgrade to 1.2.3 before Friday",
+        "between 09:00 and 17:30 tomorrow",
+        "rooms 101 and 102 are free",
+        "it came to 1,250 yen",
+        "in 2026 we shipped 431 units",
+    )
+
+    @pytest.mark.parametrize("text", SENSITIVE, ids=[t[:22] for t in SENSITIVE])
+    def test_it_fires(self, text: str) -> None:
+        rules = [finding.rule for finding in FallbackScanner().scan(text)]
+        assert "fallback.long-digit-run" in rules, text
+
+    @pytest.mark.parametrize("text", BENIGN, ids=[t[:22] for t in BENIGN])
+    def test_it_does_not_fire(self, text: str) -> None:
+        rules = [finding.rule for finding in FallbackScanner().scan(text)]
+        assert "fallback.long-digit-run" not in rules, text
+
+    def test_the_span_covers_the_number_and_not_the_sentence(self) -> None:
+        """A span that swallowed the surrounding words would still route
+        correctly and would point a reader at the wrong characters."""
+        text = "my card number is 4111 1111 1111 1111"
+        [finding] = [f for f in FallbackScanner().scan(text) if f.rule.endswith("digit-run")]
+        assert text[finding.span.start : finding.span.end] == "4111 1111 1111 1111"
+
+
 class TestWhatItAlsoCatches:
     """Specified over-detection, not tolerated over-detection. ADR-0005.
 

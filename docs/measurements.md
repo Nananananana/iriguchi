@@ -210,7 +210,7 @@ mamori installed, no model, no network.
 | | whole | generated | borrowed | requests |
 |---|---|---|---|---|
 | cases | 197 | 21 | 134 | 42 |
-| **missed findings** | **61.7%** | | | 0.0% |
+| **missed findings** | **57.0%** | | | 0.0% |
 | leak rate | 0.0% | 0.0% | 0.0% | 0.0% |
 | over-caution rate | 8.9% | 20.0% | 13.9% | 0.0% |
 | route accuracy | 93.9% | 90.5% | 100% | 76.2% |
@@ -303,7 +303,7 @@ bought it back. Net: strictly better on both axes.
 > **Scope.** The figures in this section were measured on the 155-case corpus,
 > before `requests.json` added 42 more. They are kept as recorded rather than
 > re-derived, the way the model rows are. The current whole-corpus figure is
-> **61.7%**, and the scanner comparison that matters to a user today is in
+> **57.0%**, and the scanner comparison that matters to a user today is in
 > [What installing Presidio buys](#what-installing-presidio-buys).
 
 The fallback scanner cannot find a name without an honorific, an English name, a
@@ -527,7 +527,7 @@ clean venv holding iriguchi and Presidio and nothing else. Reproduce with
 
 | scanner | missed findings | over-caution |
 |---|---:|---:|
-| `fallback` | 61.7% | 8.9% |
+| `fallback` | 57.0% | 8.9% |
 | `presidio` | 44.9% | 35.6% |
 | **`fallback+presidio`** | **27.1%** | **41.1%** |
 
