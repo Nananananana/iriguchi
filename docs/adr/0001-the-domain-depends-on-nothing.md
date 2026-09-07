@@ -65,7 +65,13 @@ the same 155 cases:
                               mamori              1.0% (1/104)
 
 So the magnitude is real and large. Two things about it belong here and not only
-there. **The 1.0% is measured on mamori's home ground** -- 134 of the 155 cases
+there. *(Measured 2026-09-04 over a 155-case corpus. The fallback's figure is
+**57.0%, 61/107**, as of 2026-09-08 over 197 cases -- the corpus grew and
+`fallback.long-digit-run` learned about separators. The argument below is
+about the gap between the two scanners, which is unchanged; the live number
+is in `docs/measurements.md`.)*
+
+**The 1.0% is measured on mamori's home ground** -- 134 of the 155 cases
 are borrowed from mamori's own corpus, so that half scores mamori against the
 data it was developed with. And the 21 cases mamori has never seen contain
 **six** must-stay-local prompts, on which both scanners score 0%, which is a

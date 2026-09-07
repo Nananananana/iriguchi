@@ -134,6 +134,33 @@ save that would be a bad trade. `typing` is ~15 ms and is real at runtime for
 the ports. Both are asserted *present*, so that a future round finding them gone
 has to explain why.
 
+### What is left, measured rather than assumed
+
+Re-profiled 2026-09-08 after the change above, with `-X importtime`. Stated with
+the method, because the round before this one recorded a conclusion without one
+and that conclusion stopped the search for a week.
+
+| | | |
+|---|---:|---|
+| `dataclasses` + `inspect` | ~32 ms | every domain value is a frozen dataclass |
+| `typing` | ~17 ms | `Protocol` and `runtime_checkable` in the five ports |
+| `iriguchi.config` + `registry` | ~17 ms | a `route` builds a scanner by name |
+| `iriguchi.application.routing` | ~15 ms | the use case itself |
+| `site` + `_virtualenv` | ~37 ms | **the venv, not iriguchi** — absent from a plain install |
+
+**`typing` cannot be deferred, and the reason is worth writing down.** Most of
+its uses are annotations, which `from __future__ import annotations` already
+turns into strings — but the ports define `Protocol` classes at import time, and
+`TYPE_CHECKING` is itself imported *from* `typing`, so a module guarding its
+annotation-only imports still pays for the module. Checked: `dataclasses` does
+not pull `typing`, so all ~17 ms is iriguchi's own and none of it is reachable
+without giving up either Protocols or idiomatic type-checking.
+
+So there is **no cheap win left**: everything above is either CPython's, the
+venv's, or a module a `route` genuinely needs. The next round should start by
+disproving that sentence with `-X importtime` rather than by trusting it — which
+is precisely what the previous conclusion was not set up to invite.
+
 ### What the router itself costs, and it is not the router
 
 | | |

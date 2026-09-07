@@ -65,6 +65,8 @@ It has now been measured, and the measurement does not support it.
 `docs/measurements.md` has the table. Over the 21 generated cases, at
 temperature 0, against four locally available models in two framings:
 
+    (measured 2026-09-05; 81.0% still holds on 2026-09-08)
+
     always answering `low`        66.7%
     **the rules, today**          **81.0%**
     eight model configurations    28.6% to 90.5%

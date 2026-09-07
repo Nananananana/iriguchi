@@ -7,6 +7,21 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- **Every document that publishes a number now says who checks it, or when it
+  was true.** Audited 2026-09-08: the suite recomputes `README.md`,
+  `measurements.md` and `feasibility.md`, which left **22 percentages in
+  documents no test opens** — the ADRs and the design proposal — three of them
+  carrying no date either, so a reader could not tell a live claim from a record
+  of one. None was wrong; **the defect was that nothing would notice when one
+  went stale**, and one just had: widening `fallback.long-digit-run` turned
+  ADR-0017's composite row into a ceiling, in a table that reads as current
+  advice. Documents are now `RECOMPUTED` or `HISTORICAL`, a historical one must
+  carry a date, and one in neither list fails. The ADRs are deliberately *not*
+  recomputed — a number in a decision's Context was true when the decision was
+  taken, and rewriting it would falsify the record.
+
 ### Fixed
 
 - **A card number written the way people write it was not detected.**

@@ -13,7 +13,8 @@ the first time, against 42 prompts written to test it:
 | **moderate** | 12 | **2** | 0 |
 | **high** | 7 | 4 | **2** |
 
-**42.9%, against 35.7% for always answering `low`.** `low` is nearly perfect at
+**42.9%, against 35.7% for always answering `low`** (measured 2026-09-06 over
+the 42 `requests` cases, and still 42.9% on 2026-09-08). `low` is nearly perfect at
 14/15 and `high` is 2 of 13: eleven of the thirteen hardest prompts were kept
 local, seven called `low` outright.
 
