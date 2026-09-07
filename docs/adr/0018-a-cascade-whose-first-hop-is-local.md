@@ -170,7 +170,10 @@ escalates on its own.
 author, because escalation needs mamori to protect the outbound prompt and mamori
 is not on PyPI ([`feasibility.md`](../feasibility.md) F2). The local half — the
 answer, the judgement, the verdict and its reason — works today and is the part
-that carries the argument. F2 remains the open decision it was.
+that carries the argument. F2 was open when this was written and is decided now:
+[ADR-0019](0019-the-external-route-needs-a-checkout-nobody-has.md) puts the
+outbound hop out of scope for v0.1 and says so in the road table, which changes
+what the documentation claims and nothing about this cascade.
 
 **Two bands, not three.** The complexity axis has a middle band because an
 explanation benefits from distinguishing "not obviously easy" from "actually

@@ -63,10 +63,20 @@ and the whole of it runs with no GUI, no network and no model:
 - `evaluation/` — 155 labelled cases and the report that scores them
 - `interfaces/cli/` — `route`, `config`, `doctor`, `demo`, `eval`
 
-**Not built:** everything with a seam or a surface. mamori as a scanner and as an
-escalation channel, ollama as a local model, `iriguchi ask` (v0.2); the tray and
-the popup (v0.3); the Anchor Dashboard (v0.4). The proposal's section 8 has the
-order and the reasons.
+That paragraph is v0.1's shape and is still true of v0.1. It is no longer the
+whole of what is built: `ask`, `schema`, `rules` and `algorithms` are commands
+now, `infrastructure/models/` holds an OpenAI-compatible upstream, and
+`infrastructure/judges/` holds the cascade's two judges.
+
+**Not built:** the tray and the popup (v0.3); the Anchor Dashboard (v0.4). The
+proposal's section 8 has the order and the reasons.
+
+**Built and not reachable:** mamori as a scanner and as an escalation channel.
+It needs a checkout beside this one, because mamori is not on PyPI --
+[ADR-0019](adr/0019-the-external-route-needs-a-checkout-nobody-has.md) decides
+what iriguchi says while that is true, and `feasibility.md` F2 is the finding
+behind it. **Built and reachable are different questions**, and this list asked
+only the first one until that ADR.
 
 `architecture.md` is still absent, and now for a different reason than before:
 there is an architecture, and `AGENTS.md` describes it, and the layer table there
