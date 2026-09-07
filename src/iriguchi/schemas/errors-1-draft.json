@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Nananananana/iriguchi/schemas/errors-1-draft.json",
+  "title": "iriguchi.errors/1-draft",
+  "description": "Every named failure iriguchi can print, the exceptions it raises and never prints, and one sentence each in two languages. **This is not an error.** It is a catalogue, the same on every run, and a consumer reads it once at build time so that a failure arriving at three in the morning already has a name it knows.",
+  "type": "object",
+  "required": ["contract", "by", "errors", "open_namespaces", "not_a_failure"],
+  "additionalProperties": false,
+  "properties": {
+    "contract": {
+      "const": "iriguchi.errors/1-draft"
+    },
+    "by": {
+      "description": "Producer, as name/version. A kind added in a later version is absent here, which is the staleness a consumer's build is testing for.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]+/[A-Za-z0-9._+-]+$"
+    },
+    "errors": {
+      "description": "**The closed set.** Every kind iriguchi prints as the name before the colon on the first line of stderr when it exits non-zero.\n\n`[]` is a valid answer and means *this build has no named failures*. It is not the same as the field being absent, which would mean nobody had asked the question.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/error" }
+    },
+    "open_namespaces": {
+      "description": "Prefixes whose second half comes from a foreign vocabulary iriguchi cannot enumerate -- the arrangement `iriguchi.rules/1-draft` uses for `presidio.` and `mamori.`.\n\niriguchi's is empty, and that is a claim rather than an omission: every kind above is one of its own class names, because an adapter that catches a foreign exception wraps it before it can reach the top-level handler.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/namespace" }
+    },
+    "not_a_failure": {
+      "description": "**The half a catalogue of errors normally cannot say.** These are raised, and a person never sees them as failures: ADR-0002 turns a broken proposer into the most restrictive route available with a reason naming what broke, so it arrives as a *decision*.\n\nWithout this field a consumer reading `errors` would conclude that a broken scanner produces nothing. It produces a routing decision, and `reported_as` says which rule identifier carries it.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/quiet" }
+    }
+  },
+  "$defs": {
+    "error": {
+      "type": "object",
+      "required": ["kind", "exit_code", "outcome", "retryable", "detail", "detail_ja"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "description": "The stable identifier, spelled exactly as it appears before the colon on the first line of stderr. This is the fold key: a consumer collapsing repeated failures into one row groups on this and keeps nothing else, because the sentence after the colon can quote what was handed in.",
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9]*$"
+        },
+        "exit_code": {
+          "description": "The process exit code that always accompanies this kind.\n\niriguchi's codes are `0` decided, `2` refused, `1` broken -- and **`2` is a decision, not a failure**, which is why no entry here carries it. A refusal has a routing decision on standard output and belongs to `iriguchi.routing-decision/1`.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "outcome": {
+          "description": "What happened, in the consumer's vocabulary. Narrower than the exit code: `1` is every named failure here, and these four are what a screen needs to distinguish.",
+          "enum": ["refused", "unavailable", "failed", "timed_out"]
+        },
+        "retryable": {
+          "description": "**Not a forecast.** Whether a consumer may try this again on its own.\n\nThe two readings come apart on a restoration failure: asking again might well succeed, and it would put the prompt through the outbound path a second time. A router does not hand a consumer a reason to re-send a prompt, so the narrower reading is the one this field carries.",
+          "type": "boolean"
+        },
+        "detail": {
+          "description": "One sentence about **what the kind means**, in English. Not what happened on a particular run -- the sentence after the colon on stderr says that, and it is the half a consumer is asked not to keep.",
+          "type": "string",
+          "minLength": 1
+        },
+        "detail_ja": {
+          "description": "The same sentence in Japanese, **authored rather than translated**, for the reason `iriguchi.rules/1-draft` gives: iriguchi owns the meaning of its own failures, so both sentences are written by the same hand and cannot disagree.",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "$comment": "No message template, and no example of a real path. Both were asked for to be left out, and the reason is that a reader fills a template in from their own logs -- at which point a document that holds no values is a document that holds values."
+    },
+    "namespace": {
+      "type": "object",
+      "required": ["prefix", "detail", "detail_ja"],
+      "additionalProperties": false,
+      "properties": {
+        "prefix": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9]*\\.$"
+        },
+        "detail": { "type": "string", "minLength": 1 },
+        "detail_ja": { "type": "string", "minLength": 1 }
+      }
+    },
+    "quiet": {
+      "type": "object",
+      "required": ["kind", "reported_as", "detail", "detail_ja"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9]*$"
+        },
+        "reported_as": {
+          "description": "The rule identifier that carries it into a decision instead. Resolvable in `iriguchi.rules/1-draft`, and a test drives it through that document -- the first draft of this catalogue pointed at `routing.judge-failed`, which does not exist.",
+          "type": "string",
+          "pattern": "^[a-z]+\\.[a-z0-9-]+$"
+        },
+        "detail": { "type": "string", "minLength": 1 },
+        "detail_ja": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "$comment": "A draft. It freezes when a second program both produces and consumes it, which is the family's rule -- and the rule is about a program that used it and found something, not about a validator that accepted it. Sora is the consumer; no second producer exists yet.\n\nThree invariants JSON Schema cannot express, all enforced by `tests/test_the_error_catalogue_is_complete.py`:\n\n**`errors` is complete.** Every `IriguchiError` subclass is in `errors`, in `not_a_failure`, or declared in `errors.NOT_YET_RAISED` as raised by nothing.\n\n**`exit_code` is driven, for every kind.** Each declared code is the code the top-level handler actually returns when that kind is raised, and the name it prints first -- measured by raising each one at a seam inside the handler rather than by reading the table. `ConfigurationError` is additionally driven through a real failing command. This is a claim about the handler, not about reachability: whether a kind can arise at all is what `errors.NOT_YET_RAISED` answers, and a kind declared there is refused a place in `errors`.\n\n**The two lists never overlap**, and `reported_as` resolves in the rules catalogue."
+}

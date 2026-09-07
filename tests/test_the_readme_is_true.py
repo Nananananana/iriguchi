@@ -191,3 +191,51 @@ class TestTheSettingsTable:
         named = set(re.findall(r"\|\s*\*{0,2}`([a-z+]+)`\*{0,2}\s*\|", table))
         assert named, "the scanner table lost its names"
         assert named <= set(SCANNERS.names), f"unregistered scanners offered: {named}"
+
+
+class TestTheRoadmap:
+    """The road table, and the sentence above it.
+
+    That sentence named `iriguchi ask` as its example of *a name in this table
+    is a plan, not a command* -- and `ask` had been typeable for some time when
+    somebody finally read it. A stale list of commands is the same failure the
+    rest of this file exists for, one paragraph further down the page, and it
+    survived longer because nothing in the first screen was wrong.
+    """
+
+    @staticmethod
+    def _listed(readme: str) -> set[str]:
+        """The commands the roadmap paragraph claims are built."""
+        marker = "The built commands are "
+        assert marker in readme, "the README no longer says which commands are built"
+        end = "is the authority"
+        assert end in readme.split(marker, 1)[1], "the sentence no longer ends where this expects"
+        sentence = readme.split(marker, 1)[1].split(end, 1)[0]
+        return set(re.findall(r"`([a-z]+)`", sentence))
+
+    @staticmethod
+    def _real() -> set[str]:
+        [commands] = [
+            action
+            for action in build_parser()._actions
+            if isinstance(action, argparse._SubParsersAction)
+        ]
+        return set(commands.choices)
+
+    def test_it_names_every_command_that_exists(self, readme: str) -> None:
+        missing = self._real() - self._listed(readme)
+        assert not missing, f"built and unlisted: {sorted(missing)}"
+
+    def test_it_names_nothing_that_does_not(self, readme: str) -> None:
+        """The half that was actually wrong. `ask` was listed as unbuildable
+        while being built; the mirror of that is a command listed after it is
+        removed, and both read the same to somebody skimming."""
+        invented = self._listed(readme) - self._real()
+        assert not invented, f"listed and not a command: {sorted(invented)}"
+
+    def test_the_table_separates_built_from_reachable(self, readme: str) -> None:
+        """ADR-0019's whole content. The external half is built, tested against
+        a real mamori, and openable by nobody who is not on this machine -- and
+        a single `built` column had no way to say that."""
+        assert "| **v0.2** | **yes** | **with a sibling checkout** |" in readme
+        assert "0019-the-external-route-needs-a-checkout-nobody-has.md" in readme

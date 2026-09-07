@@ -199,7 +199,7 @@ $ iriguchi schema        # the contract, from the wheel you installed
 $ iriguchi algorithms    # what can sit behind each port, and what each costs
 ```
 
-iriguchi publishes three documents and ships a schema for each. `iriguchi
+iriguchi publishes four documents and ships a schema for each. `iriguchi
 schema` with no argument prints the frozen one above; pass a name for the other
 two:
 
@@ -208,6 +208,7 @@ two:
 | `iriguchi.routing-decision/1` | `route --json` | frozen |
 | `iriguchi.route-batch/1-draft` | `route --batch` | draft |
 | `iriguchi.rules/1-draft` | `rules` | draft |
+| `iriguchi.errors/1-draft` | `errors` | draft |
 
 ```console
 $ iriguchi schema iriguchi.route-batch/1-draft
@@ -284,7 +285,11 @@ that difficulty could have out-voted. Note also that the reason names a *span*,
 ## What actually leaves
 
 With mamori installed, an outbound route can show you the text that would arrive
-— having sent nothing:
+— having sent nothing. **mamori is not on PyPI**, so this example needs a
+checkout beside this one (`uv pip install -e ../mamori`) and is out of scope for
+a v0.1 release
+([ADR-0019](docs/adr/0019-the-external-route-needs-a-checkout-nobody-has.md)).
+Everything above this section runs with nothing installed but iriguchi:
 
 ```console
 $ iriguchi --local --external route --explain --dry-run     "田中と二つのアルゴリズムを比較して、計算量を証明してください。"
@@ -360,18 +365,25 @@ arrives as a published JSON contract that iriguchi reads and never imports
 
 ## The road
 
-A name in this table is a plan, not a command. `iriguchi ask` reads like
-something you could type, and it is not — the built commands are `route`,
-`config`, `doctor`, `demo` and `eval`, and `iriguchi --help` is the authority.
+A name in this table is a plan, not a command — except that this paragraph named
+`iriguchi ask` as its example of something you could not type, and it has been
+typeable for some time. The built commands are `route`, `ask`, `config`,
+`schema`, `rules`, `errors`, `algorithms`, `doctor`, `demo` and `eval`, and
+`iriguchi --help` is the authority over both this sentence and the table below.
 
-| | | |
-|---|---|---|
-| **v0.1** | **built** | The router, headless. Domain, ports, fallback scanner, complexity estimator, CLI, evaluation corpus. No GUI, no network, no model. |
-| **v0.2** | **built** | mamori as the scanner (`--scanner mamori`), and as the escalation channel. |
-| **v0.2** | *not built* | ollama as the local model; `iriguchi ask`, which would be the first command that actually sends. |
-| **v0.3** | *not built* | The shell. Tray residency, hotkey, popup — with measured performance floors on the warm path. |
-| **v0.4** | *not built* | The Anchor Dashboard. Provenance from tsumugi and akashi, rendered — including what was left out. |
-| **v1.0** | *not built* | Full-offline routing. No new intelligence. |
+**`built` and `reachable` are two columns, not one.** They used to be one, and
+the row that suffered was the external half: built here, tested against a real
+mamori, and openable by nobody who is not on this machine
+([ADR-0019](docs/adr/0019-the-external-route-needs-a-checkout-nobody-has.md)).
+
+| | built | reachable | |
+|---|---|---|---|
+| **v0.1** | **yes** | **yes** | The router, headless. Domain, ports, fallback scanner, complexity estimator, CLI, evaluation corpus. No GUI, no network, no model. |
+| **v0.2** | **yes** | **yes** | An OpenAI-compatible local model (ollama and anything that speaks its API), `iriguchi ask`, and the cascade that escalates only after a local answer comes back weak. Presidio as a scanner you can actually install. |
+| **v0.2** | **yes** | **with a sibling checkout** | mamori as the scanner (`--scanner mamori`) and as the escalation channel. mamori is not on PyPI, so this half needs `uv pip install -e ../mamori` and is out of scope for a v0.1 release. |
+| **v0.3** | no | | The shell. Tray residency, hotkey, popup — with measured performance floors on the warm path. |
+| **v0.4** | no | | The Anchor Dashboard. Provenance from tsumugi and akashi, rendered — including what was left out. |
+| **v1.0** | no | | Full-offline routing. No new intelligence. |
 
 [docs/proposals/0001-the-design.md](docs/proposals/0001-the-design.md) is the
 whole design, including the parts of the original specification it revises and
