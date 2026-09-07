@@ -7,6 +7,23 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- **ADR-0019 answers `feasibility.md` F2**, which had been open since it was
+  written and restated in three ADRs without moving. The external route needs
+  mamori, mamori is a 404 on PyPI (re-checked 2026-09-07), so it is documented
+  as requiring a sibling checkout and out of scope for a v0.1 release. Nothing
+  was deleted and no behaviour changed — what changed is what the documentation
+  claims.
+- **The road table has two columns where it had one.** `built` and `reachable`
+  are different questions, and the row that suffered from their being one was
+  the external half: built here, tested against a real mamori, openable by
+  nobody who is not on this machine.
+- **The roadmap's own example of a name you cannot type was `iriguchi ask`**,
+  which had been typeable for some time — along with `schema`, `rules` and
+  `algorithms`. Three tests now hold that paragraph to `iriguchi --help`, in
+  both directions, and each was checked by breaking the README.
+
 ### Added
 
 - **A schema for every document iriguchi publishes, and one command that prints

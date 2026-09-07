@@ -158,6 +158,25 @@ what ADR-0012 exists to protect — is code no user reaches.
 
 (2) is available immediately and does not foreclose (1).
 
+### Decided: (2)
+
+[ADR-0019](adr/0019-the-external-route-needs-a-checkout-nobody-has.md), 2026-09-07.
+Re-checked against PyPI on that date and unchanged: `mamori` 404, `iriguchi` 404,
+`tsumugi` 200 and still the genomics project.
+
+Nothing was deleted and no behaviour changed. What changed is what the
+documentation claims. The road table has **two columns where it had one** --
+`built` and `reachable` -- because the external half was built here, tested
+against a real mamori, and openable by nobody who is not on this machine, and a
+single column had no way to say that. `docs/README.md`'s *not built* list had
+the same gap and now separates the two.
+
+The finding stays in this document rather than being struck out. It is what
+happened, the measurement is what made the option obvious, and an option chosen
+is not the same as an option that was never open. **(1) is still available**:
+publishing mamori turns a documented prerequisite into a dependency line and
+supersedes the ADR rather than contradicting it.
+
 ---
 
 ## F3. `doctor` called that unusable destination "available" — fixed
@@ -207,8 +226,13 @@ PyPI, it needs a checkout beside this one*, so a reader is no longer left to try
 `pip install mamori` and conclude the advice is stale. The comment above the
 message had said this since it was written; the string somebody actually reads
 did not, which is the whole failure in one line — **a true fact in a comment is
-a fact the user never gets.** It does not make the package obtainable. That is
-still F2's to answer.
+a fact the user never gets.** It does not make the package obtainable.
+
+**Now fully answered**, by F2's own decision above: the road table says which
+release makes this reachable, so a reader meeting the message is no longer the
+first person to learn that the remedy needs a second checkout. The package is
+still not obtainable, and that is now a documented prerequisite rather than a
+gap between what `doctor` says and what the roadmap implies.
 
 ---
 
