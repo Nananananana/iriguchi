@@ -44,7 +44,7 @@ OWNED = ("policy", "routing", "cascade", "fallback", "complexity", "judge")
 #: A rule-shaped string literal in one of the owned namespaces.
 LITERAL = re.compile(rf"^(?:{'|'.join(OWNED)})\.[a-z0-9-]+$")
 
-CATALOGUE = {rule for rule, _, _ in RULES}
+CATALOGUE = {rule for rule, *_ in RULES}
 
 
 def _string_literals() -> set[str]:
@@ -114,12 +114,23 @@ class TestEveryEmittedRuleIsListed:
         )
         assert not stale, f"{stale} are in the catalogue and nothing emits them"
 
-    @pytest.mark.parametrize("rule,source,detail", RULES, ids=[r for r, _, _ in RULES])
-    def test_every_entry_says_what_it_means(self, rule: str, source: str, detail: str) -> None:
+    @pytest.mark.parametrize("rule,source,detail,japanese", RULES, ids=[r for r, *_ in RULES])
+    def test_every_entry_says_what_it_means(
+        self, rule: str, source: str, detail: str, japanese: str
+    ) -> None:
         assert rule.startswith(f"{source}."), (rule, source)
         assert source in OWNED
         assert detail.endswith("."), f"{rule}'s detail is not a sentence"
         assert len(detail.split()) >= 5, f"{rule}'s detail is a shrug"
+        # The Japanese is authored here rather than by a consumer, so that a
+        # disagreement between the two cannot arise -- and it is checked here
+        # so the pair cannot drift apart the way two files would.
+        assert japanese.strip(), f"{rule} has no Japanese sentence"
+        assert japanese.endswith("。"), f"{rule}'s Japanese is not a sentence"
+        assert japanese != detail, f"{rule}'s Japanese is the English"
+        assert any("぀" <= c <= "ヿ" or "一" <= c <= "鿿" for c in japanese), (
+            f"{rule}'s Japanese contains no Japanese"
+        )
 
     def test_no_rule_is_listed_twice(self) -> None:
         assert len(CATALOGUE) == len(RULES)
@@ -227,7 +238,36 @@ class TestTheDocument:
     def test_every_rule_appears_once_with_its_sentence(self) -> None:
         rules = as_document("0.1.0")["rules"]
         assert len(rules) == len(RULES)
-        assert all(set(entry) == {"rule", "source", "detail"} for entry in rules)
+        assert all(set(entry) == {"rule", "source", "detail", "detail_ja"} for entry in rules)
+
+    def test_every_rule_carries_both_sentences(self) -> None:
+        """`detail` is English and `detail_ja` is Japanese, both authored here.
+
+        Sora said translating these themselves felt unsafe -- they would be
+        inventing vocabulary they do not own, and a disagreement with the
+        English would leave nobody able to say which was right. The fix is not
+        for them to be braver: iriguchi owns the meaning, so iriguchi writes
+        both and the disagreement cannot arise.
+        """
+        for entry in as_document("0.1.0")["rules"]:
+            assert entry["detail_ja"].endswith("。"), entry["rule"]
+            assert entry["detail_ja"] != entry["detail"], entry["rule"]
+
+    def test_the_open_namespaces_carry_both_too(self) -> None:
+        for entry in as_document("0.1.0")["open_namespaces"]:
+            assert entry["detail_ja"].endswith("。"), entry["prefix"]
+
+    def test_no_other_language_is_offered(self) -> None:
+        """**French is deliberately absent**, and this is the test that keeps it
+        so until somebody who can check the wording writes it.
+
+        Shipping a French sentence nobody here could verify would be exactly the
+        invented vocabulary Sora was right to avoid, one level further from
+        anyone able to catch it. Japanese is authored, not translated: this
+        project is written in Japanese, about Japanese prompts.
+        """
+        offered = {key for entry in as_document("0.1.0")["rules"] for key in entry}
+        assert offered == {"rule", "source", "detail", "detail_ja"}, offered
 
     def test_the_open_namespaces_are_declared_and_explained(self) -> None:
         """The half of Sora's acceptance condition that cannot hold, stated in
@@ -244,7 +284,7 @@ class TestTheDocument:
 
     def test_no_open_namespace_overlaps_the_closed_set(self) -> None:
         """If they did, a consumer could not tell which half to trust."""
-        for prefix, _ in OPEN_NAMESPACES:
+        for prefix, *_ in OPEN_NAMESPACES:
             assert not any(rule.startswith(prefix) for rule in CATALOGUE), prefix
 
 
