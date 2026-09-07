@@ -52,7 +52,7 @@
           "enum": ["refused", "unavailable", "failed", "timed_out"]
         },
         "retryable": {
-          "description": "**Not a forecast.** Whether a consumer may try this again on its own.\n\nThe two readings come apart on a restoration failure: asking again might well succeed, and it would put the prompt through the outbound path a second time. A router does not hand a consumer a reason to re-send a prompt, so the narrower reading is the one this field carries.",
+          "description": "**Not a forecast.** Whether the same request may be issued again, unchanged -- a question about permission, not about possibility. A failure where re-issuing is itself a new event (it leaves the machine, it is billed, it leaves a trace) is `false` even when it could succeed.\n\nEvery entry in this build is `false`, which is a statement rather than an oversight. `ModelError` is the one that is not obvious: on the outbound path it is raised after the send has already happened, so re-issuing sends the prompt a second time. One kind spans the local path and the outbound one, and the answer for a kind that spans them is the restrictive one. Recovering local retry would mean splitting the kind, which is a change to the exception tree rather than to this document.",
           "type": "boolean"
         },
         "detail": {

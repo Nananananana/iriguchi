@@ -313,3 +313,108 @@ class TestTheDocument:
         rendered = json.dumps(errors_document(__version__), ensure_ascii=False)
         for shape in ("{}", "{0}", "%s", "/home/", "C:\\", "/tmp/"):
             assert shape not in rendered, f"the catalogue carries {shape!r}"
+
+
+class TestRetryableMeansPermissionAndNotPossibility:
+    """Sora asked whether asking again could *succeed*; this document answers
+    whether it *may be issued*. They adopted the narrower reading, and mamori
+    reached the same sentence independently:
+
+        may the same request be issued again, unchanged -- and a failure where
+        re-issuing is itself a new event is `false` even when it could succeed
+
+    Applying it moved an entry that had been `true` since this table was
+    written, so the reason is pinned here rather than left in a comment.
+    """
+
+    @staticmethod
+    def _asker(external_failure: Exception) -> tuple[Any, Any, Any]:
+        from dataclasses import dataclass, field
+
+        from iriguchi.application.asking import Asker
+        from iriguchi.application.routing import PromptRouter
+        from iriguchi.domain.reason import Reason
+        from iriguchi.infrastructure.estimators.rules import RulesEstimator
+        from iriguchi.infrastructure.scanners.fallback import FallbackScanner
+
+        @dataclass
+        class _Model:
+            failure: Exception | None = None
+            asked: list[str] = field(default_factory=list)
+
+            @property
+            def name(self) -> str:
+                return "a-model"
+
+            def answer(self, prompt: str) -> str:
+                self.asked.append(prompt)
+                if self.failure is not None:
+                    raise self.failure
+                return "an answer"
+
+        @dataclass
+        class _Escalation:
+            protected_text: str = "<PERSON_001> asked a question"
+            findings: tuple[Reason, ...] = ()
+            closed: int = 0
+
+            def restore(self, response: str) -> str:
+                return response
+
+            def close(self) -> None:
+                self.closed += 1
+
+        @dataclass
+        class _Channel:
+            escalation: _Escalation = field(default_factory=_Escalation)
+            prepared: list[str] = field(default_factory=list)
+            name: str = "a-channel"
+
+            def prepare(self, prompt: str) -> _Escalation:
+                self.prepared.append(prompt)
+                return self.escalation
+
+        channel, external = _Channel(), _Model(failure=external_failure)
+        asker = Asker(
+            router=PromptRouter(scanner=FallbackScanner(), estimator=RulesEstimator()),
+            local=_Model(),
+            external=external,
+            channel=channel,
+        )
+        return asker, channel, external
+
+    #: Long, structural, and nothing a scanner objects to -- so the veto leaves
+    #: the external destination in place and the estimator asks for it. Asserted
+    #: below rather than trusted, because a prompt that quietly routed local
+    #: would make every assertion here vacuous.
+    WANTS_THE_BIG_ONE = (
+        "Refactor this module and explain why, step by step, with alternatives considered."
+    )
+
+    def test_a_model_error_can_arise_after_the_prompt_has_left(self) -> None:
+        """**The measurement that moved the entry.** `Asker._outward` raises this
+        from `external.answer()`, which is the one line in the package that
+        sends -- so by the time the failure exists, the prompt is gone."""
+        from iriguchi.domain.destination import Destination
+        from iriguchi.errors import ModelError
+
+        asker, channel, external = self._asker(ModelError("the upstream returned 503"))
+        with pytest.raises(ModelError):
+            asker.ask(self.WANTS_THE_BIG_ONE, frozenset({Destination.LOCAL, Destination.EXTERNAL}))
+
+        assert channel.prepared, "the route was not outward, so this measured nothing"
+        assert external.asked, "the send never happened, so this measured nothing"
+        assert channel.escalation.closed == 1
+
+    def test_so_model_error_is_not_retryable(self) -> None:
+        """Retrying re-issues the same request, and on that path re-issuing
+        sends the prompt a second time. One kind spans the local path and the
+        outbound one; the answer for a kind that spans them is the restrictive
+        one."""
+        assert {kind: retry for kind, _, _, retry, *_ in ERRORS}["ModelError"] is False
+
+    def test_nothing_in_this_build_is_retryable(self) -> None:
+        """A statement, not an oversight -- and the place a future `true` has to
+        argue with. Splitting `ModelError` so the outbound failure has a name of
+        its own is what would earn one back."""
+        assert not [kind for kind, _, _, retry, *_ in ERRORS if retry]
