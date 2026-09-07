@@ -33,7 +33,13 @@ from ...application.routing import PromptRouter
 from ...config import ENV_PREFIX, IriguchiConfig
 from ...domain.destination import Destination, Route
 from ...domain.sensitivity import Finding
-from ...errors import ConfigurationError, EscalationRefusedError, IriguchiError
+from ...errors import (
+    ConfigurationError,
+    EscalationRefusedError,
+    IriguchiError,
+    safe_detail,
+)
+from ...evaluation.case import Case
 from ...evaluation.dataset import load_corpus
 from ...evaluation.scoring import run as run_evaluation
 from ...infrastructure.registry import ESTIMATORS, JUDGES, SCANNERS
@@ -250,6 +256,16 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate = commands.add_parser("eval", help="run the labelled corpus and report")
     evaluate.add_argument(
         "--source", help="only cases from this source, e.g. generated, borrowed:mamori"
+    )
+    evaluate.add_argument(
+        "--corpus",
+        metavar="DIR",
+        help=(
+            "score cases from this directory instead of the built-in corpus. The "
+            "prompts stay on your machine -- the report carries case ids, rates and "
+            "counts, and no prompt text. See docs/feasibility.md F1 for why "
+            "somebody else's prompts are the measurement iriguchi cannot make."
+        ),
     )
     return parser
 
@@ -842,8 +858,16 @@ def cmd_demo(config: IriguchiConfig, out: TextIO) -> int:
 
 
 def cmd_eval(args: argparse.Namespace, config: IriguchiConfig, out: TextIO) -> int:
-    """No model. Ever. ADR-0007."""
-    cases = load_corpus()
+    """No model. Ever. ADR-0007.
+
+    `--corpus` is a seam somebody else's file crosses, and this session has
+    already been taught twice what those cost: a bare `OSError` from an
+    unreadable `--findings` file, and a `ValueError` from a span the domain
+    refuses. Both escaped the handler as tracebacks. So everything the loader
+    can raise is turned into a `ConfigurationError` here -- a kind that is in
+    `iriguchi errors`, exits 1, and prints its name first.
+    """
+    cases = _corpus(args.corpus)
     if args.source:
         cases = tuple(case for case in cases if case.source == args.source)
         if not cases:
@@ -852,6 +876,53 @@ def cmd_eval(args: argparse.Namespace, config: IriguchiConfig, out: TextIO) -> i
     report = run_evaluation(config.router(), cases)
     print(report.render(), file=out)
     return EXIT_OK
+
+
+def _corpus(directory: str | None) -> tuple[Case, ...]:
+    """The built-in corpus, or one somebody else holds.
+
+    The loader has always taken a directory; nothing exposed it. That is the
+    smaller half of what `--corpus` is for -- the larger half is that
+    `docs/feasibility.md` F1 asks for a measurement iriguchi structurally cannot
+    make, because every prompt that asks the complexity axis a question was
+    written by the people who wrote the axis. Somebody else's prompts are the
+    only answer, and their prompts cannot come here.
+
+    So the measurement goes to them. The report carries rates, counts and the
+    case ids they chose, and no prompt text -- asserted, not asserted-to.
+    """
+    if directory is None:
+        return load_corpus()
+    root = Path(directory)
+    if not root.is_dir():
+        raise ConfigurationError(
+            f"--corpus {directory!r} is not a directory. It should hold one or more "
+            f"corpus JSON files in the shape of `src/iriguchi/evaluation/data/*.json`; "
+            f"`iriguchi eval` with no --corpus scores the built-in one."
+        )
+    try:
+        cases = load_corpus(root)
+    except IriguchiError:
+        raise
+    except Exception as failure:
+        # The loader predates this flag and raises `KeyError`, `ValueError` and
+        # `OSError` for a malformed file -- none of them an `IriguchiError`, so
+        # each would have reached a person as a traceback and Sora as a failure
+        # with no name. `safe_detail` keeps the class and drops the message,
+        # because a JSON parser quotes what it choked on (ADR-0021).
+        raise ConfigurationError(
+            f"--corpus {directory!r} holds a file iriguchi could not read "
+            f"({safe_detail(failure)}). Every file must match the shape of "
+            f"`src/iriguchi/evaluation/data/*.json`: a `samples` list, and each "
+            f"sample with an `id`, a `prompt`, a sensitivity class and a band."
+        ) from failure
+    if not cases:
+        raise ConfigurationError(
+            f"--corpus {directory!r} is a directory with no corpus files in it. "
+            f"An empty corpus scores 100% on everything, which is the shape of a "
+            f"check that cannot fail rather than a passing one."
+        )
+    return cases
 
 
 def main(argv: Sequence[str] | None = None, out: TextIO | None = None) -> int:

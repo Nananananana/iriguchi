@@ -275,6 +275,50 @@ class TestTheFeasibilityAuditIsStillTrue:
             f"short to band rests on this number."
         )
 
+    def test_the_residual_table_is_what_the_corpus_gives(self, audit: str) -> None:
+        """F1's third table -- band label against who wrote the text.
+
+        It is the table that says the 42.9% is an estimator agreeing with the
+        people who built it, so it is worth exactly as much as its arithmetic.
+        Recomputed here from `provenance.text.authored_by`, which the corpus has
+        carried since it existed and which nothing read until this table.
+        """
+        import re
+        from collections import Counter
+
+        from iriguchi.evaluation.dataset import load_corpus
+
+        counted: Counter[tuple[str, str]] = Counter(
+            (case.band.value, case.provenance.text.authored_by) for case in load_corpus()
+        )
+        for band in ("low", "moderate", "high"):
+            row = re.search(
+                rf"^\| `{band}` \| \*?\*?(\d+)\*?\*? \| \*?\*?(\d+)\*?\*? \|", audit, re.MULTILINE
+            )
+            assert row, f"F1's residual table has lost its `{band}` row"
+            published = (int(row.group(1)), int(row.group(2)))
+            actual = (counted[(band, "iriguchi")], counted[(band, "mamori")])
+            assert published == actual, (
+                f"F1 publishes {published} for `{band}` and the corpus now gives {actual}."
+            )
+
+    def test_the_sentence_that_table_supports(self) -> None:
+        """**No case above `low` was written by anybody else.** The day that
+        stops being true, F1's residual is answered -- and `eval` stops printing
+        *not yet an independent measurement* on its own, because the report
+        measures the same thing rather than repeating this sentence."""
+        from iriguchi.config import IriguchiConfig
+        from iriguchi.evaluation.dataset import load_corpus
+        from iriguchi.evaluation.scoring import SELF
+        from iriguchi.evaluation.scoring import run as run_evaluation
+
+        report = run_evaluation(IriguchiConfig().router(), load_corpus())
+        assert report.above_low, "no case asks the axis anything, so this checks nothing"
+        assert set(report.band_text_authors) == {SELF}, (
+            "somebody else's prompts now exercise the complexity axis. F1's "
+            "residual is answered -- rewrite it rather than deleting this test."
+        )
+
     def test_the_claim_the_argument_rests_on(
         self, counts: tuple[dict[str, int], dict[str, dict[str, int]], dict[str, str]]
     ) -> None:

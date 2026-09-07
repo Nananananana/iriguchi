@@ -42,6 +42,15 @@ from ..domain.sensitivity import Finding, Sensitivity, SensitivityLevel
 from ..domain.span import Span
 from .case import Case, SensitivityClass
 
+#: The name this project records as the author of text it wrote itself, in a
+#: corpus file's `provenance.text.authored_by`.
+#:
+#: A constant rather than a literal at the comparison, because the claim it
+#: supports -- *nobody else's prompts have asked this axis a question* -- is one
+#: of the more consequential sentences in the repository, and a string typed
+#: twice is a sentence that can quietly become true by a typo.
+SELF = "iriguchi"
+
 __all__ = ["Outcome", "Report", "run"]
 
 #: What the corpus assumes a machine can reach. Both, because a corpus scored on
@@ -145,6 +154,44 @@ class Report:
         return _share(self.leaks, candidates)
 
     @property
+    def above_low(self) -> tuple[Outcome, ...]:
+        """The cases that ask the complexity axis anything at all.
+
+        A case labelled `low` is one the axis gets right by doing nothing, so a
+        corpus of them measures the axis the way a corpus of empty strings
+        measures a parser. 163 of iriguchi's 197 are `low`, and 134 of those are
+        borrowed PII samples -- a name, a particle, an email address -- which is
+        what they were written to be and not a request for work.
+        """
+        return tuple(o for o in self.outcomes if o.case.band is not ComplexityBand.LOW)
+
+    @property
+    def band_text_authors(self) -> dict[str, int]:
+        """Who wrote the text of the cases in `above_low`, and how many each.
+
+        **The number `band accuracy` most needs and never carried.** An
+        estimator scored on prompts its own authors invented is being asked
+        whether it agrees with the intuitions that produced it -- which it does,
+        and which is not evidence. `docs/feasibility.md` F1 says this in prose;
+        this is the same sentence attached to the number.
+        """
+        counted: dict[str, int] = {}
+        for outcome in self.above_low:
+            author = outcome.case.provenance.text.authored_by
+            counted[author] = counted.get(author, 0) + 1
+        return dict(sorted(counted.items(), key=lambda pair: (-pair[1], pair[0])))
+
+    @property
+    def band_is_self_scored(self) -> bool:
+        """True while nobody else's text asks the axis a question.
+
+        Measured, not assumed: it is `False` the moment a corpus arrives whose
+        above-`low` cases were written by another hand, which is exactly the
+        state F1 asks for and the reason `eval --corpus` exists.
+        """
+        return bool(self.above_low) and set(self.band_text_authors) <= {SELF}
+
+    @property
     def missed_findings(self) -> tuple[Outcome, ...]:
         return tuple(outcome for outcome in self.outcomes if outcome.missed_finding)
 
@@ -183,6 +230,24 @@ class Report:
     def slowest_latency_ms(self) -> float:
         return max((o.latency_ms for o in self.outcomes), default=0.0)
 
+    def _band_provenance(self) -> list[str]:
+        """Under `band accuracy`, whose text it was measured on.
+
+        Two lines rather than a footnote, because a rate printed on its own is
+        read as a property of the estimator and this one is partly a property of
+        who wrote the corpus.
+        """
+        if not self.above_low:
+            return ["  above `low`        nothing -- this corpus asks the axis no question"]
+        listed = ", ".join(f"{author} {count}" for author, count in self.band_text_authors.items())
+        lines = [f"  above `low`        {len(self.above_low)} cases, text by: {listed}"]
+        if self.band_is_self_scored:
+            lines.append(
+                "                     all of it written here, so this rate is not yet an "
+                "independent measurement (docs/feasibility.md F1)"
+            )
+        return lines
+
     def render(self) -> str:
         """A table, and the sentence that keeps it honest."""
         lines = [
@@ -193,7 +258,9 @@ class Report:
             "   <- end to end, floor of zero, flattered by easy prompts",
             f"over-caution rate    {self.over_caution_rate:6.1%}",
             f"route accuracy       {self.route_accuracy:6.1%}",
-            f"band accuracy        {self.band_accuracy:6.1%}",
+            f"band accuracy        {self.band_accuracy:6.1%}"
+            f"   <- {self.total - len(self.above_low)} of {self.total} are labelled `low`",
+            *self._band_provenance(),
             f"decision latency     {self.median_latency_ms:6.2f} ms median, "
             f"{self.slowest_latency_ms:.2f} ms slowest",
         ]
