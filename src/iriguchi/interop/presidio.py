@@ -19,7 +19,7 @@ from typing import Any
 
 from ..domain.sensitivity import Finding
 from ..domain.span import Span
-from ..errors import IriguchiError
+from ..errors import InteropError
 
 __all__ = [
     "SOURCE",
@@ -36,13 +36,12 @@ __all__ = [
 SOURCE = "presidio"
 
 
-class InteropError(IriguchiError):
-    """A foreign result could not be read.
-
-    Its own type rather than `ValueError`, so a caller converting a batch can
-    tell *this analyzer output is malformed* from *this program has a bug* --
-    and so the message can name the item rather than the field.
-    """
+# `InteropError` is re-exported above and defined in `iriguchi.errors`, with the
+# rest of the tree. It lived here until a package-wide walk found it: the error
+# catalogue promised *every kind iriguchi can print* and was checked against
+# `iriguchi.errors` alone, so a printable kind one directory away was invisible
+# to the check that existed to find exactly that. Keeping the name importable
+# from here costs one line and breaks nobody.
 
 
 @dataclass(frozen=True, slots=True)

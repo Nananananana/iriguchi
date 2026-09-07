@@ -33,7 +33,7 @@ from ..domain.policy import RoutingPolicy
 from ..domain.reason import Reason
 from ..domain.sensitivity import Finding, Sensitivity
 from ..domain.span import Span
-from ..errors import EstimationError, ScanError
+from ..errors import EstimationError, ScanError, safe_detail
 from ..ports.estimator import ComplexityEstimator
 from ..ports.scanner import SensitivityScanner
 
@@ -94,21 +94,41 @@ class PromptRouter:
         try:
             findings = tuple(self.scanner.scan(text))
         except ScanError as failure:
-            return self._scanner_failed(text, str(failure))
+            # The port's contract, and a live branch rather than a decorative
+            # one -- `tests/test_error_tree.py` asserts that difference.
+            return self._scanner_failed(text, safe_detail(failure))
         except Exception as failure:
             # An adapter that raises something other than `ScanError` is not
             # conforming, and it is still not a reason to send the prompt out.
             # Catching broadly here is deliberate: the alternative is that a
             # `KeyError` in somebody's regex table becomes a leak.
-            return self._scanner_failed(text, f"{type(failure).__name__}: {failure}")
+            return self._scanner_failed(text, safe_detail(failure))
         return Sensitivity.from_findings(findings), ()
 
-    def _scanner_failed(self, text: str, detail: str) -> tuple[Sensitivity, tuple[Reason, ...]]:
+    def _scanner_failed(self, text: str, kind: str) -> tuple[Sensitivity, tuple[Reason, ...]]:
         """ADR-0002, at the point where it costs something.
 
         The synthetic finding spans the whole prompt, because that is what is
-        actually true: nothing is known about any part of it. It carries the
-        scanner's failure and never the text.
+        actually true: nothing is known about any part of it.
+
+        **`kind` is an exception's class name, and never its message.** This
+        docstring said *it carries the scanner's failure and never the text*
+        while `str(failure)` went straight into a published document, and the
+        two are the same string whenever a scanner quotes what it choked on --
+        which is the most ordinary error message any library writes:
+
+            regex engine gave up on 'Please email tanaka@example.com the ...'
+
+        That reached `reasons[].detail` of `iriguchi.routing-decision/1`, the
+        document ADR-0016 says is publishable *because it holds no prompt*.
+        iriguchi does not write mamori's error messages or presidio's, so the
+        guarantee rested on code this repository does not control.
+
+        The remedy is the one iriguchi gave Sora for the same problem in the
+        same week: **keep the name, discard the sentence.** A class name is
+        written by the library author about the library; a message is
+        unclassified text of unknown provenance, and ADR-0006 already said
+        which of those may travel -- rule ids, spans and types, never a value.
         """
         whole = Span(0, len(text))
         finding = Finding("routing.scanner-failed", _SOURCE, whole)
@@ -118,7 +138,7 @@ class PromptRouter:
             span=None,
             detail=(
                 f"the sensitivity scanner {self.scanner.name!r} could not answer "
-                f"({detail}), so nothing is known about this prompt and it is treated "
+                f"({kind}), so nothing is known about this prompt and it is treated "
                 f"as restricted"
             ),
         )
@@ -135,9 +155,9 @@ class PromptRouter:
         try:
             return Complexity.from_signals(self.estimator.estimate(text), self.thresholds), ()
         except EstimationError as failure:
-            detail = str(failure)
+            kind = safe_detail(failure)
         except Exception as failure:
-            detail = f"{type(failure).__name__}: {failure}"
+            kind = safe_detail(failure)
         return Complexity.from_signals((), self.thresholds), (
             Reason(
                 rule="routing.estimator-failed",
@@ -145,7 +165,7 @@ class PromptRouter:
                 span=None,
                 detail=(
                     f"the complexity estimator {self.estimator.name!r} could not answer "
-                    f"({detail}), so this prompt is treated as the lowest band -- which "
+                    f"({kind}), so this prompt is treated as the lowest band -- which "
                     f"routes local and costs answer quality, never privacy"
                 ),
             ),

@@ -7,6 +7,30 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- **A scanner's exception message reached the published decision, and could
+  carry the prompt.** ADR-0002 turns a broken proposer into a decision;
+  ADR-0016 says that decision is publishable *because it holds no prompt*. The
+  join between them interpolated `str(failure)` into `reasons[].detail`, so a
+  scanner quoting the text it choked on — the default behaviour of a regex
+  engine, a tokenizer and a JSON parser — put the prompt into
+  `iriguchi.routing-decision/1`. Measured on the real router, not argued from
+  the code. **The guarantee had been resting on code this repository does not
+  write**: iriguchi authors neither mamori's exception messages nor presidio's.
+  A message now travels only when whoever raised it passed `quotable=True`;
+  two audited sites do, an AST scan lists them, and everything else is reduced
+  to its class name. ADR-0021.
+- **`InteropError` was a printable failure kind that no catalogue listed.**
+  It lived in `iriguchi.interop.presidio`, is raised on the `--findings` seam,
+  exits 1 and reaches a person — and the two checks that existed to prevent
+  exactly this both said *every exception* and both read `iriguchi.errors`
+  alone. So `iriguchi errors` published a catalogue claiming completeness while
+  missing a kind, against Sora's stated acceptance condition. The class has
+  moved into the exception tree (importable from where it was), and the scan is
+  package-wide, shared, and proved to be wider than one file by planting a
+  subclass outside `errors.py`.
+
 ### Changed
 
 - **`ModelError` is no longer `retryable`, and now nothing is.** Sora adopted

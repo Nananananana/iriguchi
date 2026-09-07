@@ -128,7 +128,7 @@ class MamoriScanner:
     def __init__(self) -> None:
         state, detail = mamori_state()
         if state is SiblingState.ABSENT:
-            raise ScanError(_MISSING)
+            raise ScanError(_MISSING, quotable=True)  # a constant; no prompt can be in it
         if state is SiblingState.BROKEN:
             # Telling somebody to install what they already have is the
             # `policy.prefer-local` mistake again: a wrong stated reason reads
