@@ -25,7 +25,6 @@ import json
 import sys
 from collections.abc import Sequence
 from dataclasses import replace
-from pathlib import Path
 from typing import TYPE_CHECKING, NoReturn, TextIO
 
 from ...application.routing import PromptRouter
@@ -39,11 +38,6 @@ from ...errors import (
     safe_detail,
 )
 from ...infrastructure.registry import ESTIMATORS, JUDGES, SCANNERS
-from ...infrastructure.scanners.mamori_scanner import (
-    SiblingState,
-    mamori_is_available,
-    mamori_state,
-)
 from ..contract import CONTRACT, SCHEMAS, as_document, schema
 from .console import print_content
 from .render import render_decision
@@ -437,6 +431,8 @@ def _findings_from(source: str | None) -> tuple[Finding, ...] | None:
         # that spawns this as a subprocess and reads stderr. A tool asked for a
         # path it cannot read should say so in its own voice and exit 1.
         try:
+            from pathlib import Path
+
             raw = Path(source).read_bytes()
         except OSError as failure:
             raise ConfigurationError(
@@ -806,6 +802,14 @@ def cmd_doctor(config: IriguchiConfig, out: TextIO) -> int:
     class of prompt into refusals, so the tool says that plainly rather than
     letting somebody discover it mid-sentence.
     """
+    # Imported here rather than at the top: this is the only function that
+    # asks, and the module it comes from is one a `route` was paying for.
+    from ...infrastructure.scanners.mamori_scanner import (
+        SiblingState,
+        mamori_is_available,
+        mamori_state,
+    )
+
     lines = [config.describe(), ""]
     if Destination.LOCAL not in config.available:
         lines.append(
@@ -905,6 +909,8 @@ def _corpus(directory: str | None) -> tuple[Case, ...]:
 
     if directory is None:
         return load_corpus()
+    from pathlib import Path
+
     root = Path(directory)
     if not root.is_dir():
         raise ConfigurationError(

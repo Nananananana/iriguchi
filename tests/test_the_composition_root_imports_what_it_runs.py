@@ -17,6 +17,15 @@ The four that were paid for and unused by a `route`:
     iriguchi.evaluation.dataset               only `eval`
     importlib.resources              ~15 ms   only `schema`, via contract.py
 
+A second round found more, after this file's own docstring had said there was
+nothing cheap left. **`pathlib`** was imported at the top of `main.py` for two
+lines inside command-specific helpers, and it drags `ipaddress`,
+`urllib.parse` and `fnmatch` with it. The mamori scanner was imported for three
+names used by `config` alone. Seven modules, ~8 ms of import work:
+
+    pathlib + ipaddress + urllib.parse + fnmatch    only --findings and --corpus
+    iriguchi.infrastructure.scanners.mamori_scanner only `config`
+
 `importlib.resources` was the expensive one and the least visible: `contract.py`
 imported it at module scope for a single function, and it drags `inspect` along.
 
@@ -26,7 +35,7 @@ that is imported costs time to import, memory to hold, and an entry in
 
     iriguchi's own startup cost   125.3 ms -> 95.1 ms    (-24%)
     retained after one route      5017 KiB -> 4079 KiB   (-19%)
-    modules loaded                     172 -> 146
+    modules loaded                     172 -> 146 -> 132
 
 Milliseconds are not asserted anywhere here -- a timing test on a shared runner
 teaches everybody to ignore the suite. The module count is the same fact,
@@ -58,6 +67,10 @@ import pytest
 #: Modules a `route` must not load, and who actually needs each.
 UNUSED_BY_ROUTE = {
     "iriguchi.application.asking": "only `ask`",
+    "pathlib": "only `--findings` and `--corpus`; it drags in ipaddress and urllib",
+    "ipaddress": "nothing here wants it; `pathlib` brought it",
+    "urllib.parse": "nothing here wants it; `pathlib` brought it",
+    "iriguchi.infrastructure.scanners.mamori_scanner": "only `config`",
     "iriguchi.evaluation.scoring": "only `eval`",
     "iriguchi.evaluation.dataset": "only `eval`",
     "importlib.resources": "only `schema`, via interfaces/contract.py",
@@ -147,8 +160,10 @@ class TestTheModuleCountIsTheBudget:
     `scoring` and `importlib.resources` at module scope does.
     """
 
-    #: 146 at the time of writing, from 172. The headroom is deliberate.
-    CEILING = 155
+    #: 132 now: 172 -> 146 when the composition root stopped importing every
+    #: command, then -> 132 when `pathlib` and the mamori scanner followed. The
+    #: ceiling came down with it, because the test below insists it does.
+    CEILING = 140
 
     def test_a_route_stays_under_the_budget(self, after_a_route: set[str]) -> None:
         assert len(after_a_route) <= self.CEILING, (
