@@ -593,8 +593,22 @@ clean venv holding iriguchi and Presidio and nothing else. Reproduce with
 | scanner | missed findings | over-caution |
 |---|---:|---:|
 | `fallback` | 57.0% | 8.9% |
-| `presidio` | 44.9% | 35.6% |
-| **`fallback+presidio`** | **27.1%** | **41.1%** |
+| `presidio` | 44.9%† | 35.6%† |
+| **`fallback+presidio`** | **27.1%**† | **41.1%**† |
+
+The `fallback` row is recomputed from the corpus on every test run and is
+current as of 2026-09-08, when `fallback.long-digit-run` was widened — which is
+why it does not match the date above it.
+
+†the other two rows are as of 2026-09-06 and **not recomputed since**. presidio
+needs a 560 MB spaCy model, so it is an optional extra and absent from CI, and
+until 2026-09-08 nothing anywhere recomputed these two rows. What runs now is
+two-sided: on a machine with presidio installed they are recomputed and must
+match; on a machine without one — every CI runner — the check is that this
+paragraph exists. **CI cannot verify the numbers, so CI verifies that the
+document says so.** The composite is a union of findings, so widening the
+fallback can only have lowered its miss rate: `27.1%` is a ceiling rather than a
+measurement.
 
 Re-measured on the 197-case corpus. The composite's over-caution fell from 60.8%
 to 41.1% when `requests.json` landed, and that is a real result rather than an
