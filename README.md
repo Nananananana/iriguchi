@@ -199,6 +199,23 @@ $ iriguchi schema        # the contract, from the wheel you installed
 $ iriguchi algorithms    # what can sit behind each port, and what each costs
 ```
 
+iriguchi publishes three documents and ships a schema for each. `iriguchi
+schema` with no argument prints the frozen one above; pass a name for the other
+two:
+
+| document | written by | state |
+|---|---|---|
+| `iriguchi.routing-decision/1` | `route --json` | frozen |
+| `iriguchi.route-batch/1-draft` | `route --batch` | draft |
+| `iriguchi.rules/1-draft` | `rules` | draft |
+
+```console
+$ iriguchi schema iriguchi.route-batch/1-draft
+```
+
+A draft freezes when a second program both produces and consumes it — a program
+that *used* it and found something, not a validator that accepted it.
+
 The exit code is the same either way: `0` decided, `2` refused, `1` broken. A
 refusal is not a failure, and a script that cannot tell them apart will retry a
 refusal forever.

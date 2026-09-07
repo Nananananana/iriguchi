@@ -49,8 +49,9 @@ from ..domain.decision import RoutingDecision
 from ..domain.reason import Reason
 from ..domain.sensitivity import Sensitivity
 from ..domain.span import Span
+from ..errors import ConfigurationError
 
-__all__ = ["CONTRACT", "SCHEMA_RESOURCE", "as_document", "schema"]
+__all__ = ["CONTRACT", "SCHEMAS", "SCHEMA_RESOURCE", "as_document", "schema"]
 
 #: The identifier a consumer checks first, and the field that carries the state.
 #: akashi found the cost of putting that on the second field a reader looks at;
@@ -61,15 +62,45 @@ CONTRACT = "iriguchi.routing-decision/1"
 
 SCHEMA_RESOURCE = "schemas/routing-decision-1.json"
 
+#: Every document iriguchi publishes, and the schema the wheel ships for it.
+#:
+#: **All three, not the frozen one.** iriguchi published three documents and
+#: shipped a schema for one of them, which left the other two as an example in a
+#: reply and a shape a consumer had to infer from output. Sora vendored
+#: `route-batch/1-draft` on exactly that basis.
+#:
+#: The ids are repeated here as literals rather than imported. `route-batch` is
+#: named in the CLI and `rules` in `interfaces.rules`, and importing either way
+#: would point this module at its own consumers -- so the agreement between the
+#: three spellings is held by a test instead, the way `ALLOWED`, `AGENTS.md` and
+#: `.importlinter` are.
+SCHEMAS: dict[str, str] = {
+    CONTRACT: SCHEMA_RESOURCE,
+    "iriguchi.route-batch/1-draft": "schemas/route-batch-1-draft.json",
+    "iriguchi.rules/1-draft": "schemas/rules-1-draft.json",
+}
 
-def schema() -> dict[str, Any]:
-    """The published schema, read from the wheel.
+
+def schema(contract: str = CONTRACT) -> dict[str, Any]:
+    """One published schema, read from the wheel.
 
     From the installed package rather than the repository, so `iriguchi schema`
     prints what a consumer actually has. A schema that only exists next to the
     source is a schema nobody downstream can check against.
+
+    The default is the frozen contract, because that is the one a caller with no
+    opinion wants and the one every existing caller already meant.
     """
-    resource = importlib.resources.files("iriguchi").joinpath(SCHEMA_RESOURCE)
+    try:
+        resource_name = SCHEMAS[contract]
+    except KeyError:
+        known = ", ".join(sorted(SCHEMAS))
+        raise ConfigurationError(
+            f"iriguchi publishes no schema for {contract!r}. It ships schemas for: {known}. "
+            f"A consumer wanting a document this build does not know about is reading a "
+            f"newer iriguchi's documentation than the one installed."
+        ) from None
+    resource = importlib.resources.files("iriguchi").joinpath(resource_name)
     return json.loads(resource.read_text(encoding="utf-8"))  # type: ignore[no-any-return]
 
 

@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Nananananana/iriguchi/schemas/rules-1-draft.json",
+  "title": "iriguchi.rules/1-draft",
+  "description": "Every rule identifier a decision can carry, and the namespaces where iriguchi cannot know the identifiers in advance. **This is not a decision.** It is a catalogue, the same for every prompt, and a consumer reads it once at build time to check that its own vocabulary covers what iriguchi can say.",
+  "type": "object",
+  "required": ["contract", "by", "rules", "open_namespaces"],
+  "additionalProperties": false,
+  "properties": {
+    "contract": {
+      "const": "iriguchi.rules/1-draft"
+    },
+    "by": {
+      "description": "Producer, as name/version. The catalogue is a property of a build: a rule added in a later version is absent here, which is exactly the staleness a consumer is testing for.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._-]+/[A-Za-z0-9._+-]+$"
+    },
+    "rules": {
+      "description": "**The closed set.** Every identifier iriguchi's own components can put in a decision. A consumer can test its vocabulary against this exhaustively, and iriguchi's own test suite refuses a rule that reaches a decision without appearing here.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/rule" }
+    },
+    "open_namespaces": {
+      "description": "**The open half, and the reason a flat list would lie.** These are prefixes whose second half is `f\"{source}.{entity_type}\"` from a foreign detector -- which identifiers exist depends on that detector's recognisers and configuration, and iriguchi never sees the list. It could not enumerate them without importing the thing it refuses to import.\n\nA consumer translates by prefix here. `detected by Presidio` is true whatever the entity type turns out to be, so a detector gaining a recogniser does not break anybody's screen.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/namespace" }
+    }
+  },
+  "$defs": {
+    "rule": {
+      "type": "object",
+      "required": ["rule", "source", "detail", "detail_ja"],
+      "additionalProperties": false,
+      "properties": {
+        "rule": {
+          "description": "The stable identifier. It does not change while the decision contract is at v1, which is what makes it safe to key a translation off.",
+          "type": "string",
+          "pattern": "^[a-z]+\\.[a-z0-9-]+$"
+        },
+        "source": {
+          "description": "Which component emits it, and the first half of the identifier.",
+          "type": "string",
+          "minLength": 1
+        },
+        "detail": {
+          "description": "One sentence about **what the rule means**, in English. Not what it did on a particular prompt -- a decision's own `reasons[].detail` says that, and a second copy here would be a second thing to drift.",
+          "type": "string",
+          "minLength": 1
+        },
+        "detail_ja": {
+          "description": "The same sentence in Japanese, **authored rather than translated**. iriguchi owns the meaning of its own rules, so both sentences are written by the same hand and cannot disagree -- which is the failure a consumer writing its own Japanese would risk, with nobody able to say which wording was right.",
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "$comment": "There is deliberately no third language. Nobody on this project can write French that anybody on this project could check, and shipping it would be exactly the invented vocabulary this field exists to make unnecessary -- one step further from anyone able to catch it. A consumer that needs one owns it, and takes `detail` as authoritative."
+    },
+    "namespace": {
+      "type": "object",
+      "required": ["prefix", "detail", "detail_ja"],
+      "additionalProperties": false,
+      "properties": {
+        "prefix": {
+          "description": "Including the dot, so a consumer can match with a plain prefix test.",
+          "type": "string",
+          "pattern": "^[a-z]+\\.$"
+        },
+        "detail": { "type": "string", "minLength": 1 },
+        "detail_ja": { "type": "string", "minLength": 1 }
+      }
+    }
+  },
+  "$comment": "Two invariants JSON Schema cannot express, both enforced by `tests/test_the_rule_catalogue_is_complete.py`:\n\n**`rules` is complete.** A test walks the package's syntax tree for rule-shaped literals and fails if one is missing, and drives the families assembled as `f\"{SOURCE}.{rule}\"` through every branch -- those produce no literal for a scan to find.\n\n**The two halves never overlap.** No identifier in `rules` starts with a prefix in `open_namespaces`, because a consumer meeting one in both could not tell which half to trust."
+}
