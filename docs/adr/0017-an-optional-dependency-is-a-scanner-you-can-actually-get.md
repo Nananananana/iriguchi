@@ -50,9 +50,16 @@ rather than chosen in advance.
 
 | scanner | missed findings | over-caution |
 |---|---:|---:|
-| `fallback` | 61.7% → 57.0% | 8.9% |
-| `presidio` | 44.9% | 35.6% |
-| **`fallback+presidio`** | **27.1%** | **41.1%** |
+| `fallback` | 61.7% → **57.0%** | 8.9% |
+| `presidio` | 44.9%† | 35.6%† |
+| **`fallback+presidio`** | **27.1%**† | **41.1%**† |
+
+†measured 2026-09-06 and **not recomputed** since the fallback was widened on
+2026-09-08. presidio is an optional extra and is absent from CI, so nothing here
+or in the suite recomputes these two rows. The composite is a union of findings,
+so its miss rate can only have fallen — the number above is a ceiling rather
+than a measurement. The argument below rests on *neither dominating*, which no
+movement in these rows can change.
 
 Presidio finds `Katherine Whitfield` where the fallback finds nothing. The
 fallback finds `田中さん` where Presidio, running an English model, finds
