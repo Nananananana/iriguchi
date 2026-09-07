@@ -7,6 +7,26 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- **`pathlib` and the mamori scanner left the `route` path**, and the *at a
+  floor* conclusion published a day earlier was wrong. Two corrections found it:
+  `typing`'s ~17 ms was **cumulative and double-counted `re`** — marginally it
+  is ~6 ms — and a question that had never been asked, *what does a decision
+  cost importing only what it uses*, put **64 ms against 98 ms through the
+  CLI**. The 34 ms difference named itself in a module diff: `main.py` imported
+  `pathlib` at module scope for two lines living inside `--findings` and
+  `--corpus`, and `pathlib` drags `ipaddress`, `urllib.parse` and `fnmatch`
+  behind it.
+
+  | | before | after |
+  |---|---:|---:|
+  | import work, warm cache | 132.3 ms | **124.3 ms** |
+  | modules loaded | 139 | **132** |
+
+  The module budget came down from 155 to 140, because the test that guards it
+  fails when the ceiling stops catching anything.
+
 ### Added
 
 - **Every document that publishes a number now says who checks it, or when it

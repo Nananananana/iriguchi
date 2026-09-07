@@ -161,6 +161,44 @@ venv's, or a module a `route` genuinely needs. The next round should start by
 disproving that sentence with `-X importtime` rather than by trusting it — which
 is precisely what the previous conclusion was not set up to invite.
 
+### The next round disproved it the same day
+
+That sentence was wrong, and the invitation worked. **`typing`'s ~17 ms was a
+cumulative figure that double-counted `re`** — measured marginally, with `re`
+already loaded, it is about **6 ms**, and `dataclasses` is the ~18 ms one. A
+cumulative number read as a marginal one is how a cheap target looks expensive
+and an expensive one looks unavoidable.
+
+The larger miss was a question never asked: **what does a decision cost with
+only the imports it needs?**
+
+| | iriguchi's share |
+|---|---:|
+| a decision, importing only what it uses | 64 ms |
+| the same decision through the CLI | 98 ms |
+
+**34 ms of CLI**, and the module diff named it. `main.py` imported `pathlib` at
+module scope for two lines that live inside `--findings` and `--corpus`, and
+`pathlib` drags `ipaddress`, `urllib.parse` and `fnmatch` behind it. The mamori
+scanner was imported for three names `config` alone uses.
+
+| | before | after |
+|---|---:|---:|
+| import work, warm cache | 132.3 ms | **124.3 ms** |
+| modules loaded | 139 | **132** |
+
+**And one measurement was wrong before it was right.** The first A/B reported
+353 ms → 184 ms, a 48% improvement, which was implausible enough to check:
+`git stash` rewrites the source file, so the *before* side was recompiling
+bytecode that the *after* side had cached. Two warm-up runs per side fixed it,
+and the real figure is 8 ms. `-X importtime` inflates absolute numbers, so the
+ratio is what to read.
+
+What is genuinely left is `argparse` (a CLI must parse), `dataclasses` (every
+domain value is one), the ports' `Protocol`s, and iriguchi's own 32 modules at
+under a millisecond each. **The same instruction still applies to the next
+round, and it is now a demonstrated instruction rather than a hopeful one.**
+
 ### What the router itself costs, and it is not the router
 
 | | |
