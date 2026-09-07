@@ -7,6 +7,27 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- **A `route` stopped paying for `ask`, `eval` and `schema`.** The composition
+  root imported every command's dependencies before working out which command
+  was running, and `contract.py` imported `importlib.resources` at module scope
+  for one function. Sora spawns iriguchi once per prompt, so this is a cost
+  their consumer pays every time. Measured with `-X importtime`, which the
+  previous round had not used — its subprocess totals produced the conclusion
+  *no single offender above 20 ms*, and there were three.
+
+  | | before | after | |
+  |---|---:|---:|---|
+  | iriguchi's own startup cost | 125.3 ms | **95.1 ms** | −24% |
+  | retained after one `route` | 5017 KiB | **4079 KiB** | −19% |
+  | modules loaded | 172 | **146** | |
+
+  Held by a module-count budget rather than a timing assertion, because a
+  timing test on a shared runner teaches everybody to ignore the suite.
+  `tools/measure_startup.py` grew router stages; it had only ever measured the
+  tkinter path.
+
 ### Added
 
 - **A clear decision says whose look produced the emptiness.** Sora walked the

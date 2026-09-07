@@ -26,9 +26,8 @@ import sys
 from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
-from typing import NoReturn, TextIO
+from typing import TYPE_CHECKING, NoReturn, TextIO
 
-from ...application.asking import Answer
 from ...application.routing import PromptRouter
 from ...config import ENV_PREFIX, IriguchiConfig
 from ...domain.destination import Destination, Route
@@ -39,9 +38,6 @@ from ...errors import (
     IriguchiError,
     safe_detail,
 )
-from ...evaluation.case import Case
-from ...evaluation.dataset import load_corpus
-from ...evaluation.scoring import run as run_evaluation
 from ...infrastructure.registry import ESTIMATORS, JUDGES, SCANNERS
 from ...infrastructure.scanners.mamori_scanner import (
     SiblingState,
@@ -51,6 +47,18 @@ from ...infrastructure.scanners.mamori_scanner import (
 from ..contract import CONTRACT, SCHEMAS, as_document, schema
 from .console import print_content
 from .render import render_decision
+
+if TYPE_CHECKING:  # pragma: no cover - annotations only
+    # **Only for annotations.** `from __future__ import annotations` makes every
+    # one of these a string at runtime, so importing them here costs a reader
+    # nothing and costs a `route` nothing.
+    #
+    # `application.asking` alone is ~20 ms, and `evaluation` pulls the corpus
+    # loader and the scorer. A `route` used to pay for `ask` and for `eval`
+    # because the composition root imported every command's dependencies before
+    # deciding which command was being run.
+    from ...application.asking import Answer
+    from ...evaluation.case import Case
 
 __all__ = ["main"]
 
@@ -867,6 +875,8 @@ def cmd_eval(args: argparse.Namespace, config: IriguchiConfig, out: TextIO) -> i
     can raise is turned into a `ConfigurationError` here -- a kind that is in
     `iriguchi errors`, exits 1, and prints its name first.
     """
+    from ...evaluation.scoring import run as run_evaluation
+
     cases = _corpus(args.corpus)
     if args.source:
         cases = tuple(case for case in cases if case.source == args.source)
@@ -891,6 +901,8 @@ def _corpus(directory: str | None) -> tuple[Case, ...]:
     So the measurement goes to them. The report carries rates, counts and the
     case ids they chose, and no prompt text -- asserted, not asserted-to.
     """
+    from ...evaluation.dataset import load_corpus
+
     if directory is None:
         return load_corpus()
     root = Path(directory)

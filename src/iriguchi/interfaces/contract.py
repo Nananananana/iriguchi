@@ -39,7 +39,6 @@ words — silently, and worse the more the text needed protecting.
 
 from __future__ import annotations
 
-import importlib.resources
 import json
 from typing import Any
 
@@ -92,6 +91,13 @@ def schema(contract: str = CONTRACT) -> dict[str, Any]:
     The default is the frozen contract, because that is the one a caller with no
     opinion wants and the one every existing caller already meant.
     """
+    # **Imported here rather than at the top, and this is the expensive one.**
+    # `importlib.resources` costs ~15 ms and drags `inspect` in with it, and
+    # `schema()` is reached by exactly one command. Every `route` was paying for
+    # it -- and a consumer that spawns iriguchi once per prompt pays it once per
+    # prompt. Measured before and after; see the module docstring.
+    import importlib.resources
+
     try:
         resource_name = SCHEMAS[contract]
     except KeyError:
