@@ -497,6 +497,13 @@ and `iriguchi rules` lists all of them with a sentence each, as
 off `rule` and can test its translations against that list — so a rule added here
 cannot reach a reader as raw ASCII.
 
+Every entry carries `detail` and `detail_ja`, both written here. A consumer
+translating them itself would be inventing vocabulary it does not own, and a
+disagreement with the English would leave nobody able to say which was right;
+iriguchi owns the meaning of its own rules, so it writes both sentences. Japanese
+and no other language — this project is written in Japanese, about Japanese
+prompts, so that sentence is authored rather than translated.
+
 The list has two halves, and the second is the honest one: `presidio.*` and
 `mamori.*` are `f"{source}.{entity_type}"` from a foreign detector, so which
 identifiers exist depends on that detector's configuration and iriguchi cannot
