@@ -118,6 +118,26 @@ RULES: tuple[tuple[str, str, str, str], ...] = (
     ),
     # -- the router: what happened when a proposer failed. `application/routing.py`.
     (
+        "scan.by-the-caller",
+        "scan",
+        "The findings came in with the prompt, from the caller's own analyzer. "
+        "iriguchi did not look at this text -- so an empty set of findings here "
+        "is the caller's clean bill of health, not iriguchi's.",
+        "finding はプロンプトと一緒に渡された。呼び出し側自身の検出器のものである。"
+        "iriguchi はこのテキストを見ていない。ここで finding が空なら、"
+        "それは呼び出し側の「問題なし」であって、iriguchi のものではない。",
+    ),
+    (
+        "scan.by-the-router",
+        "scan",
+        "iriguchi's own configured scanner looked and found nothing. The scanner "
+        "is named in the detail, and what it misses is published -- an empty set "
+        "of findings here is only as strong as that scanner.",
+        "iriguchi 自身の（設定された）スキャナが見て、何も見つけなかった。"
+        "どのスキャナかは detail に書いてある。取りこぼす範囲は公表してある。"
+        "ここで finding が空であることの強さは、そのスキャナの強さまでである。",
+    ),
+    (
         "routing.scanner-failed",
         "routing",
         "The sensitivity scanner could not answer, so nothing is known about "
