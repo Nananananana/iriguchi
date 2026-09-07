@@ -7,7 +7,28 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- **`eval` says whose text a rate was measured on**, and `eval --corpus DIR`
+  scores cases somebody else holds. `provenance.text.authored_by` has been in
+  every corpus file since the corpus existed, loaded onto every `Case`, and read
+  by nothing — so `band accuracy` went out with the reason it is weak sitting
+  one field away. Counted: **all 34 cases labelled above `low` have text
+  iriguchi wrote**; the 134 with another author are borrowed PII samples, every
+  one of them `low`, independent and asking nothing. The report now prints that,
+  and stops printing *not yet an independent measurement* the moment a case from
+  another hand appears — a warning that cannot turn off is decoration, so a test
+  drives both directions. `docs/feasibility.md` F1 is the finding; this is its
+  mechanism, and the answer still needs somebody with real prompts.
+
 ### Fixed
+
+- **Every number in the README's `eval` block was stale**, and nothing checked
+  it. The corpus had grown from 155 cases to 197 while the README published the
+  old six — `cases 155`, `missed findings 63.5%`, `band accuracy 96.1%` — and
+  the prose under the block quoted a seventh that disagreed with the block
+  itself. The routing example one screen up has been checked since the day it
+  was found invented; the check had simply never been pointed here.
 
 - **A scanner's exception message reached the published decision, and could
   carry the prompt.** ADR-0002 turns a broken proposer into a decision;

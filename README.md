@@ -320,25 +320,43 @@ configuration in which iriguchi sends something less protected instead
 ```console
 $ iriguchi --local --external eval
 
-cases                155
-missed findings       63.5%   <- the scanner's coverage; read this first
+cases                197
+missed findings       61.7%   <- the scanner's coverage; read this first
 leak rate              0.0%   <- end to end, floor of zero, flattered by easy prompts
-over-caution rate     15.7%
-route accuracy        98.7%
-band accuracy         96.1%
-decision latency       0.10 ms median
+over-caution rate      8.9%
+route accuracy        93.9%
+band accuracy         84.8%   <- 163 of 197 are labelled `low`
+  above `low`        34 cases, text by: iriguchi 34
+                     all of it written here, so this rate is not yet an independent measurement (docs/feasibility.md F1)
 ```
+
+Every number above was stale until a test started running this block: the
+corpus had grown from 155 cases to 197 and the README still published the old
+six. They are checked now, the way the routing example already was.
 
 **Read the first number, and read it as a recommendation to install mamori.**
 The built-in scanner is deliberately dumb (ADR-0005) and cannot find a name
 without an honorific, an English name, a company name or an address. It misses
-63.5% of the corpus's must-stay-local cases, and that is published rather than
+61.7% of the corpus's must-stay-local cases, and that is published rather than
 fixed by widening it until the number looks better.
 
 The 0% leak rate underneath it is honest and nearly meaningless on its own —
 those prompts are easy, so the *complexity* axis kept them local, and a missed
 finding that never became a route is invisible end to end. The first version of
 this report had only the second number.
+
+**`band accuracy` carries its own author, and that is the two lines under it.**
+34 of the 197 cases are labelled above `low` — the rest cannot get the band
+wrong — and every one of those 34 has text iriguchi wrote. An estimator scored
+on prompts its own authors invented is being asked whether it agrees with the
+intuitions that produced it. It does. That is not evidence, and the report says
+so until a case from another hand arrives, at which point the line disappears
+on its own.
+
+`iriguchi eval --corpus DIR` is the door: it scores cases somebody else holds,
+on their machine. The prompts stay there — the report carries rates, counts and
+the case ids they chose, and no prompt text
+([`docs/feasibility.md`](docs/feasibility.md) F1).
 
 And every figure here is a **regression floor, not a measurement of the world**:
 the corpus was written by iriguchi's author and borrowed from a sibling that can

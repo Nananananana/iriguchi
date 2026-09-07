@@ -105,6 +105,42 @@ against which the complexity band can be scored the way sensitivity already is.
 Until that exists, the honest statement is that iriguchi has one measured axis
 and one designed one, and the README should say so.
 
+### The residual, measured (2026-09-10)
+
+`requests` exists and the axis has a number. What that number does not have is
+an author, and the corpus has recorded one all along in
+`provenance.text.authored_by` — a field loaded onto every `Case` and **read by
+nothing**. Counted:
+
+| band label | text by `iriguchi` | text by `mamori` |
+|---|---:|---:|
+| `low` | 29 | 134 |
+| `moderate` | **17** | **0** |
+| `high` | **17** | **0** |
+
+**All 34 cases that ask the axis anything were written here.** The 134 with
+another author are the borrowed PII samples, every one of them `low` — they are
+independent and they ask nothing. So 42.9% and 81.0% are both an estimator
+agreeing with the intuitions that produced it, which it does, and which is not
+evidence.
+
+Two things changed rather than one sentence being added.
+
+**`eval` prints whose text a rate was measured on**, and stops saying *not yet
+an independent measurement* the moment a case from another hand appears. A
+warning that cannot turn off is decoration; a test drives both directions.
+
+**`eval --corpus DIR` scores cases somebody else holds.** The loader always took
+a directory and nothing exposed it. This is what makes the finding answerable
+at all, because the answer cannot come here: prompts are the most sensitive
+thing this family handles, and F1 asks for somebody else's. So the measurement
+goes to them — the report carries rates, counts and the case ids they chose,
+and **no prompt text**, which is asserted over both corpora rather than argued.
+
+What is still open is the arrangement, not the mechanism: somebody with real
+prompts has to label them and run it. That is a decision for the owner and for
+whoever holds the prompts, and iriguchi's part of it is now built.
+
 Reproduce: `python tools/which_axis.py` and `python tools/calibrate.py --sweep`.
 Both run against the committed corpus with no model and no network. The rows
 above are recomputed on every test run by `tests/test_the_published_numbers.py`,

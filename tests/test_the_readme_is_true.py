@@ -112,6 +112,90 @@ class TestTheConsoleExample:
             assert f"at {start}-{end}" in printed
 
 
+class TestTheEvalExample:
+    """The report block, which nothing checked until it was wrong in every row.
+
+    The corpus grew from 155 cases to 197 and the README kept publishing the old
+    six numbers -- `cases 155`, `missed findings 63.5%`, `band accuracy 96.1%`.
+    Every one of them was a measurement, printed as a measurement, and stale.
+
+    The routing example above has been checked since the day it was found
+    invented. This block was in the same document, one screen down, and the
+    check simply had not been pointed at it -- which is the same shape as the
+    error-catalogue scan that read one module while claiming the package.
+    """
+
+    EVAL = "iriguchi --local --external eval"
+
+    @staticmethod
+    def _actual(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+        monkeypatch.setenv("IRIGUCHI_LOCAL", "1")
+        monkeypatch.setenv("IRIGUCHI_EXTERNAL", "1")
+        out = io.StringIO()
+        assert main(["eval"], out=out) == EXIT_OK
+        return [line.rstrip() for line in out.getvalue().splitlines() if line.strip()]
+
+    def test_the_example_produces_output_at_all(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        assert len(self._actual(monkeypatch)) >= 6
+
+    def test_there_is_something_being_claimed(self, readme: str) -> None:
+        assert len(_console_block(readme, self.EVAL)) >= 6, "the README's block shrank to nothing"
+
+    def test_every_claimed_line_is_really_printed(
+        self, readme: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """**Latency excluded, and only latency.** It is the one row that
+        differs between machines, so pinning it would make the suite red on a
+        busy laptop and teach everybody to ignore this file. Every rate, every
+        count and both provenance lines are exact."""
+        actual = self._actual(monkeypatch)
+        claimed = [
+            line
+            for line in _console_block(readme, self.EVAL)
+            if not line.strip().startswith("decision latency")
+        ]
+        assert claimed, "every line was excluded, so this is checking nothing"
+        missing = [line for line in claimed if line not in actual]
+        assert not missing, f"the README claims lines iriguchi does not print: {missing}"
+
+    def test_the_block_still_shows_what_the_rate_rests_on(self, readme: str) -> None:
+        """**The other direction, and the one that matters here.**
+
+        Every other check in this class asserts the README claims nothing
+        iriguchi does not print -- which a *shorter* README satisfies perfectly.
+        Deleting the two provenance lines would leave `band accuracy 84.8%`
+        standing alone and every test above green, and standing alone is exactly
+        the state this change exists to end.
+        """
+        block = " ".join(_console_block(readme, self.EVAL))
+        assert "above `low`" in block, "the README shows the rate without its population"
+        assert "text by:" in block, "the README shows the rate without its author"
+        assert "not yet an independent measurement" in block, (
+            "the README shows `band accuracy` without the sentence that says it is "
+            "an estimator agreeing with the people who wrote it. If a corpus from "
+            "another hand has arrived, this test is obsolete and F1 is answered -- "
+            "rewrite both rather than deleting this."
+        )
+
+    def test_the_rates_in_the_prose_are_the_rates_in_the_block(self, readme: str) -> None:
+        """The sentence under the block quotes the scanner's miss rate. It said
+        63.5% while the block said 61.7% -- two numbers for one fact, in one
+        document, one screen apart."""
+        [block_rate] = [
+            line.split()[2]
+            for line in _console_block(readme, self.EVAL)
+            if line.strip().startswith("missed findings")
+        ]
+        after = readme.split(self.EVAL, 1)[1]
+        prose = after[: after.index("regression floor")]
+        # Line wrapping puts a newline anywhere, so the prose is flattened
+        # before the rate is looked for.
+        flattened = " ".join(prose.split())
+        assert f"misses {block_rate}" in flattened, (
+            f"the block says {block_rate} and the prose under it does not"
+        )
+
+
 class TestThePythonExample:
     def test_the_first_snippet_runs_and_says_what_it_claims(self) -> None:
         """`decision.leaves_the_machine # False`, with the comment as the
