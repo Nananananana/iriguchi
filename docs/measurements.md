@@ -92,6 +92,64 @@ restarts with it. `route --batch` amortises the whole 215 ms across every prompt
 in a call instead — five cards cost one start — and that is the shape Sora's
 manifest already speaks. Revisit if the numbers change.
 
+### The composition root imported every command, one round later
+
+Measured 2026-09-13 with `python -X importtime`, which the round above had not
+used — its stages were whole subprocesses, and a subprocess total cannot say
+*which module*. That is why it concluded there was **no single offender above
+20 ms** and stopped. There were three.
+
+| | | |
+|---|---:|---|
+| `iriguchi.application.asking` | ~20 ms | only `ask` needs it |
+| `importlib.resources` | ~15 ms | only `schema`, via `interfaces/contract.py` |
+| `iriguchi.evaluation.scoring` + `dataset` | ~11 ms | only `eval` |
+
+`main.py` is the composition root and imported every command's dependencies
+before working out which command was being run. `contract.py` imported
+`importlib.resources` at module scope for one function, and it drags `inspect`
+in with it.
+
+The same change moves three numbers, because they are one cause — an imported
+module costs time, memory and a `sys.modules` entry:
+
+| | before | after | |
+|---|---:|---:|---|
+| iriguchi's own startup cost | 125.3 ms | **95.1 ms** | −24%, above a 53 ms interpreter |
+| retained after one `route` | 5017 KiB | **4079 KiB** | −19%, `tracemalloc` |
+| modules loaded | 172 | **146** | |
+
+The machine is faster than it was on 09-06, so the absolute milliseconds are not
+comparable across the two tables; the *deltas* are.
+
+Reproduce: `python tools/measure_startup.py`, which grew router stages in the
+same commit — the tool had only ever measured the tkinter path.
+`tests/test_the_composition_root_imports_what_it_runs.py` holds it, in module
+count rather than milliseconds, because a timing assertion on a shared runner
+teaches everybody to ignore the suite.
+
+**What is deliberately not chased.** `dataclasses` costs ~17 ms and brings
+`inspect`; every domain value is a frozen dataclass and hand-writing them to
+save that would be a bad trade. `typing` is ~15 ms and is real at runtime for
+the ports. Both are asserted *present*, so that a future round finding them gone
+has to explain why.
+
+### What the router itself costs, and it is not the router
+
+| | |
+|---|---:|
+| building a router | 1.0 KiB |
+| one decision, median over the 197-case corpus | 0.044 ms |
+| p95 | 0.114 ms |
+| a 34,400-character prompt | 26.4 ms — linear, ~0.72 µs/char |
+| retained after 2000 decisions | 3.5 KiB |
+
+**Nothing accumulates**, and the deciding is four hundredths of a millisecond
+against a ~150 ms process. Every remaining performance question here is about
+imports, not about routing — which is worth writing down, because *the router
+is slow* is the hypothesis anybody would reach for first and it is wrong by
+three orders of magnitude.
+
 ### The first measurement was of a command that had not run
 
 `python -m iriguchi` did not exist. The first benchmark measured it anyway, got a

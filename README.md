@@ -400,6 +400,8 @@ mamori, and openable by nobody who is not on this machine
 | **v0.2** | **yes** | **yes** | An OpenAI-compatible local model (ollama and anything that speaks its API), `iriguchi ask`, and the cascade that escalates only after a local answer comes back weak. Presidio as a scanner you can actually install. |
 | **v0.2** | **yes** | **with a sibling checkout** | mamori as the scanner (`--scanner mamori`) and as the escalation channel. mamori is not on PyPI, so this half needs `uv pip install -e ../mamori` and is out of scope for a v0.1 release. |
 | **v0.3** | no | | The shell. Tray residency, hotkey, popup — with measured performance floors on the warm path. |
+| **perf** | ongoing | | **Cold start, because a consumer spawns a process per prompt.** 125 ms → 95 ms of iriguchi's own cost so far; the remainder is `dataclasses`, `typing` and iriguchi's own modules, with no single offender left above 20 ms — a sentence that stopped the search once already, so the next round starts with `-X importtime` rather than with subprocess totals. |
+| **detection** | next | | `fallback.long-digit-run` is `[0-9]{8,}` with no separators: it catches `4111111111111111` and misses `4111 1111 1111 1111`, `4111-1111-1111-1111` and `090 1234 5678`. Found by Sora. Fixing it moves the published miss and over-caution rates, so it is its own change. |
 | **v0.4** | no | | The Anchor Dashboard. Provenance from tsumugi and akashi, rendered — including what was left out. |
 | **v1.0** | no | | Full-offline routing. No new intelligence. |
 
@@ -419,6 +421,26 @@ So the invariant is the **warm path** — hotkey pressed to input box visible, o
 an already-resident process — because that is what a person actually experiences
 and it is what a build can honestly gate on
 ([ADR-0008](docs/adr/0008-the-invariant-is-the-warm-path.md)).
+
+**And then a consumer arrived who pays the cold path every time.** Sora spawns
+iriguchi once per prompt, so for the only program using this library today the
+cold start is not a login cost — it is the cost. ADR-0008 is not wrong; it chose
+the invariant a *person* experiences, and the tray it was written for is v0.3.
+But nothing was measuring the number the consumer that exists actually pays.
+
+| | |
+|---:|---|
+| **0.044 ms** | deciding, median over the 197-case corpus |
+| **~95 ms** | iriguchi's own cost in a fresh process, above a ~53 ms interpreter |
+
+The deciding is four hundredths of a millisecond and the process is a hundred
+and fifty. **Every performance question here is about imports, not about
+routing** — worth stating because *the router is slow* is the first hypothesis
+anybody reaches for, and it is wrong by three orders of magnitude. The most
+recent round cut iriguchi's own cost by 24% and its retained memory by 19% by
+noticing that the composition root imported `ask`, `eval` and `schema`'s
+dependencies before working out which command was running
+([docs/measurements.md](docs/measurements.md)).
 
 Every number in this repository is measured, ships with the script that produced
 it, and states what it does not say.

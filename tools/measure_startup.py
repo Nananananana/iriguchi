@@ -11,6 +11,13 @@ This measures the *cold* path. ``docs/adr/0008-the-invariant-is-the-warm-path.md
 is the decision that this is the wrong thing to gate a build on: a resident tray
 process pays it once, at login. It is measured anyway, because the number is
 what rejected the original specification's 1 ms target.
+
+**And then a consumer arrived who pays it every time.** Sora spawns iriguchi
+once per prompt, so for the only program using this library today the cold path
+is not a login cost, it is the cost. ADR-0008 is not wrong -- it chose the
+invariant a *person* experiences, and the tray it was written for is still v0.3
+-- but the router stages below are the number that matters to the consumer that
+exists now, and nothing was measuring them.
 """
 
 from __future__ import annotations
@@ -28,6 +35,20 @@ STAGES = (
     (
         "Tk() window realised",
         "import tkinter; r = tkinter.Tk(); r.update_idletasks(); r.update(); r.destroy()",
+    ),
+    # The router's own cold path: what Sora pays per prompt. The environment is
+    # set inside the child rather than passed in, so every stage here is still
+    # just `python -c <literal>`.
+    ("import iriguchi", "import iriguchi"),
+    (
+        "iriguchi route",
+        "import os; os.environ['IRIGUCHI_LOCAL'] = '1';"
+        "import iriguchi.interfaces.cli.main as m; m.main(['route', 'hello'])",
+    ),
+    (
+        "iriguchi route --json",
+        "import os; os.environ['IRIGUCHI_LOCAL'] = '1';"
+        "import iriguchi.interfaces.cli.main as m; m.main(['route', '--json', 'hello'])",
     ),
 )
 
