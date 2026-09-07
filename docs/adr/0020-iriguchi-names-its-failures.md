@@ -73,8 +73,25 @@ a person reads it.
 two readings come apart on `RestorationError`: a second `ask` might well
 succeed, and it would put the prompt through the outbound path a second time. A
 router does not hand a consumer a reason to re-send a prompt, so the field
-carries the narrower reading and the catalogue says so. `ModelError` is the only
-`true`.
+carries the narrower reading and the catalogue says so.
+
+> **Amended 2026-09-10.** This paragraph said *`ModelError` is the only `true`*,
+> and that was wrong under its own rule. Sora adopted the narrower reading and
+> stated it more sharply than it had been put here — *may the same request be
+> issued again, unchanged, and a failure where re-issuing is itself a new event
+> is `false` even when it could succeed* — with mamori arriving at the same
+> sentence independently. Applied to this table it moves `ModelError`:
+> `Asker._outward` raises it **after** `external.answer()` has returned, which
+> is the one line in the package that sends, so on that path re-issuing sends
+> the prompt again. One kind spans the local path and the outbound one, and the
+> answer for a kind that spans them is the restrictive one — ADR-0002's rule,
+> applied to a document rather than to a route.
+>
+> The cost is real: a local model that was simply not running is safely
+> retryable and now says otherwise. Recovering that means **splitting the
+> kind**, which is a change to the exception tree rather than to the catalogue,
+> and nobody has needed it yet. Every entry is `false`, and that is a statement
+> rather than an oversight.
 
 **The document has a third list.** `not_a_failure` names the routing family and
 the rule identifier each becomes — resolvable in `rules --json`, and driven

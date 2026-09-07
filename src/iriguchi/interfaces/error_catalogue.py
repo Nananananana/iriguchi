@@ -68,12 +68,32 @@ CONTRACT = "iriguchi.errors/1-draft"
 
 #: kind, exit code, outcome, retryable, English, Japanese.
 #:
-#: **`retryable` is not a forecast.** Sora asked whether asking again could
-#: succeed, and for a router the useful reading is narrower: *may a consumer try
-#: this again on its own*. `RestorationError` is where the two readings come
-#: apart — a second `ask` might well succeed, and it would put the prompt through
-#: the outbound path a second time. A router does not hand a consumer a reason to
-#: re-send a prompt, so that one is `false` and this comment is why.
+#: **`retryable` is not a forecast.** Sora first asked whether asking again could
+#: succeed; that is a question about *possibility*, and the one a consumer needs
+#: answered is about *permission*. They adopted the narrower reading and wrote it
+#: better than it had been put here:
+#:
+#:     may the same request be issued again, unchanged — and a failure where
+#:     re-issuing is itself a new event (it leaves the machine, it is billed, it
+#:     leaves a trace) is `false` even when it could succeed
+#:
+#: mamori reached the same sentence independently, which is the reason to trust
+#: it rather than a coincidence to note.
+#:
+#: **Applying it here moved an entry.** `ModelError` was `true`, on the reasoning
+#: that a model which timed out might answer next time. It is raised by
+#: `Asker._outward` *after* `external.answer()` has returned — which is the one
+#: line in this package that sends — so on that path re-issuing sends the prompt
+#: again. One kind spans the local path and the outbound one, and the answer for
+#: a kind that spans them is the restrictive one: ADR-0002's rule, applied to a
+#: document rather than to a route.
+#:
+#: The cost is real and worth naming. A local model that was simply not running
+#: is safely retryable and now says otherwise. Recovering that means **splitting
+#: the kind**, so the outbound failure has a name of its own — a change to the
+#: exception tree rather than to this table, and nobody has needed it yet.
+#:
+#: So every entry is `false`, and that is a statement rather than an oversight.
 ERRORS: tuple[tuple[str, int, str, bool, str, str], ...] = (
     (
         "ConfigurationError",
@@ -101,12 +121,20 @@ ERRORS: tuple[tuple[str, int, str, bool, str, str], ...] = (
         "ModelError",
         1,
         "unavailable",
-        True,
+        False,
         "A model could not answer -- unreachable, too slow for its timeout, or "
         "answering in a shape this build does not understand. The route was "
-        "already decided and is not in doubt.",
+        "already decided and is not in doubt. **Not retryable, and the local "
+        "case is the reason this is not obvious**: on the outbound path the "
+        "send has already happened when this is raised, so re-issuing the same "
+        "request sends the prompt a second time. One kind spans both paths, and "
+        "the answer for a kind that spans them is the restrictive one.",
         "モデルが答えられなかった。到達できないか、時間切れか、"
-        "この版が解釈できない形で返ってきたか。経路は既に決まっており、疑われていない。",
+        "この版が解釈できない形で返ってきたか。経路は既に決まっており、疑われていない。"
+        "**再試行不可。ローカルの場合を考えると自明でないが**、外向きの経路では"
+        "これが上がる時点で送信は既に済んでいるので、同じ要求を出し直すと"
+        "プロンプトがもう一度外に出る。1 つの kind が両方の経路にまたがっており、"
+        "またがる kind の答えは制限の強いほうである。",
     ),
     (
         "InteropError",
