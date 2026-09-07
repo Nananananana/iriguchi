@@ -169,7 +169,7 @@ _RULES: tuple[_Rule, ...] = (
     # with one -- mamori's rule, learned the expensive way.
     _Rule(
         "fallback.long-digit-run",
-        re.compile(r"(?<![0-9])[0-9]{8,}(?![0-9])"),
+        re.compile(r"(?<![0-9])(?:[0-9]{8,}|[0-9]{3,}(?:[ -][0-9]{3,}){2,})(?![0-9])"),
     ),
     # Japanese names, anchored on an honorific.
     #

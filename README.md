@@ -60,7 +60,7 @@ installing the wheel with no extras and asserting nothing came along.
 
 ### Better detection, optional
 
-The built-in scanner has no model and **misses 61.7%** of the must-stay-local
+The built-in scanner has no model and **misses 57.0%** of the must-stay-local
 cases in the corpus — bare names, English names, company names, addresses. That
 is it working as specified, and it is not enough for most people.
 
@@ -72,12 +72,18 @@ iriguchi --scanner fallback+presidio route "..."
 
 | scanner | missed findings | over-caution | needs |
 |---|---:|---:|---|
-| `fallback` | 61.7% | 8.9% | nothing |
-| `presidio` | 44.9% | 35.6% | `[presidio]` + a spaCy model |
-| **`fallback+presidio`** | **27.1%** | 41.1% | the same |
+| `fallback` | 57.0% | 8.9% | nothing |
+| `presidio` | 44.9%† | 35.6%† | `[presidio]` + a spaCy model |
+| **`fallback+presidio`** | **27.1%**† | 41.1%† | the same |
 | `mamori` | 1.0%\* | | a sibling checkout — [not on PyPI](docs/feasibility.md) |
 
-\*on mamori's own corpus. Measured: [`docs/measurements.md`](docs/measurements.md).
+\*on mamori's own corpus.
+†measured 2026-09-06 and **not recomputed** since `fallback.long-digit-run` was
+widened on 2026-09-08. presidio is an optional extra, absent from CI, and
+nothing in the suite recomputes these two rows — which is its own small finding.
+The composite is a union of findings, so its miss rate can only have fallen;
+the number above is therefore a ceiling rather than a measurement.
+Measured: [`docs/measurements.md`](docs/measurements.md).
 Run it yourself with `iriguchi --scanner <name> eval`.
 
 **Neither of the first two dominates the other**, which is why the composite
@@ -321,7 +327,7 @@ configuration in which iriguchi sends something less protected instead
 $ iriguchi --local --external eval
 
 cases                197
-missed findings       61.7%   <- the scanner's coverage; read this first
+missed findings       57.0%   <- the scanner's coverage; read this first
 leak rate              0.0%   <- end to end, floor of zero, flattered by easy prompts
 over-caution rate      8.9%
 route accuracy        93.9%
@@ -337,7 +343,7 @@ six. They are checked now, the way the routing example already was.
 **Read the first number, and read it as a recommendation to install mamori.**
 The built-in scanner is deliberately dumb (ADR-0005) and cannot find a name
 without an honorific, an English name, a company name or an address. It misses
-61.7% of the corpus's must-stay-local cases, and that is published rather than
+57.0% of the corpus's must-stay-local cases, and that is published rather than
 fixed by widening it until the number looks better.
 
 The 0% leak rate underneath it is honest and nearly meaningless on its own —
@@ -401,7 +407,7 @@ mamori, and openable by nobody who is not on this machine
 | **v0.2** | **yes** | **with a sibling checkout** | mamori as the scanner (`--scanner mamori`) and as the escalation channel. mamori is not on PyPI, so this half needs `uv pip install -e ../mamori` and is out of scope for a v0.1 release. |
 | **v0.3** | no | | The shell. Tray residency, hotkey, popup — with measured performance floors on the warm path. |
 | **perf** | ongoing | | **Cold start, because a consumer spawns a process per prompt.** 125 ms → 95 ms of iriguchi's own cost so far; the remainder is `dataclasses`, `typing` and iriguchi's own modules, with no single offender left above 20 ms — a sentence that stopped the search once already, so the next round starts with `-X importtime` rather than with subprocess totals. |
-| **detection** | next | | `fallback.long-digit-run` is `[0-9]{8,}` with no separators: it catches `4111111111111111` and misses `4111 1111 1111 1111`, `4111-1111-1111-1111` and `090 1234 5678`. Found by Sora. Fixing it moves the published miss and over-caution rates, so it is its own change. |
+| **detection** | done | | `fallback.long-digit-run` was `{8,}` with no separators — it caught `4111111111111111` and missed `4111 1111 1111 1111`. Found by Sora on a real run. Missed findings **61.7% → 57.0%**, over-caution **unchanged**. |
 | **v0.4** | no | | The Anchor Dashboard. Provenance from tsumugi and akashi, rendered — including what was left out. |
 | **v1.0** | no | | Full-offline routing. No new intelligence. |
 
