@@ -9,6 +9,19 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- **`ModelError` is no longer `retryable`, and now nothing is.** Sora adopted
+  the narrower reading of that field and stated it better than iriguchi had —
+  *may the same request be issued again, unchanged, and a failure where
+  re-issuing is itself a new event is `false` even when it could succeed* — with
+  mamori reaching the same sentence independently. Applied to iriguchi's own
+  table it moved an entry: `Asker._outward` raises `ModelError` **after**
+  `external.answer()` has returned, which is the one line in the package that
+  sends, so on that path retrying sends the prompt again. Measured, not
+  reasoned: a test drives the outward path and asserts the send happened before
+  the failure existed. The cost is that a local model which was simply not
+  running is safely retryable and now says otherwise; recovering that means
+  splitting the kind. ADR-0020, amended.
+
 - **A mistyped flag was arriving as a routing refusal.** argparse exits `2` for
   a usage error and iriguchi publishes `2` as *refused* — a decision it stands
   behind — so `iriguchi --nosuchflag route "..."` reached a consumer as *your
