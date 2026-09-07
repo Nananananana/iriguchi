@@ -26,7 +26,7 @@ import sys
 from collections.abc import Sequence
 from dataclasses import replace
 from pathlib import Path
-from typing import TextIO
+from typing import NoReturn, TextIO
 
 from ...application.asking import Answer
 from ...application.routing import PromptRouter
@@ -65,8 +65,36 @@ DEMO_PROMPTS = (
 )
 
 
+class _Parser(argparse.ArgumentParser):
+    """argparse, with iriguchi's exit codes rather than argparse's.
+
+    **A mistyped flag was arriving as a routing refusal.** argparse exits `2`
+    for a usage error; iriguchi publishes `2` as *refused*, which is a decision
+    it stands behind. Sora maps `2` to `refused` and deliberately does not
+    colour it as an error, so `iriguchi --nosuchflag route "..."` reached a
+    person as *your prompt was refused* -- with no decision document anywhere,
+    because none had been made. A false statement about a policy decision,
+    produced by a typo.
+
+    Measured before it was changed. The README's own sentence had said which
+    code this should be since before the collision existed: `0` decided, `2`
+    refused, `1` broken.
+
+    The message comes out **before** the usage block and named as a
+    `ConfigurationError`, which is not a new kind: *a setting was missing,
+    malformed, or not recognised* is exactly what a bad flag is. That puts the
+    name first on stderr, where R-E2 needs it, and puts the error above the
+    usage text, where a person reads it.
+    """
+
+    def error(self, message: str) -> NoReturn:
+        print(f"ConfigurationError: {message}", file=sys.stderr)
+        self.print_usage(sys.stderr)
+        raise SystemExit(EXIT_ERROR)
+
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
+    parser = _Parser(
         prog="iriguchi",
         description=(
             "Decide where a prompt is allowed to go -- locally, deterministically, "
@@ -211,6 +239,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     commands.add_parser(
         "rules", help="every rule identifier a decision can carry, and what each means"
+    )
+    commands.add_parser(
+        "errors", help="every named failure iriguchi can print, and the ones that are not failures"
     )
     commands.add_parser("algorithms", help="what can sit behind each port, and what each one costs")
     commands.add_parser("doctor", help="what is available, and what a missing piece costs")
@@ -683,6 +714,27 @@ def _what_would_leave(config: IriguchiConfig, prompt: str, out: TextIO) -> None:
         escalation.close()
 
 
+def cmd_errors(out: TextIO) -> int:
+    """Every named failure, as `iriguchi.errors/1-draft`.
+
+    Sora keeps a ledger of what is not working and folds repeated failures into
+    one row keyed on the kind, holding **no values** -- so they need to know
+    which kinds exist, what each one means, and whether trying again is a thing
+    a consumer may do. They copied the shape from `rules --json` and said so.
+
+    The document has a third half the rules catalogue does not: `not_a_failure`,
+    for the exceptions iriguchi raises and never prints. A consumer that saw
+    only `errors` would conclude a broken scanner produces nothing, when what it
+    produces is a decision -- the most restrictive one available, with a reason
+    naming what broke.
+    """
+    from ... import __version__
+    from ..error_catalogue import as_document as errors_document
+
+    print(json.dumps(errors_document(__version__), ensure_ascii=False, indent=2), file=out)
+    return EXIT_OK
+
+
 def cmd_algorithms(config: IriguchiConfig, out: TextIO) -> int:
     """The menu, with prices.
 
@@ -819,6 +871,8 @@ def main(argv: Sequence[str] | None = None, out: TextIO | None = None) -> int:
             return cmd_schema(args, stream)
         if args.command == "rules":
             return cmd_rules(stream)
+        if args.command == "errors":
+            return cmd_errors(stream)
         if args.command == "algorithms":
             return cmd_algorithms(config, stream)
         if args.command == "doctor":
@@ -828,7 +882,16 @@ def main(argv: Sequence[str] | None = None, out: TextIO | None = None) -> int:
         if args.command == "eval":
             return cmd_eval(args, config, stream)
     except IriguchiError as failure:
-        print(f"iriguchi: {failure}", file=sys.stderr)
+        # **The kind first, then the sentence.** Sora folds repeated failures
+        # into one incident row keyed on the name before the colon, and keeps no
+        # values -- so this line was `iriguchi: <message>` and four unrelated
+        # failures folded into a single row called `iriguchi`, which carries the
+        # same information as a counter. R-E2 was filed as a request rather than
+        # a requirement; it was the more urgent half.
+        #
+        # The sentence after the colon is unconstrained and stays as it was. It
+        # is read by the person at the terminal, who is the one entitled to it.
+        print(f"{type(failure).__name__}: {failure}", file=sys.stderr)
         return EXIT_ERROR
 
     # Unreachable while `add_subparsers(required=True)` holds. Kept as a

@@ -78,6 +78,7 @@ SCHEMAS: dict[str, str] = {
     CONTRACT: SCHEMA_RESOURCE,
     "iriguchi.route-batch/1-draft": "schemas/route-batch-1-draft.json",
     "iriguchi.rules/1-draft": "schemas/rules-1-draft.json",
+    "iriguchi.errors/1-draft": "schemas/errors-1-draft.json",
 }
 
 
