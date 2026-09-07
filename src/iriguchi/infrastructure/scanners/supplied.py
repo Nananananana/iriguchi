@@ -77,6 +77,11 @@ class SuppliedScanner:
             raise ScanError(
                 f"{len(beyond)} supplied finding(s) run past the end of this prompt, "
                 f"which is {limit} character(s) long: {listed}. A span is an offset "
-                f"into the prompt it came with, so these are about some other text."
+                f"into the prompt it came with, so these are about some other text.",
+                # Built from rule ids, spans and a length -- exactly what
+                # ADR-0006 permits to travel, and nothing from the prompt. This
+                # message is worth keeping: it names which supplied finding was
+                # wrong, which is the whole diagnostic.
+                quotable=True,
             )
         return self.findings

@@ -23,7 +23,23 @@ from __future__ import annotations
 
 
 class IriguchiError(Exception):
-    """Base for everything this library raises."""
+    """Base for everything this library raises.
+
+    Carries one flag, and it is about where the *message* may go rather than
+    about the failure. See `safe_detail`.
+    """
+
+    def __init__(self, *args: object, quotable: bool = False) -> None:
+        super().__init__(*args)
+        #: May this message travel in a published decision?
+        #:
+        #: **Default `False`, and the default is the whole mechanism.** A
+        #: message is safe only when whoever wrote it knows it was built from
+        #: rule ids, spans, names and counts -- and the only person who knows
+        #: that is the one at the `raise`. iriguchi does not write mamori's
+        #: exception messages or presidio's, and a scanner quoting the text it
+        #: choked on is the most ordinary error message any library writes.
+        self.quotable = quotable
 
 
 class RoutingError(IriguchiError):
@@ -125,6 +141,22 @@ class ModelError(IriguchiError):
     """
 
 
+class InteropError(IriguchiError):
+    """A foreign result could not be read.
+
+    Its own type rather than `ValueError`, so a caller converting a batch can
+    tell *this analyzer output is malformed* from *this program has a bug* --
+    and so the message can name the item rather than the field.
+
+    Raised by `iriguchi.interop`, and importable from there too. It is defined
+    **here** because this module's first line says it is the base for everything
+    this library raises, and for a while that was true of the base and not of
+    the tree: this class lived beside its only caller, which put it outside
+    `__all__`, outside `NOT_YET_RAISED`'s reach, and outside the error
+    catalogue -- while being printable, exiting 1, and reaching a person.
+    """
+
+
 class ContractError(IriguchiError):
     """A document did not match a contract version this build understands.
 
@@ -137,6 +169,35 @@ class ContractError(IriguchiError):
     `EscalationRefusedError`, because the response there is to leave the prompt
     where it is rather than to report a bad document.
     """
+
+
+def safe_detail(failure: BaseException) -> str:
+    """What may be said about `failure` inside a published decision.
+
+    The message when its author vouched for it, the class name otherwise.
+
+    **This exists because the guarantee was resting on other people's code.**
+    A broken scanner becomes a decision rather than a failure (ADR-0002), and
+    that decision is published as `iriguchi.routing-decision/1` -- which
+    ADR-0016 says is publishable *because it holds no prompt*. The reason
+    naming the broken scanner interpolated `str(failure)`, so:
+
+        regex engine gave up on 'Please email tanaka@example.com the ...'
+
+    went into `reasons[].detail` of a document built to be handed to somebody
+    else. Measured, not theorised: a scanner raising with the prompt in its
+    message put the prompt in the published JSON.
+
+    The remedy is the one iriguchi gave Sora for the same problem in the same
+    week -- **keep the name, discard the sentence**. A class name is written by
+    a library author about the library. A message is unclassified text of
+    unknown provenance, and ADR-0006 already said which of those may travel:
+    rule ids, spans and types, never a value.
+
+    Non-iriguchi exceptions have no flag and are therefore never quoted, which
+    is the correct answer for them and not an accident of `getattr`.
+    """
+    return str(failure) if getattr(failure, "quotable", False) else type(failure).__name__
 
 
 #: Exceptions that exist, are exported, and are raised by nothing in `src/`.
@@ -165,9 +226,11 @@ __all__ = [
     "ContractError",
     "EscalationRefusedError",
     "EstimationError",
+    "InteropError",
     "IriguchiError",
     "ModelError",
     "RestorationError",
     "RoutingError",
     "ScanError",
+    "safe_detail",
 ]

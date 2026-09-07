@@ -40,7 +40,7 @@ from ..domain.cascade import EscalationVerdict, escalation_possible, may_escalat
 from ..domain.decision import RoutingDecision
 from ..domain.destination import Destination
 from ..domain.reason import Reason
-from ..errors import EscalationRefusedError, JudgementError
+from ..errors import EscalationRefusedError, JudgementError, safe_detail
 from ..ports.channel import EscalationChannel
 from ..ports.judge import AnswerJudge
 from ..ports.model import Model
@@ -198,8 +198,8 @@ class Asker:
                     source="cascade",
                     span=None,
                     detail=(
-                        f"the judge {self.judge.name!r} could not run ({failure}); "
-                        f"the local answer stands unjudged"
+                        f"the judge {self.judge.name!r} could not run "
+                        f"({safe_detail(failure)}); the local answer stands unjudged"
                     ),
                 ),
             )

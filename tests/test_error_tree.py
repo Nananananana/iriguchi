@@ -44,18 +44,26 @@ from pathlib import Path
 
 import pytest
 
+from exception_tree import every_subclass
 from iriguchi import errors
 
 SRC = Path(__file__).resolve().parent.parent / "src"
 
 
 def _exception_classes() -> dict[str, type[BaseException]]:
-    """Everything the package exports that a caller could catch."""
-    return {
-        name: obj
-        for name in errors.__all__
-        if isinstance(obj := getattr(errors, name), type) and issubclass(obj, BaseException)
-    }
+    """Everything the package defines that a caller could catch.
+
+    **This read `errors.__all__` and the sentence above says `the package`.**
+    `InteropError` was defined in `iriguchi.interop.presidio`, next to its only
+    caller, so it was outside `__all__` and therefore outside this check --
+    which meant the two directions below were never asked about it. It could
+    have become raised-by-nothing without a word.
+
+    The catalogue's completeness check had narrowed the same sentence the same
+    way on the same day, independently, which is the reason the walk is shared
+    now rather than fixed twice. See `tests/exception_tree.py`.
+    """
+    return dict(every_subclass())
 
 
 def _raised_in_src() -> set[str]:

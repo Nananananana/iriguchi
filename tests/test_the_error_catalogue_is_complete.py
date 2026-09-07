@@ -29,8 +29,9 @@ import pytest
 from jsonschema import Draft202012Validator
 
 import iriguchi.errors as error_module
+from exception_tree import every_subclass, modules_walked
 from iriguchi import __version__
-from iriguchi.errors import NOT_YET_RAISED, IriguchiError, RoutingError
+from iriguchi.errors import NOT_YET_RAISED, RoutingError
 from iriguchi.interfaces.cli.main import EXIT_ERROR, EXIT_OK, EXIT_REFUSED, main
 from iriguchi.interfaces.contract import schema
 from iriguchi.interfaces.error_catalogue import (
@@ -47,19 +48,118 @@ QUIET = {kind for kind, *_ in NOT_A_FAILURE}
 
 
 def _subclasses() -> set[str]:
-    """Every `IriguchiError` subclass the package defines.
+    """Every `IriguchiError` subclass the package defines, found by walking it.
 
-    Read off the module rather than listed, so a new exception class is in this
+    Read off the program rather than listed, so a new exception class is in this
     set the moment somebody writes it -- which is the only way the completeness
     check below can be about the program instead of about a second list.
+
+    **This read `vars(iriguchi.errors)` and was wrong.** `InteropError` was
+    defined next to its only caller in `iriguchi.interop.presidio`, is raised on
+    the `--findings` path, exits 1 and reaches a person -- and was in neither
+    this check nor `test_error_tree.py`, which had narrowed the same sentence
+    the same way. The catalogue published *complete* while missing a printable
+    kind. See `tests/exception_tree.py`.
     """
-    return {
-        name
-        for name, value in vars(error_module).items()
-        if isinstance(value, type)
-        and issubclass(value, IriguchiError)
-        and value is not IriguchiError
-    }
+    return set(every_subclass())
+
+
+class TestTheScanIsWiderThanOneFile:
+    """The defect was not a missing entry. It was **a check narrower than its
+    own sentence**, in two files, both saying *every exception* and both asking
+    `iriguchi.errors`.
+
+    `InteropError` sat one directory away, was raised on the `--findings` seam,
+    exited 1 and reached a person -- and neither check could see it. Moving the
+    class into `iriguchi.errors` makes both of the old narrow scans accidentally
+    correct again, which is exactly how this happened, so these tests are about
+    the *scan* rather than about that one class.
+    """
+
+    def test_it_imports_more_than_the_errors_module(self) -> None:
+        walked = modules_walked()
+        assert len(walked) > 20, walked
+        assert "iriguchi.interop.presidio" in walked
+        assert "iriguchi.interfaces.cli.main" in walked
+
+    def test_a_subclass_defined_outside_the_errors_module_is_found(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Planted where the real one used to live. A scan reading
+        `iriguchi.errors` alone returns without it and the completeness check
+        passes, which is the state this repository shipped in."""
+        import iriguchi.interop.presidio as elsewhere
+
+        planted = type("_PlantedError", (error_module.IriguchiError,), {})
+        monkeypatch.setattr(elsewhere, "_PlantedError", planted, raising=False)
+        assert "_PlantedError" in every_subclass()
+
+    def test_and_the_completeness_check_then_fails(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """The half that matters. Finding it is worth nothing if the catalogue
+        does not then object -- this pins that an exception nobody catalogued
+        makes the suite red rather than making a set slightly larger."""
+        import iriguchi.interop.presidio as elsewhere
+
+        planted = type("_PlantedError", (error_module.IriguchiError,), {})
+        monkeypatch.setattr(elsewhere, "_PlantedError", planted, raising=False)
+        unaccounted = (
+            set(every_subclass()) - CATALOGUED - QUIET - set(NOT_YET_RAISED) - {"RoutingError"}
+        )
+        assert unaccounted == {"_PlantedError"}
+
+
+class TestTheKindThatWasMissing:
+    """`InteropError`, driven the way it actually reaches a person: a sibling's
+    analyzer output crossing the `--findings` seam with an offset the domain
+    refuses."""
+
+    @pytest.mark.parametrize(
+        "label,finding",
+        [
+            ("a negative start", {"entity_type": "PERSON", "start": -1, "end": 5, "score": 0.9}),
+            ("a backwards span", {"entity_type": "PERSON", "start": 5, "end": 2, "score": 0.9}),
+            ("an offset that is not a number", {"entity_type": "PERSON", "start": "x", "end": 5}),
+        ],
+        ids=["negative-start", "backwards-span", "non-integer-offset"],
+    )
+    def test_it_is_printed_as_a_catalogued_kind(
+        self,
+        label: str,
+        finding: dict[str, Any],
+        tmp_path: Any,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        supplied = tmp_path / "findings.json"
+        supplied.write_text(json.dumps([finding]), encoding="utf-8")
+        monkeypatch.setenv("IRIGUCHI_LOCAL", "1")
+        assert main(["route", "--findings", str(supplied), "hello world"]) == EXIT_ERROR
+        first = capsys.readouterr().err.splitlines()[0]
+        assert first.split(":", 1)[0] in CATALOGUED, f"{label} folds as {first.split(':', 1)[0]!r}"
+
+    def test_it_carries_no_part_of_the_prompt(
+        self,
+        tmp_path: Any,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """ADR-0006 at the seam that failed. The message names the item and the
+        offsets; the prompt it could not be checked against stays out of it."""
+        supplied = tmp_path / "findings.json"
+        supplied.write_text(
+            json.dumps([{"entity_type": "PERSON", "start": -1, "end": 5}]), encoding="utf-8"
+        )
+        monkeypatch.setenv("IRIGUCHI_LOCAL", "1")
+        main(["route", "--findings", str(supplied), "tanaka@example.com is the address"])
+        assert "tanaka@example.com" not in capsys.readouterr().err
+
+    def test_it_is_importable_from_where_it_used_to_live(self) -> None:
+        """Moving it fixed the scan; breaking somebody's import would not have
+        been part of the fix."""
+        import iriguchi.errors as tree
+        import iriguchi.interop.presidio as where_it_lived
+
+        assert where_it_lived.InteropError is tree.InteropError
 
 
 class TestItIsComplete:
@@ -95,8 +195,8 @@ class TestItIsComplete:
         property -- so the two lists are drawn by the type tree, not by taste."""
         routing = {
             name
-            for name in _subclasses()
-            if issubclass(getattr(error_module, name), RoutingError) and name != "RoutingError"
+            for name, value in every_subclass().items()
+            if issubclass(value, RoutingError) and name != "RoutingError"
         }
         assert routing == QUIET
 

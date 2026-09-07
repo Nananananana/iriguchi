@@ -109,6 +109,21 @@ ERRORS: tuple[tuple[str, int, str, bool, str, str], ...] = (
         "この版が解釈できない形で返ってきたか。経路は既に決まっており、疑われていない。",
     ),
     (
+        "InteropError",
+        1,
+        "failed",
+        False,
+        "A foreign analyzer's result could not be read -- a missing field, an "
+        "offset that is not an integer, or a span that runs backwards or before "
+        "the start of the prompt. It is refused rather than skipped, because a "
+        "batch of findings quietly one short is a prompt scanned less than the "
+        "caller believes.",
+        "他所の検出器の結果が読めなかった。欄が欠けているか、"
+        "オフセットが整数でないか、範囲が逆向きか先頭より前にある。"
+        "飛ばさずに拒否する。黙って 1 件少ない finding の束は、"
+        "呼び出し側が思っているより浅く走査されたプロンプトだからである。",
+    ),
+    (
         "RestorationError",
         1,
         "failed",

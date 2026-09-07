@@ -210,7 +210,12 @@ class TestAJudgeThatBreaks:
         answer = _asker(_Judge(failure=JudgementError("the model went away"))).ask(EASY, BOTH)
         assert answer.escalation is not None
         assert answer.escalation.reason.rule == "cascade.judge-failed"
-        assert "went away" in answer.escalation.reason.detail
+        # The judge's name and the failure's kind. **Not its message** -- a
+        # consistency judge wraps whatever the upstream said, and an upstream
+        # that echoes the prompt in an error body would put it here.
+        assert answer.escalation.reason.rule == "cascade.judge-failed"
+        assert "JudgementError" in answer.escalation.reason.detail
+        assert "went away" not in answer.escalation.reason.detail
 
     def test_no_quality_is_invented(self) -> None:
         """`None`, not an adequate-looking `AnswerQuality`. No opinion was

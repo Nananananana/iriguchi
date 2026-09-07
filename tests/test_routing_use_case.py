@@ -145,11 +145,21 @@ class TestWhenTheScannerBreaks:
         assert decision.route is Route.LOCAL
 
     def test_the_failure_is_in_the_reasons_and_names_the_scanner(self) -> None:
+        """The scanner's **name** and the exception's **class**, and not the
+        message.
+
+        This asserted `"rule table did not load" in failure.detail` -- the
+        message, verbatim, from a scanner. That reason is published in
+        `iriguchi.routing-decision/1`, so the test was pinning a leak in place:
+        a scanner whose message quotes the text it choked on put the prompt in
+        a document ADR-0016 says holds none. See `TestAFailureCarriesNoPrompt`.
+        """
         router = PromptRouter(scanner=RaisingScanner(), estimator=RulesEstimator())
         decision = router.route("anything", BOTH)
         failure = next(r for r in decision.reasons if r.rule == "routing.scanner-failed")
-        assert "raising" in failure.detail
-        assert "rule table did not load" in failure.detail
+        assert "raising" in failure.detail, "the scanner is not named"
+        assert "ScanError" in failure.detail, "the failure's kind is not named"
+        assert "rule table did not load" not in failure.detail
 
     def test_the_failure_sorts_among_the_statements_about_the_request(self) -> None:
         """It carries no span, so it is a statement about the request rather
