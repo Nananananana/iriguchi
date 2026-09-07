@@ -170,11 +170,12 @@ jobs:
           # through the import. The names are spelled out rather than read from
           # `SCHEMAS`, so a document quietly dropped from the registry fails here
           # instead of shrinking the loop to nothing.
-          for contract in iriguchi.routing-decision/1 iriguchi.route-batch/1-draft iriguchi.rules/1-draft
+          for contract in iriguchi.routing-decision/1 iriguchi.route-batch/1-draft iriguchi.rules/1-draft iriguchi.errors/1-draft
           do
             iriguchi schema "$contract" | python -c "import json,sys; json.load(sys.stdin)"
           done
           iriguchi rules | python -c "import json,sys; json.load(sys.stdin)"
+          iriguchi errors | python -c "import json,sys; json.load(sys.stdin)"
 
       # The other half of the mamori-is-optional promise. There is genuinely no
       # mamori in this environment, so this is stronger than the import-blocking

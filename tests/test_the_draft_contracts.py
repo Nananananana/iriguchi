@@ -218,8 +218,9 @@ class TestTheRegistryAgreesWithEverythingElse:
 
     def test_every_published_document_has_an_entry(self) -> None:
         from iriguchi.interfaces.cli.main import BATCH_CONTRACT
+        from iriguchi.interfaces.error_catalogue import CONTRACT as ERRORS_CONTRACT
 
-        assert set(SCHEMAS) == {CONTRACT, BATCH_CONTRACT, RULES_CONTRACT}
+        assert set(SCHEMAS) == {CONTRACT, BATCH_CONTRACT, RULES_CONTRACT, ERRORS_CONTRACT}
 
     @pytest.mark.parametrize("contract", sorted(SCHEMAS))
     def test_the_entry_points_at_the_schema_for_that_contract(self, contract: str) -> None:

@@ -35,3 +35,4 @@ current-state document for code that does not exist.
 | [0017](0017-an-optional-dependency-is-a-scanner-you-can-actually-get.md) | An optional dependency is a scanner you can actually get |
 | [0018](0018-a-cascade-whose-first-hop-is-local.md) | A cascade whose first hop is local |
 | [0019](0019-the-external-route-needs-a-checkout-nobody-has.md) | The external route is out of scope for v0.1, and says so |
+| [0020](0020-iriguchi-names-its-failures.md) | iriguchi names its failures, and a usage error is not a refusal |

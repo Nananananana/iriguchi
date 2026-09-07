@@ -199,7 +199,7 @@ $ iriguchi schema        # the contract, from the wheel you installed
 $ iriguchi algorithms    # what can sit behind each port, and what each costs
 ```
 
-iriguchi publishes three documents and ships a schema for each. `iriguchi
+iriguchi publishes four documents and ships a schema for each. `iriguchi
 schema` with no argument prints the frozen one above; pass a name for the other
 two:
 
@@ -208,6 +208,7 @@ two:
 | `iriguchi.routing-decision/1` | `route --json` | frozen |
 | `iriguchi.route-batch/1-draft` | `route --batch` | draft |
 | `iriguchi.rules/1-draft` | `rules` | draft |
+| `iriguchi.errors/1-draft` | `errors` | draft |
 
 ```console
 $ iriguchi schema iriguchi.route-batch/1-draft
@@ -367,7 +368,7 @@ arrives as a published JSON contract that iriguchi reads and never imports
 A name in this table is a plan, not a command — except that this paragraph named
 `iriguchi ask` as its example of something you could not type, and it has been
 typeable for some time. The built commands are `route`, `ask`, `config`,
-`schema`, `rules`, `algorithms`, `doctor`, `demo` and `eval`, and
+`schema`, `rules`, `errors`, `algorithms`, `doctor`, `demo` and `eval`, and
 `iriguchi --help` is the authority over both this sentence and the table below.
 
 **`built` and `reachable` are two columns, not one.** They used to be one, and
