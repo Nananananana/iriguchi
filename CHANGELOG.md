@@ -7,6 +7,29 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- **The scanner comparison table is checked as far as a machine can check it.**
+  Two documents publish it — the README's, which tells a user which scanner to
+  install, and `measurements.md`'s — and **nothing recomputed any row of
+  either**. The `fallback` row went stale when `fallback.long-digit-run` was
+  widened and matched afterwards only because somebody remembered, which is the
+  weakest reason a number can be right. It is recomputed from the corpus on
+  every run now; there was never a reason it was not.
+
+  The `presidio` and `fallback+presidio` rows need a **560 MB** spaCy model, so
+  presidio stays an optional extra and CI cannot check them. The rule is
+  two-sided: **with presidio installed the rows are recomputed and must match;
+  without it, both documents must say the rows are unverified.** CI cannot
+  verify the numbers, so CI verifies that the documents admit it — a number
+  nothing can check is not a defect, but a number nothing can check that reads
+  as though somebody had is one.
+
+  Found on the way: `measurements.md` carried a 2026-09-08 `fallback` figure
+  under a *Measured 2026-09-04* heading, and its presidio rows had no caveat at
+  all while the README's did — so the two documents disagreed about whether
+  their own numbers were trustworthy.
+
 ### Changed
 
 - **`pathlib` and the mamori scanner left the `route` path**, and the *at a

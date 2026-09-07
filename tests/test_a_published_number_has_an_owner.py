@@ -70,8 +70,11 @@ HISTORICAL = {
         "the band accuracy that justified deciding without a model"
     ),
     "docs/adr/0017-an-optional-dependency-is-a-scanner-you-can-actually-get.md": (
-        "the scanner comparison as it stood; presidio is absent from CI so two "
-        "rows cannot be recomputed anywhere"
+        "the scanner comparison as it stood. The live copies of that table, in "
+        "the README and measurements.md, are checked by "
+        "tests/test_the_scanner_comparison_is_checkable.py -- the fallback row "
+        "against the corpus on every run, the presidio rows only where presidio "
+        "is installed, and otherwise the documents must say they are unverified"
     ),
     "docs/adr/0018-a-cascade-whose-first-hop-is-local.md": (
         "the 42.9% the cascade exists because of"
