@@ -41,6 +41,12 @@ __all__ = ["PromptRouter"]
 
 _SOURCE = "routing"
 
+#: The source on a reason that says whose look produced an empty set of
+#: findings. Its own namespace rather than `routing`, because it is a statement
+#: about the scan rather than about the routing that followed it -- and because
+#: `rules --json` keys translations off the prefix.
+_SCAN = "scan"
+
 
 @dataclass(frozen=True, slots=True)
 class PromptRouter:
@@ -103,7 +109,54 @@ class PromptRouter:
             # Catching broadly here is deliberate: the alternative is that a
             # `KeyError` in somebody's regex table becomes a leak.
             return self._scanner_failed(text, safe_detail(failure))
-        return Sensitivity.from_findings(findings), ()
+        return Sensitivity.from_findings(findings), self._who_looked(findings)
+
+    def _who_looked(self, findings: tuple[Finding, ...]) -> tuple[Reason, ...]:
+        """Whose look produced an empty set of findings.
+
+        **Only when it is empty**, and that is the whole point rather than an
+        economy. When findings exist, each one carries its own `source` and the
+        document already says who found it. When there are none, the document
+        said nothing at all -- and *the caller's analyzer looked and found
+        nothing* and *this build's scanner looked and found nothing* are claims
+        of very different strength that rendered byte-for-byte identically.
+
+        Sora found it by walking the `--findings` path on a real machine and
+        diffing the two documents. Their sentence for why it matters is better
+        than any written here: **without saying who looked, the weaker claim
+        wears the face of the stronger one.**
+
+        iriguchi had already insisted on exactly this distinction in the other
+        direction -- `--findings []` means *my analyzer found nothing*, not
+        *scan for me* -- and then published a document that collapsed it.
+        """
+        if findings:
+            return ()
+        if getattr(self.scanner, "relays_the_caller", False):
+            return (
+                Reason(
+                    rule="scan.by-the-caller",
+                    source=_SCAN,
+                    span=None,
+                    detail=(
+                        "the findings came in with the prompt and iriguchi did not scan "
+                        "it, so an empty set here is the caller's clean bill of health "
+                        "rather than this build's"
+                    ),
+                ),
+            )
+        return (
+            Reason(
+                rule="scan.by-the-router",
+                source=_SCAN,
+                span=None,
+                detail=(
+                    f"the scanner {self.scanner.name!r} looked and found nothing; what "
+                    f"it misses is published, so an empty set here is only as strong as "
+                    f"that scanner"
+                ),
+            ),
+        )
 
     def _scanner_failed(self, text: str, kind: str) -> tuple[Sensitivity, tuple[Reason, ...]]:
         """ADR-0002, at the point where it costs something.

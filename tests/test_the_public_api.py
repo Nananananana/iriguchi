@@ -129,6 +129,22 @@ class TestTheDocstringExampleIsTrue:
         first thing anybody tries. Run rather than read."""
         decision = route("Summarise this article.", local=True, external=True)
         assert decision.leaves_the_machine is False
-        assert [reason.detail for reason in decision.reasons] == [
-            "complexity band low does not call for the larger model, and a local model is permitted"
+        assert [reason.rule for reason in decision.reasons] == [
+            "policy.prefer-local",
+            "scan.by-the-router",
         ]
+        assert next(reason.detail for reason in decision.reasons) == (
+            "complexity band low does not call for the larger model, and a local model is permitted"
+        )
+
+    def test_a_clear_decision_says_whose_look_produced_the_emptiness(self) -> None:
+        """The second reason, added the day Sora reported that `--findings []`
+        and no `--findings` at all produced byte-identical documents.
+
+        Pinned here rather than only where it was added, because this is the
+        example in the package docstring -- the first thing a reader runs, and
+        the place a reason silently disappearing would go unnoticed longest."""
+        decision = route("Summarise this article.", local=True, external=True)
+        [scan] = [r for r in decision.reasons if r.rule.startswith("scan.")]
+        assert scan.source == "scan"
+        assert "fallback" in scan.detail

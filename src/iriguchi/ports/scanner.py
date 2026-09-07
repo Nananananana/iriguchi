@@ -28,7 +28,30 @@ __all__ = ["SensitivityScanner"]
 
 @runtime_checkable
 class SensitivityScanner(Protocol):
-    """Text in, findings out."""
+    """Text in, findings out.
+
+    ## One optional attribute, deliberately outside this body
+
+    `relays_the_caller: bool` says whether an adapter is **relaying somebody
+    else's analysis** rather than performing one. It is read with
+    `getattr(scanner, "relays_the_caller", False)` and is **not** declared as a
+    member above, because a Protocol member is required: declaring it made every
+    adapter that had never heard of it stop satisfying the port, which
+    `test_a_class_that_never_heard_of_the_port_satisfies_it` caught immediately.
+    A port that grows a mandatory attribute is a port that breaks every existing
+    adapter, and this one is optional by nature -- almost nothing relays.
+
+    The default is `False`, and the default is the **weaker claim** on purpose:
+    an adapter that says nothing is treated as having looked here, which is what
+    invites the caveat about what a scanner misses.
+
+    It exists because `findings: []` is two different sentences and the
+    published decision could not tell them apart. *Somebody else looked and
+    found nothing* and *this build's scanner looked and found nothing* differ in
+    strength, and only the adapter knows which it is making. Sora found it by
+    walking the `--findings` path on a real machine and diffing two documents
+    that were byte-for-byte identical.
+    """
 
     @property
     def name(self) -> str:

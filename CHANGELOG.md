@@ -9,6 +9,23 @@ this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- **A clear decision says whose look produced the emptiness.** Sora walked the
+  `--findings` path on a real machine and diffed the results: `--findings []`
+  and no `--findings` at all produced **byte-for-byte identical documents**,
+  both saying `"sensitivity": {"level": "clear", "findings": []}`. One means
+  *the caller's analyzer looked and found nothing*; the other means *this
+  build's scanner looked and found nothing*, and this build's scanner publishes
+  a 61.7% miss rate. iriguchi had insisted on exactly that distinction in the
+  other direction — `--findings []` is not *scan for me* — and then published a
+  document that collapsed it. Two new rules, `scan.by-the-caller` and
+  `scan.by-the-router`, both in `rules --json` with a sentence in each language.
+- **No `routing-decision/2`.** Sora asked for `sensitivity.scanned_by`, which
+  every object in that schema being `additionalProperties: false` would have
+  forced a version bump for — ADR-0016 wrote that rule down in advance.
+  `reasons[]` is the extension point the design already has: `rule` and
+  `source` are open strings, the rule catalogue is a draft so that it can grow,
+  and Sora already runs their vocabulary against it in CI.
+
 - **`eval` says whose text a rate was measured on**, and `eval --corpus DIR`
   scores cases somebody else holds. `provenance.text.authored_by` has been in
   every corpus file since the corpus existed, loaded onto every `Case`, and read

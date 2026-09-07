@@ -53,6 +53,13 @@ class SuppliedScanner:
         """
         return "supplied"
 
+    #: The only adapter for which this is true. Everything else in
+    #: `infrastructure/scanners/` performs a scan; this one hands over an
+    #: analysis somebody else performed, and the decision now says so
+    #: (`scan.by-the-caller`) rather than producing a document indistinguishable
+    #: from one this build's own scanner produced.
+    relays_the_caller = True
+
     def scan(self, text: str) -> Sequence[Finding]:
         """Return what was handed over, once it can be true of this prompt.
 

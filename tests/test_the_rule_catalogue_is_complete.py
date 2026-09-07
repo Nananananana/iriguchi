@@ -39,7 +39,7 @@ PACKAGE = Path(__file__).resolve().parent.parent / "src" / "iriguchi"
 
 #: The namespaces this project owns. `presidio.` and `mamori.` are deliberately
 #: absent: their second half is a foreign detector's entity type.
-OWNED = ("policy", "routing", "cascade", "fallback", "complexity", "judge")
+OWNED = ("policy", "routing", "cascade", "fallback", "complexity", "judge", "scan")
 
 #: A rule-shaped string literal in one of the owned namespaces.
 LITERAL = re.compile(rf"^(?:{'|'.join(OWNED)})\.[a-z0-9-]+$")
