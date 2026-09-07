@@ -141,6 +141,55 @@ class TestTheExitCodesAreMeasured:
         assert main(["route", "--findings", "no/such/file.json", "hello"]) == declared
         assert capsys.readouterr().err.splitlines()[0].startswith("ConfigurationError: ")
 
+    @pytest.mark.parametrize(
+        "kind,declared", [(k, c) for k, c, *_ in ERRORS], ids=[k for k, *_ in ERRORS]
+    )
+    def test_every_declared_code_is_the_code_the_handler_returns(
+        self,
+        kind: str,
+        declared: int,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """**All four, not the one that was easy to reach.**
+
+        The first version of this file drove `ConfigurationError` through a real
+        path and left the other three declared and unchecked -- while the
+        schema's own comment said each code *is the code the CLI actually
+        returns*. A document that overclaims about its own checking is the exact
+        failure this repository keeps finding in other people's, so it is worth
+        naming here: three quarters of that sentence was not true.
+
+        `ModelError` and `RestorationError` need a model and a real mamori, and
+        `EscalationRefusedError` needs an outbound path -- none reachable in
+        this environment. So the exception is raised at a seam inside the `try`,
+        which measures the handler: the code returned and the name printed. That
+        is what `exit_code` is a claim about. Whether each kind is *reachable*
+        is a different claim, made by `NOT_YET_RAISED` and its own test.
+        """
+        import iriguchi.interfaces.cli.main as cli
+
+        raised = getattr(error_module, kind)
+
+        def _explode(_: object) -> object:
+            raise raised("the seam refused, on purpose")
+
+        monkeypatch.setattr(cli, "_config", _explode)
+        assert cli.main(["route", "hello"]) == declared
+        assert capsys.readouterr().err.splitlines()[0] == (f"{kind}: the seam refused, on purpose")
+
+    def test_the_seam_really_is_inside_the_handler(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """The test above would pass just as well if `_config` were called
+        outside the `try` and the exception escaped -- pytest would see the
+        raise, not the return. This pins that it does not escape."""
+        import iriguchi.interfaces.cli.main as cli
+
+        def _explode(_: object) -> object:
+            raise error_module.ModelError("not a SystemExit and not an escape")
+
+        monkeypatch.setattr(cli, "_config", _explode)
+        assert isinstance(cli.main(["route", "hello"]), int)
+
     def test_no_catalogued_kind_claims_the_refusal_code(self) -> None:
         """The collision this catalogue was written next to. `2` is a decision
         iriguchi stands behind, and a failure carrying it would tell a consumer
